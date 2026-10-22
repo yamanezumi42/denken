@@ -2,6 +2,8 @@
 <html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>電験 理論</title>
+<link rel="stylesheet" href="katex/katex.min.css">
+<script src="katex/katex.min.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="電験 理論">
 <link rel="manifest" href="manifest.webmanifest">
@@ -110,6 +112,36 @@ button{font:inherit;color:inherit}
 .go.ghost{background:#fff;color:var(--accent)}
 .go[disabled]{opacity:.35;cursor:default}
 .note2{font-size:12px;color:var(--sub);line-height:1.7}
+.unit{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;margin-bottom:6px}
+.unit .no{font-size:20px;font-weight:bold;color:var(--sub);text-align:center}
+.unit .nm{font-size:16px;font-weight:bold}
+.unit .sub{font-size:12px;color:var(--sub);margin-top:3px}
+.unit .sub b{color:var(--ink)}
+.unit .acts{display:flex;gap:6px}
+.vid{height:42px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.vid svg{width:18px;height:18px}
+.secth{font-size:13px;color:var(--sub);margin:16px 4px 6px}
+.tag2{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:#fff3cd;color:#7a5b00;white-space:nowrap}
+#unitTag{display:none}
+/* ドリル */
+#drill{position:fixed;inset:0;background:var(--bg);z-index:18;display:flex;flex-direction:column}
+#drill[hidden]{display:none}
+#dtop{height:50px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;background:#fff;border-bottom:1px solid var(--line)}
+#dbody{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+.dwrap{max-width:860px;margin:0 auto;padding:28px 24px 60px}
+#dq{font-size:22px;line-height:1.8;margin-bottom:18px}
+#dq .katex{font-size:1.1em}
+.dch{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dbtn{min-height:64px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:20px;cursor:pointer;text-align:left}
+.dbtn.right{border-color:var(--ok);background:var(--okbg)}
+.dbtn.wrong{border-color:var(--ng);background:var(--ngbg)}
+.dbtn[disabled]{cursor:default}
+#dexp{margin-top:16px;font-size:16px;line-height:1.8;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+#dexp[hidden]{display:none}
+#dpad{display:block;width:100%;height:300px;background:#fff;border:1px solid var(--line);border-radius:12px;touch-action:none}
+#dfig{display:block;max-width:100%;margin:0 0 14px;border:1px solid var(--line);border-radius:8px;background:#fff}
+#dfig[hidden]{display:none}
+.drow{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
 #impLog{font-size:13px;color:var(--sub);white-space:pre-wrap;margin-top:10px}
 /* 終わり */
 #done{position:fixed;inset:0;background:var(--bg);display:none;z-index:20;align-items:center;justify-content:center;flex-direction:column;gap:16px;font-size:18px}
@@ -121,6 +153,7 @@ button{font:inherit;color:inherit}
   <div id="top">
     <button class="lnk" id="toHome">ホーム</button>
     <span class="t" id="chapName"></span>
+    <span class="tag2" id="unitTag"></span>
     <span class="m" id="pos"></span>
     <span class="m" id="src"></span>
     <span class="m" id="timer">0:00</span>
@@ -164,6 +197,16 @@ button{font:inherit;color:inherit}
       <button class="go ghost" id="goWrong">間違えた問題（<span id="wrongN">0</span>）</button></div>
   </div>
   <div id="chapList"></div>
+  <div class="note2" style="margin:8px 4px 16px">毎回＝24回分（平成18年〜令和7年下期）の過去問を単元に分けて数えた、1回の試験あたりの問題数と点数（A問題5点・B問題10点。B問題の選択問題は両方を数えている）。</div>
+  <div class="card" id="ghCard">
+    <div class="row"><span class="lab">記録のバックアップ（GitHub）</span><span class="sp"></span><span class="note2" id="ghState"></span><button class="lnk" id="ghNow">今すぐ上げる</button><button class="lnk" id="ghEdit">設定</button></div>
+    <div id="ghForm" hidden style="margin-top:10px">
+      <div class="row"><span class="lab" style="width:90px">リポジトリ</span><input id="ghRepo" style="flex:1;height:36px;font-size:15px;padding:0 8px;border:1px solid var(--line);border-radius:8px" value="yamanezumi42/denken-records"></div>
+      <div class="row" style="margin-top:8px"><span class="lab" style="width:90px">トークン</span><input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_…（この端末の中にだけ保存）" style="flex:1;height:36px;font-size:15px;padding:0 8px;border:1px solid var(--line);border-radius:8px"></div>
+      <div class="row" style="margin-top:8px"><button class="go" id="ghSave">保存して上げる</button><button class="lnk" id="ghClear">トークンを消す</button></div>
+      <div class="note2" style="margin-top:6px">トークンは「Fine-grained」で、リポジトリ denken-records だけ・Contents の読み書きだけを許可したものを作って貼ってください。トークンは記録の書き出しにも GitHub にも入りません。</div>
+    </div>
+  </div>
   <div class="note2">難易度は電験王の★（5段階）。「まだ正解していない」＝最後に解いた時に正解していない問題と、まだ解いていない問題。同じ分野の中は ★の少ない順 → 本の順。</div>
 </div></div>
 <div id="imp" hidden><div class="wrap">
@@ -178,13 +221,27 @@ button{font:inherit;color:inherit}
 <div id="eraserRing"></div>
 <div id="pop"><div class="ph" id="popTitle"></div><div class="prow"><input type="range" id="popSl"><span id="popVal"></span></div><div class="prow" id="popMode"><div class="seg" id="emode"><button data-e="part" class="on">部分消し</button><button data-e="stroke">線ごと</button></div></div><div class="pnote" id="popNote"></div></div>
 <div id="toast"></div>
+<div id="drill" hidden>
+  <div id="dtop"><button class="lnk" id="dHome">ホーム</button><span class="t" id="dName"></span><span class="m" id="dPos"></span><span class="sp"></span><span id="dJudge"></span><button id="dNext" class="lnk" disabled>次へ</button></div>
+  <div id="dbody"><div class="dwrap">
+    <div id="dq"></div>
+    <img id="dfig" alt="図" hidden>
+    <div class="dch" id="dch"></div>
+    <div id="dwrite" hidden>
+      <canvas id="dpad"></canvas>
+      <div class="drow"><button class="lnk" id="dClear">書いたものを消す</button><span class="sp"></span><button class="go" id="dShow">模範解答を見る</button></div>
+      <div class="drow" id="dSelf" hidden><span class="lab">書けた？</span><button class="go" id="dOk">書けた</button><button class="go ghost" id="dNg">書けなかった</button></div>
+    </div>
+    <div id="dexp" hidden></div>
+  </div></div>
+</div>
 <div id="done"><div id="doneText"></div><button class="big primary" id="again">間違えた問題をもう一度</button><button class="big" id="doneHome">ホームへ</button></div>
 
 <script>
 /* ---------- 問題データ（IndexedDB）：items＝問題、imgs＝画像（名前→Blob）、packs＝取り込んだ包み ---------- */
 let ALL = [];                                   // 取り込み済みの問題（理論だけ。他の科目の参考問題は除く）
 const DBN = "denken_data", RECKEY = "denken_v1";
-function idb(){ return new Promise((ok, ng) => { const r = indexedDB.open(DBN, 1); r.onupgradeneeded = () => { const d = r.result; ["items", "imgs", "packs"].forEach(n => d.objectStoreNames.contains(n) || d.createObjectStore(n)); }; r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); }); }
+function idb(){ return new Promise((ok, ng) => { const r = indexedDB.open(DBN, 2); r.onupgradeneeded = () => { const d = r.result; ["items", "imgs", "packs", "meta"].forEach(n => d.objectStoreNames.contains(n) || d.createObjectStore(n)); }; r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); }); }
 async function dbAll(store){ const d = await idb(); return new Promise((ok, ng) => { const out = {}, c = d.transaction(store).objectStore(store).openCursor(); c.onsuccess = () => { const cur = c.result; if (cur){ out[cur.key] = cur.value; cur.continue(); } else ok(out); }; c.onerror = () => ng(c.error); }); }
 async function dbGet(store, key){ const d = await idb(); return new Promise((ok, ng) => { const r = d.transaction(store).objectStore(store).get(key); r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); }); }
 const urlCache = {};
@@ -195,12 +252,14 @@ async function imgURL(name){
 }
 function dataURLtoBlob(u){ const i = u.indexOf(","), bin = atob(u.slice(i + 1)), a = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k); return new Blob([a], {type: u.slice(5, u.indexOf(";"))}); }
 async function importPack(p, log){
-  const d = await idb(), names = Object.keys(p.imgs);
+  const d = await idb(), names = Object.keys(p.imgs || {});
   for (let i = 0; i < names.length; i += 30){      // 画像は少しずつ書く（iPadで一度に大きく書くと固まるため）
     await new Promise((ok, ng) => { const tx = d.transaction("imgs", "readwrite"), st = tx.objectStore("imgs"); names.slice(i, i + 30).forEach(n => st.put(dataURLtoBlob(p.imgs[n]), n)); tx.oncomplete = ok; tx.onerror = () => ng(tx.error); });
     log(`${p.chapter}：画像 ${Math.min(i + 30, names.length)} / ${names.length}`);
   }
-  await new Promise((ok, ng) => { const tx = d.transaction(["items", "packs"], "readwrite"); p.items.forEach(it => tx.objectStore("items").put(it, it.id)); tx.objectStore("packs").put({chapter: p.chapter, prefix: p.prefix, version: p.version, count: p.items.length, at: Date.now()}, p.prefix); tx.oncomplete = ok; tx.onerror = () => ng(tx.error); });
+  await new Promise((ok, ng) => { const tx = d.transaction(["items", "packs", "meta"], "readwrite"); (p.items || []).forEach(it => tx.objectStore("items").put(it, it.id));
+    if (p.units) tx.objectStore("meta").put(p.units, "units"); if (p.drills) tx.objectStore("meta").put(p.drills, "drills");
+    tx.objectStore("packs").put({chapter: p.chapter, prefix: p.prefix, version: p.version, count: (p.items || []).length, at: Date.now()}, p.prefix); tx.oncomplete = ok; tx.onerror = () => ng(tx.error); });
   Object.keys(urlCache).forEach(k => { URL.revokeObjectURL(urlCache[k]); delete urlCache[k]; });   // 入れ直した画像を使うように
 }
 const CH_ORDER = ["se", "mg", "dc", "ac", "tr", "tp", "sc", "em", "ec", "ms"];
@@ -209,7 +268,10 @@ async function loadAll(){
   ALL = items.filter(i => i.subject === "理論")
              .sort((a, b) => CH_ORDER.indexOf(a.id.slice(0, 2)) - CH_ORDER.indexOf(b.id.slice(0, 2)) || a.id.localeCompare(b.id));
   ALL.forEach(i => i.stars = i.stars5);
+  UNITS = (await dbGet("meta", "units")) || null; DRILLS = (await dbGet("meta", "drills")) || {};
 }
+let UNITS = null, DRILLS = {};
+const unitOf = n => UNITS && UNITS.units.find(u => u.n === n);
 // 全画像を同じ倍率で出す：切り出しは 1pt=3px。本文10.5pt が倍率100%で約14px
 const ZOOM = 3, PX_PER_PT = 14 / 10.5, BASE = PX_PER_PT / ZOOM;   // 画像1px → 画面のpx（倍率100%）
 const MARGIN = 10, GAP = 24, PAD_BELOW = 520;
@@ -293,7 +355,11 @@ async function show(){
   const it = queue[idx];
   answered = false; picked = it.answer.map(() => null);
   $("#pos").textContent = `${idx + 1} / ${queue.length}`;
-  $("#chapName").textContent = it.chapter;
+  $("#chapName").textContent = it.unit && unitOf(it.unit) ? unitOf(it.unit).title : it.chapter;
+  { const t = $("#unitTag"), parts = [];
+    if (it.need && it.unit && it.need > it.unit && unitOf(it.need)) parts.push("動画" + it.need + "も必要");
+    if (it.covered === "no") parts.push("動画に無い内容（解説で学ぶ）"); else if (it.covered === "partial") parts.push("動画に無い知識を含む");
+    t.textContent = parts.join("・"); t.style.display = parts.length ? "inline-block" : "none"; }
   $("#src").textContent = `${it.src}　${"★".repeat(it.stars)}${"☆".repeat(5 - it.stars)}`;
   $("#judge").className = ""; $("#judge").textContent = "";
   $("#next").disabled = true; $("#next").textContent = "次の問題へ";
@@ -699,9 +765,10 @@ window.addEventListener("resize", () => { const r = Z / ZFIT; fitZoom(); Z = ZFI
 let REC = {v: 1, log: []};
 try { const r = JSON.parse(localStorage.getItem(RECKEY) || "null"); if (r && Array.isArray(r.log)) REC = r; } catch(e) {}
 const saveRec = () => { try { localStorage.setItem(RECKEY, JSON.stringify(REC)); } catch(e) { toast("記録を保存できませんでした"); } };
-function addRec(r){ REC.log.push(r); saveRec(); }
-function popRec(id){ for (let i = REC.log.length - 1; i >= 0; i--) if (REC.log[i].id === id){ REC.log.splice(i, 1); break; } saveRec(); }
-function lastOf(){ const m = {}; REC.log.forEach(r => m[r.id] = r); return m; }   // 問題ごとの最後の結果
+function addRec(r){ REC.log.push(r); saveRec(); syncSoon(); }
+// 「もう一度解く」で消した記録は、消した印（del）を残す。印がないと、先に GitHub へ上がっていた時に混ぜて生き返るため
+function popRec(id){ for (let i = REC.log.length - 1; i >= 0; i--) if (REC.log[i].id === id){ const r = REC.log.splice(i, 1)[0]; (REC.del = REC.del || []).push(r.id + "|" + r.t); break; } saveRec(); syncSoon(); }
+function lastOf(){ const m = {}; REC.log.forEach(r => m[r.id] = r); return m; }   // 問題ごとの最後の結果（ドリルは id が "d:単元:番号"）
 
 /* ---------- ホーム ---------- */
 const UI = {stars: [1, 2], mode: "todo"};
@@ -721,23 +788,39 @@ function renderHome(){
   $("#totalStat").innerHTML = `選んだ難易度 <b>${inStars.length}</b>問　正解 <b>${okN}</b>　間違い <b>${ngN}</b>　未着手 <b>${inStars.length - okN - ngN}</b>`;
   const wrong = ALL.filter(i => last[i.id] && !last[i.id].ok);
   $("#wrongN").textContent = wrong.length; $("#goWrong").disabled = !wrong.length;
-  const chs = [...new Set(ALL.map(i => i.chapter))];
-  $("#chapList").innerHTML = chs.map(ch => {
-    const all = ALL.filter(i => i.chapter === ch), sel = all.filter(i => UI.stars.includes(i.stars5));
+  if (!UNITS){   // 単元の一覧がまだ無い時（古い包みだけ入っている）は分野の順で出す
+    const chs = [...new Set(ALL.map(i => i.chapter))];
+    $("#chapList").innerHTML = chs.map(ch => { const n = pickList(ALL.filter(i => i.chapter === ch)).length;
+      return `<div class="unit"><div class="no">-</div><div><div class="nm">${ch}</div><div class="sub">問題データを入れ直すと、電験革命の単元順になります</div></div><div class="acts"><button class="go" data-ch="${ch}"${n ? "" : " disabled"}>${n ? n + "問 解く" : "なし"}</button></div></div>`; }).join("")
+      || `<div class="card note2">問題データがまだありません。右上の「問題データ」から読み込んでください。</div>`;
+    return;
+  }
+  const play = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg>';
+  const sec = n => n <= 13 ? "直流回路・過渡現象" : n <= 22 ? "単相交流" : n <= 26 ? "三相交流" : n <= 30 ? "静電気" : n <= 35 ? "磁気" : n <= 38 ? "電子理論" : "電気計測";
+  let lastSec = "";
+  $("#chapList").innerHTML = UNITS.units.filter(u => u.n >= 1 && u.n <= 39).map(u => {
+    const all = ALL.filter(i => i.unit === u.n), sel = all.filter(i => UI.stars.includes(i.stars5));
     const ok = sel.filter(i => last[i.id] && last[i.id].ok).length, ng = sel.filter(i => last[i.id] && !last[i.id].ok).length;
-    const n = pickList(all).length, per = [1, 2, 3, 4, 5].map(s => all.filter(i => i.stars5 === s).length);
-    return `<div class="chap"><div><div class="nm">${ch}</div>
-      <div class="sub">選んだ難易度 ${sel.length}問：正解 ${ok}・間違い ${ng}・未着手 ${sel.length - ok - ng}　（全${all.length}問 ${per.map((c, k) => "★" + (k + 1) + "=" + c).join(" ")}）</div>
+    const n = pickList(all).length, dr = (DRILLS["u" + String(u.n).padStart(2, "0")] || []).length;
+    const dOk = (DRILLS["u" + String(u.n).padStart(2, "0")] || []).filter((_, k) => { const r = last[`d:${u.n}:${k}`]; return r && r.ok; }).length;
+    const head = sec(u.n) !== lastSec ? `<div class="secth">${lastSec = sec(u.n)}</div>` : "";
+    return head + `<div class="unit"><div class="no">${u.n}</div><div><div class="nm">${u.title.replace(/^\d+\./, "")}</div>
+      <div class="sub">毎回 <b>${u.per_session.toFixed(2)}</b>問・<b>${u.pts_per_session.toFixed(1)}</b>点　｜　過去問 ${all.length}問（選んだ難易度 ${sel.length}問：正解 ${ok}・間違い ${ng}）${dr ? `　｜　ドリル ${dOk}/${dr}` : ""}</div>
       <div class="bar"><i class="ok" style="width:${sel.length ? ok / sel.length * 100 : 0}%"></i><i class="ng" style="width:${sel.length ? ng / sel.length * 100 : 0}%"></i></div></div>
-      <button class="go" data-ch="${ch}"${n ? "" : " disabled"}>${n ? n + "問 解く" : "なし"}</button></div>`;
-  }).join("") || `<div class="card note2">問題データがまだありません。右上の「問題データ」から読み込んでください。</div>`;
+      <div class="acts"><a class="vid" href="${u.url}" target="_blank" rel="noopener">${play}${u.min}分</a>
+        <button class="go ghost" data-dr="${u.n}"${dr ? "" : " disabled"}>ドリル</button>
+        <button class="go" data-un="${u.n}"${n ? "" : " disabled"}>${n ? n + "問 解く" : "なし"}</button></div></div>`;
+  }).join("");
 }
 $("#starChips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; const s = +b.dataset.s; UI.stars = UI.stars.includes(s) ? UI.stars.filter(x => x !== s) : [...UI.stars, s].sort(); saveUI(); renderHome(); });
 document.querySelectorAll("#modeSeg button").forEach(b => b.onclick = () => { UI.mode = b.dataset.m; saveUI(); renderHome(); });
-$("#chapList").addEventListener("click", e => { const b = e.target.closest(".go"); if (!b || b.disabled) return; startQueue(pickList(ALL.filter(i => i.chapter === b.dataset.ch))); });
+$("#chapList").addEventListener("click", e => { const b = e.target.closest(".go"); if (!b || b.disabled) return;
+  if (b.dataset.dr) return startDrill(+b.dataset.dr);
+  if (b.dataset.un) return startQueue(pickList(ALL.filter(i => i.unit === +b.dataset.un)));
+  startQueue(pickList(ALL.filter(i => i.chapter === b.dataset.ch))); });
 $("#goWrong").onclick = () => { const last = lastOf(); startQueue(ALL.filter(i => last[i.id] && !last[i.id].ok)); };
 function startQueue(list){ if (!list.length) return; queue = list; idx = 0; wrongs = []; $("#home").hidden = true; show(); }
-function goHome(){ clearInterval(tick); $("#imp").hidden = true; renderHome(); $("#home").hidden = false; }
+function goHome(){ clearInterval(tick); $("#imp").hidden = true; renderHome(); renderGH(); $("#home").hidden = false; }
 $("#toHome").onclick = goHome;
 // 記録の書き出し・読み込み（機種変・バックアップ用）
 $("#exportBtn").onclick = () => {
@@ -756,6 +839,129 @@ $("#recFile").onchange = async e => {
   } catch(err) { toast("記録のファイルではありません"); }
   e.target.value = "";
 };
+
+/* ---------- 単元ドリル ---------- */
+function tex(str){   // 「$…$」の部分を KaTeX で数式にする
+  return String(str).split(/(\$[^$]+\$)/).map(p => {
+    if (p.length > 1 && p[0] === "$" && p[p.length - 1] === "$"){
+      try { return katex.renderToString(p.slice(1, -1), {throwOnError: false}); } catch(e) { return p; }
+    }
+    return p.replace(/[&<>]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;"}[c]));
+  }).join("");
+}
+let DQ = {unit: 0, list: [], i: 0, start: 0, wrong: []};
+function startDrill(n){
+  const key = "u" + String(n).padStart(2, "0");
+  DQ = {unit: n, list: (DRILLS[key] || []).map((it, k) => ({...it, k})), i: 0, wrong: []};
+  if (!DQ.list.length) return;
+  $("#home").hidden = true; $("#drill").hidden = false; showDrill();
+}
+function showDrill(){
+  const it = DQ.list[DQ.i], u = unitOf(DQ.unit);
+  $("#dName").textContent = (u ? u.title : "") + "　ドリル"; $("#dPos").textContent = `${DQ.i + 1} / ${DQ.list.length}`;
+  $("#dq").innerHTML = tex(it.q); $("#dJudge").textContent = ""; $("#dNext").disabled = true; $("#dexp").hidden = true;
+  const fig = $("#dfig"); fig.hidden = true;
+  if (it.fig){ const f = ALL.find(x => x.id === it.fig); if (f) imgURL(f.q).then(u2 => { if (u2){ fig.src = u2; fig.hidden = false; } }); }
+  const isW = it.type === "write";
+  $("#dch").hidden = isW; $("#dwrite").hidden = !isW; $("#dSelf").hidden = true; $("#dShow").hidden = false;
+  if (isW){ padClear(); sizePad(); }
+  else $("#dch").innerHTML = it.choices.map((c, k) => `<button class="dbtn" data-k="${k}">${tex(c)}</button>`).join("");
+  DQ.start = Date.now(); $("#dbody").scrollTop = 0;
+}
+function drillDone(ok){
+  const it = DQ.list[DQ.i];
+  addRec({id: `d:${DQ.unit}:${it.k}`, t: Date.now(), ok, sec: Math.round((Date.now() - DQ.start) / 1000), drill: 1});
+  if (!ok) DQ.wrong.push(it);
+  const j = $("#dJudge"); j.textContent = ok ? "正解" : "不正解"; j.style.cssText = "font-weight:bold;padding:6px 12px;border-radius:8px;" + (ok ? "background:var(--okbg);color:var(--ok)" : "background:var(--ngbg);color:var(--ng)");
+  $("#dexp").innerHTML = (it.type === "write" ? "<b>模範解答</b>　" + tex(it.model) + "<br>" : "") + tex(it.exp || ""); $("#dexp").hidden = false;
+  $("#dNext").disabled = false; $("#dNext").textContent = DQ.i + 1 < DQ.list.length ? "次へ" : (DQ.wrong.length ? "間違えた問題をもう一度" : "終わる");
+}
+$("#dch").addEventListener("click", e => {
+  const b = e.target.closest(".dbtn"); if (!b || b.disabled) return;
+  const it = DQ.list[DQ.i], k = +b.dataset.k, ok = k === it.ans;
+  document.querySelectorAll("#dch .dbtn").forEach(x => { x.disabled = true; const kk = +x.dataset.k; if (kk === it.ans) x.classList.add("right"); else if (kk === k) x.classList.add("wrong"); });
+  drillDone(ok);
+});
+$("#dShow").onclick = () => { const it = DQ.list[DQ.i]; $("#dexp").innerHTML = "<b>模範解答</b>　" + tex(it.model) + "<br>" + tex(it.exp || ""); $("#dexp").hidden = false; $("#dShow").hidden = true; $("#dSelf").hidden = false; };
+$("#dOk").onclick = () => { $("#dSelf").hidden = true; drillDone(true); };
+$("#dNg").onclick = () => { $("#dSelf").hidden = true; drillDone(false); };
+$("#dNext").onclick = () => {
+  if (DQ.i + 1 < DQ.list.length){ DQ.i++; return showDrill(); }
+  if (DQ.wrong.length){ DQ.list = DQ.wrong; DQ.wrong = []; DQ.i = 0; return showDrill(); }
+  $("#drill").hidden = true; goHome();
+};
+$("#dHome").onclick = () => { $("#drill").hidden = true; goHome(); };
+// 「公式を書け」の手書き欄（ペンでも指でも書ける。ここはスクロールしない）
+const pad = $("#dpad"), pctx = pad.getContext("2d"); let pcur = null;
+function sizePad(){ const r = pad.getBoundingClientRect(), d = window.devicePixelRatio || 1; pad.width = r.width * d; pad.height = r.height * d; pctx.setTransform(d, 0, 0, d, 0, 0); pctx.lineCap = "round"; pctx.lineJoin = "round"; pctx.strokeStyle = "#1b1b1b"; pctx.lineWidth = 2.2; }
+function padClear(){ pctx.save(); pctx.setTransform(1, 0, 0, 1, 0, 0); pctx.clearRect(0, 0, pad.width, pad.height); pctx.restore(); }
+pad.addEventListener("pointerdown", e => { e.preventDefault(); try { pad.setPointerCapture(e.pointerId); } catch(x) {} const r = pad.getBoundingClientRect(); pcur = {x: e.clientX - r.left, y: e.clientY - r.top}; });
+pad.addEventListener("pointermove", e => { if (!pcur) return; const r = pad.getBoundingClientRect(), p2 = {x: e.clientX - r.left, y: e.clientY - r.top}; pctx.beginPath(); pctx.moveTo(pcur.x, pcur.y); pctx.lineTo(p2.x, p2.y); pctx.stroke(); pcur = p2; });
+["pointerup", "pointercancel"].forEach(t => pad.addEventListener(t, () => { pcur = null; }));
+$("#dClear").onclick = padClear;
+
+/* ---------- 記録のバックアップ（GitHub の非公開リポジトリ） ---------- */
+const GHKEY = "denken_gh", GHFILE = "denken_records.json";
+let GH = {repo: "yamanezumi42/denken-records", token: "", at: "", err: ""};
+try { Object.assign(GH, JSON.parse(localStorage.getItem(GHKEY) || "{}")); } catch(e) {}
+const saveGH = () => { try { localStorage.setItem(GHKEY, JSON.stringify(GH)); } catch(e) {} };
+const ghHeaders = () => ({"Authorization": "Bearer " + GH.token, "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"});
+const b64e = s => btoa(unescape(encodeURIComponent(s))), b64d = s => decodeURIComponent(escape(atob(s.replace(/\s/g, ""))));
+const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+function ghErr(st){ return st === 401 ? "トークンが正しくありません" : st === 403 ? "トークンに書き込みの許可がありません" : st === 404 ? "リポジトリが見つかりません（名前か、トークンの対象を確認）" : "上げられませんでした（" + st + "）"; }
+function renderGH(){
+  $("#ghState").textContent = !GH.token ? "未設定（記録は端末の中だけ）" : GH.err ? "失敗：" + GH.err : GH.at ? "最後に上げた時刻 " + GH.at : "まだ上げていません";
+  $("#ghState").style.color = GH.err ? "var(--ng)" : "";
+  $("#ghNow").hidden = !GH.token;
+}
+let SY = {timer: 0, first: 0, busy: false};
+function syncSoon(){
+  if (!GH.token) return;
+  const now = Date.now();
+  if (!SY.first) SY.first = now;
+  clearTimeout(SY.timer);
+  if (now - SY.first >= 60000){ SY.first = 0; syncNow(); return; }
+  SY.timer = setTimeout(() => { SY.first = 0; syncNow(); }, 10000);
+}
+// 読む→混ぜる→書く。同じ記録（id と日時が同じ）は1つにまとめる
+async function syncNow(){
+  if (!GH.token || SY.busy) return false;
+  SY.busy = true;
+  try {
+    const url = `https://api.github.com/repos/${GH.repo}/contents/${GHFILE}`;
+    const r0 = await fetch(url, {headers: ghHeaders(), cache: "no-store"});
+    if (r0.status !== 200 && r0.status !== 404) throw r0.status;
+    const cur = r0.status === 200 ? await r0.json() : null;
+    if (cur && cur.content){
+      const remote = JSON.parse(b64d(cur.content));
+      const key = x => x.id + "|" + x.t, have = new Set(REC.log.map(key));
+      const del = new Set([...(REC.del || []), ...(remote.del || [])]);
+      (remote.log || []).forEach(x => { if (!have.has(key(x))) REC.log.push(x); });
+      REC.del = [...del]; REC.log = REC.log.filter(x => !del.has(key(x)));
+      REC.log.sort((a, b) => a.t - b.t); saveRec();
+    }
+    const body = {message: "電験の記録 " + stamp(), content: b64e(JSON.stringify({v: REC.v, log: REC.log, del: REC.del || []}))};
+    if (cur && cur.sha) body.sha = cur.sha;
+    const r1 = await fetch(url, {method: "PUT", headers: ghHeaders(), body: JSON.stringify(body)});
+    if (!r1.ok) throw r1.status;
+    GH.at = stamp(); GH.err = ""; saveGH(); renderGH();
+    if (!$("#home").hidden) renderHome();
+    return true;
+  } catch(st) {
+    GH.err = typeof st === "number" ? ghErr(st) : "通信できませんでした"; saveGH(); renderGH(); return false;
+  } finally { SY.busy = false; }
+}
+$("#ghEdit").onclick = () => { $("#ghForm").hidden = !$("#ghForm").hidden; $("#ghRepo").value = GH.repo; $("#ghToken").value = ""; };
+$("#ghSave").onclick = async () => {
+  const t = $("#ghToken").value.trim(); GH.repo = $("#ghRepo").value.trim() || GH.repo;
+  if (t) GH.token = t;
+  if (!GH.token){ toast("トークンを貼ってください"); return; }
+  saveGH(); $("#ghToken").value = ""; toast("上げています…");
+  const ok = await syncNow(); toast(ok ? "上げました" : GH.err); if (ok) $("#ghForm").hidden = true;
+};
+$("#ghClear").onclick = () => { GH.token = ""; GH.at = ""; GH.err = ""; saveGH(); renderGH(); toast("トークンを消しました"); };
+$("#ghNow").onclick = async () => { toast("上げています…"); const ok = await syncNow(); toast(ok ? "上げました" : GH.err); };
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden" && SY.timer){ clearTimeout(SY.timer); SY.first = 0; syncNow(); } });   // アプリを閉じる時はためずに上げる
 
 /* ---------- 問題データの取り込み ---------- */
 async function renderImp(){
@@ -798,6 +1004,7 @@ if (location.protocol === "https:") $("#impPcRow").style.display = "none";
 (async () => {
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
   await loadAll();
+  if (GH.token) syncNow();   // 起動時にも1回（別の端末で解いた分を取り込む）
   if (!ALL.length){ await renderImp(); $("#imp").hidden = false; } else goHome();
 })();
 </script>

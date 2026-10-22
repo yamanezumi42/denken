@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>電験 理論</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="電験 理論">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#f3f2ee">
+<style>
+:root{--bg:#f3f2ee;--panel:#fff;--ink:#1b1b1b;--sub:#6b6b6b;--line:#dcdad3;--accent:#2457c5;--ok:#1f8a4c;--okbg:rgba(31,138,76,.14);--ng:#c0392b;--ngbg:rgba(192,57,43,.14);--selbg:rgba(36,87,197,.14)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}   /* 長押しでiPadのメニューが出ないように */
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none}
+button{font:inherit;color:inherit}
+#app{display:flex;flex-direction:column;height:100%}
+/* 上の帯：問題の情報・判定・次へ */
+#top{height:50px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;background:#fff;border-bottom:1px solid var(--line)}
+#top .t{font-weight:bold;font-size:15px}
+#top .m{color:var(--sub);font-size:13px;white-space:nowrap}
+#timer{font-variant-numeric:tabular-nums}
+#judge{font-weight:bold;font-size:15px;padding:6px 12px;border-radius:8px;display:none;white-space:nowrap}
+#judge.ok{display:inline-block;background:var(--okbg);color:var(--ok)}
+#judge.ng{display:inline-block;background:var(--ngbg);color:var(--ng)}
+#fallback{display:none;gap:6px}
+#fallback.on{display:flex}
+.fb{width:40px;height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:18px;cursor:pointer}
+.fb.sel{border-color:var(--accent);background:var(--selbg)}
+.fb.right{border-color:var(--ok);background:var(--okbg);color:var(--ok)}
+.fb.wrong{border-color:var(--ng);background:var(--ngbg);color:var(--ng)}
+.sp{flex:1}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:7px 10px;font-size:13px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--ink);color:#fff}
+#expToggle{height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer}
+#expToggle[hidden],#retry[hidden]{display:none}
+#retry{height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer}
+#next{height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:bold;cursor:pointer}
+#next[disabled]{opacity:.35;cursor:default}
+/* 道具 */
+#tools{flex:none;display:flex;align-items:center;gap:6px;padding:6px 12px;border-bottom:1px solid var(--line);background:#fafaf8}
+.tb{width:38px;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;cursor:pointer;font-size:12px}
+.tb.wide{width:auto;padding:0 10px}
+.tb.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:#eef3fd}
+.tb svg{width:20px;height:20px}
+.dot{width:16px;height:16px;border-radius:50%}
+.sepv{width:1px;height:24px;background:var(--line);margin:0 4px}
+.sl{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);white-space:nowrap}
+.sl input[type=range]{width:88px;accent-color:var(--accent)}
+.sl .pv{width:28px;height:28px;display:grid;place-items:center}
+.sl .pv i{display:block;border-radius:50%;background:var(--ink)}
+.sl .pv i.ring{background:transparent;border:1.5px solid var(--ink)}
+#eraserRing{position:fixed;left:0;top:0;border:1.5px solid rgba(0,0,0,.65);box-shadow:0 0 0 1px rgba(255,255,255,.9);border-radius:50%;pointer-events:none;display:none;z-index:30;transform:translate(-50%,-50%)}
+#slots{display:flex;gap:4px}
+.slot{width:38px;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;cursor:pointer}
+.slot.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:#eef3fd}
+.slot i{display:block;border-radius:50%}
+.slot i.ring{border:1.5px solid var(--ink);background:transparent}
+#pop{position:fixed;display:none;z-index:35;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:12px 14px;width:280px}
+#pop.on{display:block}
+#pop .ph{font-size:13px;font-weight:bold;margin-bottom:8px}
+#pop .prow{display:flex;align-items:center;gap:10px;margin:6px 0}
+#pop input[type=range]{flex:1;accent-color:var(--accent)}
+#popVal{min-width:40px;text-align:right;font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}
+#pop .pnote{font-size:11px;color:var(--sub);line-height:1.5;margin-top:6px}
+#toast{position:fixed;left:50%;top:110px;transform:translateX(-50%);background:rgba(27,27,27,.85);color:#fff;font-size:14px;padding:8px 16px;border-radius:20px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:40}
+#toast.on{opacity:1}
+#zoomv{font-size:12px;color:var(--sub);min-width:48px;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;font-variant-numeric:tabular-nums;cursor:pointer}
+/* 本体：左＝問題（拡大・書き込み）、右＝解説（横に出す時だけ） */
+#main{flex:1;display:flex;min-height:0}
+#scroller{flex:1;min-width:0;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--panel);position:relative}
+#sheet{position:relative}
+#sheet img{position:absolute;left:0;top:0;display:block}
+.hd{position:absolute;left:0;font-size:13px;font-weight:bold;color:var(--sub);padding:2px 8px;background:#f1f0ec;border-radius:6px}
+.cb{position:absolute;border:2px solid transparent;border-radius:6px;pointer-events:none}
+.cb.sel{border-color:var(--accent);background:var(--selbg)}
+.cb.right{border-color:var(--ok);background:var(--okbg)}
+.cb.wrong{border-color:var(--ng);background:var(--ngbg)}
+#ink{position:absolute;left:0;top:0;touch-action:pan-x pan-y}
+#side{flex:none;width:0;overflow:auto;-webkit-overflow-scrolling:touch;background:#fff;border-left:1px solid var(--line)}
+#side.on{width:var(--sidew)}
+#side .in{padding:10px;transform-origin:0 0}
+#sidebar{position:sticky;top:0;left:0;width:calc(var(--sidew) - 1px);box-sizing:border-box;z-index:2;display:flex;align-items:center;gap:6px;justify-content:flex-end;padding:6px 10px;background:rgba(255,255,255,.95);border-bottom:1px solid var(--line)}
+#sidebar .lbl{font-size:12px;color:var(--sub);margin-right:auto}
+#sidebar button{height:30px;min-width:34px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px;cursor:pointer}
+#side h3{font-size:13px;color:var(--sub);margin:6px 0;background:#f1f0ec;display:inline-block;padding:2px 8px;border-radius:6px}
+#side img{display:block;margin:0 0 14px}
+/* ホーム・取り込み */
+#home,#imp{position:fixed;inset:0;background:var(--bg);z-index:15;overflow:auto;-webkit-overflow-scrolling:touch}
+#home[hidden],#imp[hidden]{display:none}
+.wrap{max-width:1000px;margin:0 auto;padding:20px 24px 60px}
+.hh{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.hh h1{font-size:22px;margin:0}
+.hh .sp{flex:1}
+.lnk{height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;white-space:nowrap}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lab{font-size:13px;color:var(--sub)}
+.chip{height:38px;min-width:52px;padding:0 12px;border-radius:19px;border:1px solid var(--line);background:#fff;font-size:15px;cursor:pointer}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.stat{font-size:13px;color:var(--sub)}
+.stat b{color:var(--ink);font-size:15px}
+.chap{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;margin-bottom:8px}
+.chap .nm{font-size:16px;font-weight:bold}
+.chap .sub{font-size:12px;color:var(--sub);margin-top:4px}
+.bar{height:6px;border-radius:3px;background:#eceae4;overflow:hidden;margin-top:8px;display:flex}
+.bar i{display:block;height:100%}
+.bar i.ok{background:var(--ok)}
+.bar i.ng{background:var(--ng)}
+.go{height:42px;padding:0 16px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:bold;font-size:14px;cursor:pointer;white-space:nowrap}
+.go.ghost{background:#fff;color:var(--accent)}
+.go[disabled]{opacity:.35;cursor:default}
+.note2{font-size:12px;color:var(--sub);line-height:1.7}
+#impLog{font-size:13px;color:var(--sub);white-space:pre-wrap;margin-top:10px}
+/* 終わり */
+#done{position:fixed;inset:0;background:var(--bg);display:none;z-index:20;align-items:center;justify-content:center;flex-direction:column;gap:16px;font-size:18px}
+#done.on{display:flex}
+.big{height:52px;width:320px;border-radius:12px;border:1px solid var(--line);background:#fff;font-size:17px;cursor:pointer}
+.big.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:bold}
+</style></head><body>
+<div id="app">
+  <div id="top">
+    <button class="lnk" id="toHome">ホーム</button>
+    <span class="t" id="chapName"></span>
+    <span class="m" id="pos"></span>
+    <span class="m" id="src"></span>
+    <span class="m" id="timer">0:00</span>
+    <span id="fallback"></span>
+    <span id="judge"></span>
+    <span class="sp"></span>
+    <button id="retry" hidden>もう一度解く</button>
+    <button id="expToggle" hidden>解説を閉じる</button>
+    <button id="next" disabled>次の問題へ</button>
+  </div>
+  <div id="tools">
+    <button class="tb on" data-tool="pen" title="ペン"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z"/><path d="M14 6l3 3"/></svg></button>
+    <button class="tb" data-tool="erase" title="消しゴム"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20h12"/><path d="M4.5 15.5l9-9a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L12 18H7l-2.5-2.5z"/><path d="M9 11l5 5"/></svg></button>
+    <div id="slots"></div>
+    <span class="sepv"></span>
+    <button class="tb on" data-color="#1b1b1b" title="黒"><span class="dot" style="background:#1b1b1b"></span></button>
+    <button class="tb" data-color="#d0342c" title="赤"><span class="dot" style="background:#d0342c"></span></button>
+    <button class="tb" data-color="#2457c5" title="青"><span class="dot" style="background:#2457c5"></span></button>
+    <span class="sepv"></span>
+    <button class="tb" id="undo" title="取り消し"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+    <button class="tb" id="redo" title="やり直し"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+    <button class="tb" id="clear" title="全消去"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg></button>
+    <span class="sp"></span>
+    <button class="tb wide" id="zoomOut" title="縮小">－</button>
+    <button id="zoomv" title="押すと100%に戻る">100%</button>
+    <button class="tb wide" id="zoomIn" title="拡大">＋</button>
+    <span class="sepv"></span>
+    <button class="tb" id="finger" title="指でも書く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a1.5 1.5 0 0 1 3 0v5"/><path d="M12 10V8.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L4 15.5a1.5 1.5 0 0 1 2.5-1.6L9 16"/></svg></button>
+  </div>
+  <div id="main">
+    <div id="scroller"><div id="sheet"><canvas id="ink"></canvas></div></div>
+    <div id="side"><div id="sidebar"><span class="lbl">解説</span><button id="eOut">－</button><button id="eZv" title="押すと100%に戻る">100%</button><button id="eIn">＋</button></div><div class="in" id="sidein"></div></div>
+  </div>
+</div>
+<div id="home" hidden><div class="wrap">
+  <div class="hh"><h1>電験三種 理論</h1><span class="sp"></span><button class="lnk" id="toImp">問題データ</button><button class="lnk" id="exportBtn">記録を書き出す</button><button class="lnk" id="importRec">記録を読み込む</button><input type="file" id="recFile" accept=".json,application/json" hidden></div>
+  <div class="card">
+    <div class="row"><span class="lab">難易度</span><span id="starChips" class="row"></span><span class="sp"></span><span class="lab">出す問題</span>
+      <div class="seg" id="modeSeg"><button data-m="todo" class="on">まだ正解していない</button><button data-m="all">すべて</button></div></div>
+    <div class="row" style="margin-top:10px"><span class="stat" id="totalStat"></span><span class="sp"></span>
+      <button class="go ghost" id="goWrong">間違えた問題（<span id="wrongN">0</span>）</button></div>
+  </div>
+  <div id="chapList"></div>
+  <div class="note2">難易度は電験王の★（5段階）。「まだ正解していない」＝最後に解いた時に正解していない問題と、まだ解いていない問題。同じ分野の中は ★の少ない順 → 本の順。</div>
+</div></div>
+<div id="imp" hidden><div class="wrap">
+  <div class="hh"><h1>問題データ</h1><span class="sp"></span><button class="lnk" id="impBack">ホームへ</button></div>
+  <div class="card"><div class="note2" id="impHave"></div></div>
+  <div class="card">
+    <div class="row" id="impPcRow"><button class="go" id="impPc">このPCから読み込む</button><span class="note2">同じWi-FiのPCで配っている時（PCの pack フォルダを読む）</span></div>
+    <div class="row" style="margin-top:10px"><button class="go ghost" id="impFileBtn">ファイルから読み込む</button><span class="note2">LocalSend などで受け取った denken_*.json（いくつでも選べる）</span><input type="file" id="impFile" accept=".json,application/json" multiple hidden></div>
+    <div id="impLog"></div>
+  </div>
+</div></div>
+<div id="eraserRing"></div>
+<div id="pop"><div class="ph" id="popTitle"></div><div class="prow"><input type="range" id="popSl"><span id="popVal"></span></div><div class="prow" id="popMode"><div class="seg" id="emode"><button data-e="part" class="on">部分消し</button><button data-e="stroke">線ごと</button></div></div><div class="pnote" id="popNote"></div></div>
+<div id="toast"></div>
+<div id="done"><div id="doneText"></div><button class="big primary" id="again">間違えた問題をもう一度</button><button class="big" id="doneHome">ホームへ</button></div>
+
+<script>
+/* ---------- 問題データ（IndexedDB）：items＝問題、imgs＝画像（名前→Blob）、packs＝取り込んだ包み ---------- */
+let ALL = [];                                   // 取り込み済みの問題（理論だけ。他の科目の参考問題は除く）
+const DBN = "denken_data", RECKEY = "denken_v1";
+function idb(){ return new Promise((ok, ng) => { const r = indexedDB.open(DBN, 1); r.onupgradeneeded = () => { const d = r.result; ["items", "imgs", "packs"].forEach(n => d.objectStoreNames.contains(n) || d.createObjectStore(n)); }; r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); }); }
+async function dbAll(store){ const d = await idb(); return new Promise((ok, ng) => { const out = {}, c = d.transaction(store).objectStore(store).openCursor(); c.onsuccess = () => { const cur = c.result; if (cur){ out[cur.key] = cur.value; cur.continue(); } else ok(out); }; c.onerror = () => ng(c.error); }); }
+async function dbGet(store, key){ const d = await idb(); return new Promise((ok, ng) => { const r = d.transaction(store).objectStore(store).get(key); r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); }); }
+const urlCache = {};
+async function imgURL(name){
+  if (urlCache[name]) return urlCache[name];
+  const b = await dbGet("imgs", name);
+  return urlCache[name] = b ? URL.createObjectURL(b) : "";
+}
+function dataURLtoBlob(u){ const i = u.indexOf(","), bin = atob(u.slice(i + 1)), a = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) a[k] = bin.charCodeAt(k); return new Blob([a], {type: u.slice(5, u.indexOf(";"))}); }
+async function importPack(p, log){
+  const d = await idb(), names = Object.keys(p.imgs);
+  for (let i = 0; i < names.length; i += 30){      // 画像は少しずつ書く（iPadで一度に大きく書くと固まるため）
+    await new Promise((ok, ng) => { const tx = d.transaction("imgs", "readwrite"), st = tx.objectStore("imgs"); names.slice(i, i + 30).forEach(n => st.put(dataURLtoBlob(p.imgs[n]), n)); tx.oncomplete = ok; tx.onerror = () => ng(tx.error); });
+    log(`${p.chapter}：画像 ${Math.min(i + 30, names.length)} / ${names.length}`);
+  }
+  await new Promise((ok, ng) => { const tx = d.transaction(["items", "packs"], "readwrite"); p.items.forEach(it => tx.objectStore("items").put(it, it.id)); tx.objectStore("packs").put({chapter: p.chapter, prefix: p.prefix, version: p.version, count: p.items.length, at: Date.now()}, p.prefix); tx.oncomplete = ok; tx.onerror = () => ng(tx.error); });
+  Object.keys(urlCache).forEach(k => { URL.revokeObjectURL(urlCache[k]); delete urlCache[k]; });   // 入れ直した画像を使うように
+}
+const CH_ORDER = ["se", "mg", "dc", "ac", "tr", "tp", "sc", "em", "ec", "ms"];
+async function loadAll(){
+  const items = Object.values(await dbAll("items"));
+  ALL = items.filter(i => i.subject === "理論")
+             .sort((a, b) => CH_ORDER.indexOf(a.id.slice(0, 2)) - CH_ORDER.indexOf(b.id.slice(0, 2)) || a.id.localeCompare(b.id));
+  ALL.forEach(i => i.stars = i.stars5);
+}
+// 全画像を同じ倍率で出す：切り出しは 1pt=3px。本文10.5pt が倍率100%で約14px
+const ZOOM = 3, PX_PER_PT = 14 / 10.5, BASE = PX_PER_PT / ZOOM;   // 画像1px → 画面のpx（倍率100%）
+const MARGIN = 10, GAP = 24, PAD_BELOW = 520;
+const $ = s => document.querySelector(s);
+const sheet = $("#sheet"), scroller = $("#scroller"), ink = $("#ink"), ctx = ink.getContext("2d");
+
+let queue = [], idx = 0, wrongs = [], picked = [], answered = false, startAt = 0, tick = null;
+// 100%＝問題（最大幅 QMAX px）と解説の段（最大幅 EMAX px）を左右に並べて、画面の幅に収まる倍率
+const QMAX = 1540, EMAX = 762, SIDE_PAD = 24;   // 全437問の問題画像の最大幅／2段組みの解説の最大幅（px）
+let ZFIT = 1, Z = 1;                            // Z＝今の倍率（ZFIT のとき 100% と表示）
+function fitZoom(){
+  ZFIT = (window.innerWidth - 2 * MARGIN - SIDE_PAD - 24) / ((QMAX + EMAX) * BASE);   // 24＝欄の境目とPCのスクロールバーの分
+  document.documentElement.style.setProperty("--sidew", EMAX * BASE * ZFIT + SIDE_PAD + "px");
+}
+fitZoom(); Z = ZFIT;
+// 問題を左右に自由にずらせるよう、面の左右に余白を持たせる（倍率100%の座標で）。最初は問題が左端に来るようにスクロールしておく
+const PADX = () => window.innerWidth * 0.6 / ZFIT;
+const PADY = () => window.innerHeight * 0.5 / ZFIT;
+let ZMIN = 1;   // 縮小の下限＝100%。ただし問題が大きくて100%でも画面に入らない時は、その問題が入る倍率まで
+let blocks = [], sheetH = 0;                    // 面に置く物：{kind:"img"|"hd"|"cb", x, y, w, h}（倍率100%の座標）
+
+async function loadImg(name){ const src = await imgURL(name); return new Promise(r => { const im = new Image(); im.onload = () => r(im); im.onerror = () => r(im); im.src = src; }); }
+
+/* ---------- 面の組み立て（倍率100%の座標で持ち、拡大率 Z を掛けて置く） ---------- */
+async function build(){
+  const it = queue[idx];
+  sheet.querySelectorAll("img,.hd,.cb").forEach(e => e.remove());
+  blocks = [];
+  const q = await loadImg(it.q);
+  let y = PADY() + MARGIN;
+  const qb = {kind: "img", im: q, x: PADX() + MARGIN, y, w: q.naturalWidth * BASE, h: q.naturalHeight * BASE};
+  blocks.push(qb);
+  y += qb.h;
+  // 選択肢の枠（問題の画像の上に重ねる）
+  it.choices.forEach(c => {
+    const [x0, y0, x1, y1] = c.box;
+    let bx = qb.x + x0 * BASE, by = qb.y + y0 * BASE, bw = (x1 - x0) * BASE, bh = (y1 - y0) * BASE;
+    if (bh < 30){ by -= (30 - bh) / 2; bh = 30; }          // 押せる大きさを確保
+    if (bw < 44){ bx -= (44 - bw) / 2; bw = 44; }
+    blocks.push({kind: "cb", set: c.set, n: c.n, x: bx, y: by, w: bw, h: bh});
+  });
+  sheetH = y + PAD_BELOW;
+  for (const b of blocks){
+    if (b.kind === "img") b.el = b.im;
+    if (b.kind === "hd"){ b.el = document.createElement("div"); b.el.className = "hd"; b.el.textContent = b.text; }
+    if (b.kind === "cb"){ b.el = document.createElement("div"); b.el.className = "cb"; }
+    sheet.insertBefore(b.el, ink);
+  }
+  place(); paintChoices();
+}
+function place(){
+  const contentW = Math.max(...blocks.map(b => b.x + b.w)) + MARGIN + PADX();
+  const w = Math.max(contentW * Z, scroller.clientWidth), h = sheetH * Z;   // 右側の空きも書き込める
+  sheet.style.width = w + "px"; sheet.style.height = h + "px";
+  for (const b of blocks){
+    Object.assign(b.el.style, {left: b.x * Z + "px", top: b.y * Z + "px", width: b.w * Z + "px"});
+    if (b.kind !== "img") b.el.style.height = b.h * Z + "px";
+    if (b.kind === "hd") b.el.style.fontSize = 13 * Z + "px";
+  }
+  sizeInk(w, h);
+  $("#zoomv").textContent = Math.round(Z / ZFIT * 100) + "%";
+}
+
+// 問題を開いた時：問題の画像が画面いっぱいに、見切れずに入る倍率にして、真ん中に置く
+function fitProblem(){
+  const qb = blocks[0], W = scroller.clientWidth - 2 * MARGIN, H = scroller.clientHeight - 2 * MARGIN;
+  const z = Math.min(W / qb.w, H / qb.h, ZFIT * 3);
+  ZMIN = Math.min(1, z / ZFIT) * ZFIT;
+  Z = z; place();
+  scroller.scrollLeft = (qb.x + qb.w / 2) * Z - scroller.clientWidth / 2;
+  scroller.scrollTop = (qb.y + qb.h / 2) * Z - scroller.clientHeight / 2;
+}
+// 答えた時：100%に戻し、問題を左上に寄せる（右に解説の欄が出る）
+function alignLeft100(){
+  ZMIN = ZFIT; Z = ZFIT; place();
+  const qb = blocks[0];
+  scroller.scrollLeft = (qb.x - MARGIN) * Z; scroller.scrollTop = (qb.y - MARGIN) * Z;
+}
+/* ---------- 問題の切り替え ---------- */
+async function show(){
+  const it = queue[idx];
+  answered = false; picked = it.answer.map(() => null);
+  $("#pos").textContent = `${idx + 1} / ${queue.length}`;
+  $("#chapName").textContent = it.chapter;
+  $("#src").textContent = `${it.src}　${"★".repeat(it.stars)}${"☆".repeat(5 - it.stars)}`;
+  $("#judge").className = ""; $("#judge").textContent = "";
+  $("#next").disabled = true; $("#next").textContent = "次の問題へ";
+  // 選択肢が絵の中にあって位置が取れない問題だけ、上の帯に小さな①〜⑤
+  const fb = $("#fallback"); fb.innerHTML = "";
+  fb.classList.toggle("on", !it.choices.length);
+  if (!it.choices.length) it.answer.forEach((_, r) => [1,2,3,4,5].forEach(n => {
+    const b = document.createElement("button"); b.className = "fb"; b.dataset.r = r; b.dataset.n = n;
+    b.textContent = "①②③④⑤"[n - 1]; fb.appendChild(b);
+  }));
+  $("#side").classList.remove("on"); $("#sidein").innerHTML = ""; $("#expToggle").hidden = true; $("#retry").hidden = true; lastW = 0;
+  history = []; future = []; strokes = [];
+  await build();
+  fitProblem();
+  startAt = Date.now(); clearInterval(tick); tick = setInterval(showTime, 1000); showTime();
+}
+function showTime(){ const s = Math.floor((Date.now() - startAt) / 1000); $("#timer").textContent = `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`; }
+
+/* ---------- 選ぶ・判定 ---------- */
+function choose(set, n){
+  if (answered) return;
+  picked[set] = n; paintChoices();
+  if (picked.every(v => v !== null)) judge();
+}
+function paintChoices(){
+  const it = queue[idx];
+  const cls = (set, n) => {
+    if (!answered) return picked[set] === n ? "sel" : "";
+    if (it.answer[set] === n) return "right";
+    return picked[set] === n ? "wrong" : "";
+  };
+  blocks.filter(b => b.kind === "cb").forEach(b => b.el.className = "cb " + cls(b.set, b.n));
+  document.querySelectorAll(".fb").forEach(b => b.className = "fb " + cls(+b.dataset.r, +b.dataset.n));
+}
+$("#fallback").addEventListener("click", e => { const b = e.target.closest(".fb"); if (b) choose(+b.dataset.r, +b.dataset.n); });
+async function judge(){
+  const it = queue[idx];
+  answered = true; clearInterval(tick); paintChoices();
+  const sec = Math.round((Date.now() - startAt) / 1000);
+  const ok = it.answer.every((a, r) => picked[r] === a);
+  const j = $("#judge"); j.className = ok ? "ok" : "ng";
+  j.textContent = ok ? `正解（${sec}秒）` : `不正解　正解は ${it.answer.map((a, r) => (it.answer.length > 1 ? `(${"ab"[r]})` : "") + "①②③④⑤"[a-1]).join(" ")}`;
+  addRec({id: it.id, t: Date.now(), ok, sec, picked: picked.slice()});
+  lastWrongAdded = !ok && !wrongs.includes(it);
+  if (lastWrongAdded) wrongs.push(it);
+  $("#retry").hidden = false;
+  $("#next").disabled = false; $("#next").textContent = idx + 1 < queue.length ? "次の問題へ" : "終わる";
+  await showExplanation();
+}
+async function showExplanation(){
+  // 解説は右の欄に出す（答える前は、その場所が計算の書き込み欄）。倍率は100%（問題と同じ文字の大きさ）
+  const it = queue[idx], box = $("#sidein"); box.innerHTML = "";
+  for (const [k, name] of [["point", "ワンポイント解説"], ["sol", "解答の解説"]]){
+    const h = document.createElement("h3"); h.textContent = name; box.appendChild(h);
+    const im = await loadImg(it[k]); im.dataset.nw = im.naturalWidth; box.appendChild(im);
+  }
+  EZ = 1; placeSide();
+  $("#side").classList.add("on"); $("#side").scrollTop = 0;
+  alignLeft100();
+  $("#expToggle").hidden = false; $("#expToggle").textContent = "解説を閉じる";
+}
+// 解説の欄が開く・閉じる・画面が回るなどで問題側の枠の幅が変わったら、面の幅を合わせ直す
+let lastW = 0;
+new ResizeObserver(() => { if (scroller.clientWidth !== lastW && blocks.length){ lastW = scroller.clientWidth; place(); } }).observe(scroller);
+$("#expToggle").onclick = () => {
+  const on = $("#side").classList.toggle("on"); place();
+  $("#expToggle").textContent = on ? "解説を閉じる" : "解説を開く";
+};
+// もう一度解く：押し間違いに備えて、判定と解説を消して解く前に戻す。書いた計算は残す。時間は続けて測る。
+// 押し間違えた答えは「間違い」に数えない
+let lastWrongAdded = false;
+$("#retry").onclick = () => {
+  const it = queue[idx];
+  if (lastWrongAdded){ wrongs = wrongs.filter(w => w !== it); lastWrongAdded = false; }
+  popRec(it.id);   // 押し間違えた答えは記録しない
+  answered = false; picked = it.answer.map(() => null); paintChoices();
+  $("#judge").className = ""; $("#judge").textContent = "";
+  $("#next").disabled = true; $("#retry").hidden = true; $("#expToggle").hidden = true;
+  $("#side").classList.remove("on"); $("#sidein").innerHTML = "";
+  fitProblem();
+  clearInterval(tick); tick = setInterval(showTime, 1000); showTime();
+};
+$("#next").onclick = () => {
+  idx++;
+  if (idx < queue.length) return show();
+  $("#doneText").textContent = wrongs.length ? `${queue.length}問中 ${queue.length - wrongs.length}問正解。間違えた問題が${wrongs.length}問あります。` : `${queue.length}問 全部正解です。`;
+  $("#again").hidden = !wrongs.length;
+  $("#done").classList.add("on");
+};
+$("#again").onclick = () => { queue = wrongs.slice(); wrongs = []; idx = 0; $("#done").classList.remove("on"); show(); };
+$("#doneHome").onclick = () => { $("#done").classList.remove("on"); goHome(); };
+
+/* ---------- 手書き（座標は倍率100%で持つ） ---------- */
+let strokes = [], history = [], future = [], cur = null, tool = "pen", emode = "part", color = "#1b1b1b", width = 1.6, fingerDraw = false;
+let eraseR = 9;   // 消しゴムの半径（画面上のpx。拡大しても見た目の大きさは同じ）
+function sizeInk(w, h){
+  const dpr = window.devicePixelRatio || 1;
+  const s = Math.min(dpr, Math.sqrt(16e6 / (w * h)));   // 大きすぎるキャンバスはiPadで描けないので面積に上限
+  ink.style.width = w + "px"; ink.style.height = h + "px";
+  ink.width = Math.round(w * s); ink.height = Math.round(h * s);
+  ctx.setTransform(s * Z, 0, 0, s * Z, 0, 0); redraw();
+}
+function seg(a, b, wbase){ ctx.lineWidth = wbase * (0.6 + (b.p || 0.5) * 0.8); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+function drawStroke(s){
+  ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  if (s.pts.length === 1){ const a = s.pts[0]; ctx.beginPath(); ctx.arc(a.x, a.y, s.w / 2, 0, 7); ctx.fill(); return; }
+  for (let i = 1; i < s.pts.length; i++) seg(s.pts[i-1], s.pts[i], s.w);
+}
+function redraw(){ ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0, 0, ink.width, ink.height); ctx.restore(); strokes.forEach(drawStroke); }
+function pt(e){ const r = ink.getBoundingClientRect(); return {x: (e.clientX - r.left) / Z, y: (e.clientY - r.top) / Z, p: e.pressure || 0.5}; }
+const copyStrokes = () => strokes.map(s => ({...s, pts: s.pts.slice()}));
+const snapshot = () => { history.push(copyStrokes()); future = []; };   // 新しく書いたら、やり直しの分は捨てる
+function toast(t){ const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 700); }
+function undo(){ if (!history.length) return toast("取り消すものがありません"); future.push(copyStrokes()); strokes = history.pop(); redraw(); toast("取り消し"); }
+function redo(){ if (!future.length) return toast("やり直すものがありません"); history.push(copyStrokes()); strokes = future.pop(); redraw(); toast("やり直し"); }
+const canDraw = e => e.pointerType === "pen" || e.pointerType === "mouse" || (fingerDraw && e.pointerType === "touch");
+
+// 消しゴム：部分消し＝なぞった所だけ切り取る／線ごと＝触れた線を丸ごと消す
+function dSeg(p, a, b){ const dx = b.x - a.x, dy = b.y - a.y, L = dx*dx + dy*dy; let t = L ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / L : 0; t = Math.max(0, Math.min(1, t)); return Math.hypot(a.x + t*dx - p.x, a.y + t*dy - p.y); }
+function densify(s, step){
+  // 点の間隔が広い線（素早く引いた直線など）は、途中の点を補ってから消す。でないと間の線が丸ごと消える
+  const out = [s.pts[0]];
+  for (let i = 1; i < s.pts.length; i++){
+    const a = s.pts[i-1], b = s.pts[i], n = Math.floor(Math.hypot(b.x - a.x, b.y - a.y) / step);
+    for (let k = 1; k <= n; k++) out.push({x: a.x + (b.x - a.x) * k / (n + 1), y: a.y + (b.y - a.y) * k / (n + 1), p: b.p});
+    out.push(b);
+  }
+  s.pts = out;
+}
+function eraseAt(p){
+  const R = eraseR / Z;
+  let changed = false;
+  if (emode === "part") strokes.forEach(s => densify(s, R / 3));
+  if (emode === "stroke"){
+    const n = strokes.length;
+    strokes = strokes.filter(s => !s.pts.some((q, i) => Math.hypot(q.x - p.x, q.y - p.y) < R || (i && dSeg(p, s.pts[i-1], q) < R)));
+    changed = strokes.length !== n;
+  } else {
+    const out = [];
+    for (const s of strokes){
+      const pieces = []; let curp = [];
+      for (let i = 0; i < s.pts.length; i++){
+        const q = s.pts[i];
+        if (Math.hypot(q.x - p.x, q.y - p.y) < R){ if (curp.length) pieces.push(curp); curp = []; changed = true; continue; }
+        if (curp.length && dSeg(p, s.pts[i-1], q) < R){ pieces.push(curp); curp = []; changed = true; }
+        curp.push(q);
+      }
+      if (curp.length) pieces.push(curp);
+      if (pieces.length === 1 && pieces[0].length === s.pts.length) out.push(s);
+      else pieces.filter(pc => pc.length > 1).forEach(pc => out.push({...s, pts: pc}));
+    }
+    strokes = out;
+  }
+  if (changed) redraw();
+}
+const ring = $("#eraserRing");
+function showRing(e){
+  if (tool !== "erase"){ ring.style.display = "none"; return; }
+  Object.assign(ring.style, {display: "block", left: e.clientX + "px", top: e.clientY + "px", width: eraseR * 2 + "px", height: eraseR * 2 + "px"});
+}
+ink.addEventListener("pointerleave", () => { if (!cur) ring.style.display = "none"; });
+let down = null;   // 押した位置と時刻（動かさずに離したら「選ぶ」）
+ink.addEventListener("pointerdown", e => {
+  if (pinch) return;
+  down = {x: e.clientX, y: e.clientY, t: Date.now(), type: e.pointerType};
+  if (!canDraw(e)) return;
+  e.preventDefault(); try { ink.setPointerCapture(e.pointerId); } catch(err) {}
+  snapshot();
+  const p = pt(e);
+  if (tool === "erase"){ cur = {erase: true}; showRing(e); eraseAt(p); return; }
+  cur = {color, w: width, pts: [p]}; strokes.push(cur); drawStroke(cur);
+});
+ink.addEventListener("pointermove", e => {
+  if (canDraw(e) && !pinch) showRing(e);           // 消しゴムの時は、ペンの位置に円を出す（PCはマウスを乗せただけでも）
+  if (!cur || pinch) return;
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const ev of evs){
+    const p = pt(ev);
+    if (cur.erase){ eraseAt(p); continue; }
+    const a = cur.pts[cur.pts.length - 1]; cur.pts.push(p);
+    ctx.strokeStyle = cur.color; ctx.lineCap = "round"; seg(a, p, cur.w);
+  }
+});
+ink.addEventListener("pointerup", e => {
+  const wasDrawing = cur && !cur.erase;
+  if (e.pointerType !== "mouse") ring.style.display = "none";   // iPadは離したら円を消す
+  cur = null;
+  if (!down || pinch) return;
+  const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y), quick = Date.now() - down.t < 400;
+  if (moved < 6 && quick && (down.type === "touch" || down.type === "mouse")){
+    // 指で（PCはマウスで）動かさずに軽く触れた＝選択肢を選ぶ。ペンで触れた時は選ばない（本人 2026-10-22）
+    const p = pt(e);
+    const hit = blocks.find(b => b.kind === "cb" && p.x >= b.x && p.x <= b.x + b.w && p.y >= b.y && p.y <= b.y + b.h);
+    if (hit && !answered){
+      if (wasDrawing){ strokes.pop(); history.pop(); redraw(); }
+      choose(hit.set, hit.n);
+    }
+  }
+  down = null;
+});
+ink.addEventListener("pointercancel", () => { cur = null; down = null; });
+
+/* ---------- 指2本で拡大・縮小（書いた線と選択肢の枠も一緒に） ----------
+   指を動かしている間は #sheet を transform で見た目だけ拡大し（軽い）、離した時に倍率を確定して作り直す。
+   指2本の真ん中にある面上の点が、ずっと指の真ん中に留まるようにする。 */
+let pinch = null;
+const dist = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+function mid(e){ const r = scroller.getBoundingClientRect(), [a, b] = e.touches; return {x: (a.clientX + b.clientX) / 2 - r.left, y: (a.clientY + b.clientY) / 2 - r.top}; }
+ink.addEventListener("touchstart", e => {
+  const stylus = [...e.touches].some(t => t.touchType === "stylus");
+  if (stylus || (fingerDraw && e.touches.length === 1)) e.preventDefault();          // ペンで触れた時はスクロールしない
+  if (e.touches.length === 2 && !stylus && !tri){
+    e.preventDefault();
+    if (cur && !cur.erase){ strokes.pop(); history.pop(); } cur = null; down = null; redraw();
+    const m = mid(e);
+    pinch = {d0: dist(...e.touches), z0: Z, sl: scroller.scrollLeft, st: scroller.scrollTop,
+             cx: (scroller.scrollLeft + m.x) / Z, cy: (scroller.scrollTop + m.y) / Z, m, m0: m, s: 1, t0: Date.now()};
+    sheet.style.transformOrigin = "0 0"; sheet.style.willChange = "transform";
+  }
+}, {passive: false});
+ink.addEventListener("touchmove", e => {
+  const stylus = [...e.touches].some(t => t.touchType === "stylus");
+  if (stylus || (fingerDraw && e.touches.length === 1)) e.preventDefault();
+  if (pinch && e.touches.length === 2){
+    e.preventDefault();
+    const m = mid(e), z = clampZ(pinch.z0 * dist(...e.touches) / pinch.d0), s = z / pinch.z0;
+    // 面上の点 (cx,cy)（今の倍率で cx*z0）が、画面の m に来るように平行移動
+    const tx = m.x + pinch.sl - s * pinch.cx * pinch.z0, ty = m.y + pinch.st - s * pinch.cy * pinch.z0;
+    sheet.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;   // 見た目の位置＝tx + s*P - scroll
+    pinch.m = m; pinch.s = s;
+  }
+}, {passive: false});
+function endPinch(){
+  if (!pinch) return;
+  const p = pinch; pinch = null;
+  sheet.style.transform = ""; sheet.style.willChange = "";
+  // 2本指で軽くタップ（短く・ほとんど動かさず・大きさも変えず）＝取り消し（GoodNotes と同じ）
+  if (Date.now() - p.t0 < 300 && Math.abs(p.s - 1) < 0.05 && Math.hypot(p.m.x - p.m0.x, p.m.y - p.m0.y) < 12){ undo(); return; }
+  setZoom(p.z0 * p.s, p.cx, p.cy, p.m.x, p.m.y);
+}
+// 3本指で左にスライド＝取り消し、右にスライド＝やり直し（GoodNotes と同じ）。
+// ※iPadOS が3本指の操作を先に受け取る場合は、ページまで届かない（実機で確認）
+let tri = null;
+const avg = e => { const ts = [...e.touches]; return {x: ts.reduce((a, t) => a + t.clientX, 0) / ts.length, y: ts.reduce((a, t) => a + t.clientY, 0) / ts.length}; };
+ink.addEventListener("touchstart", e => {
+  if (e.touches.length !== 3) return;
+  e.preventDefault();
+  if (pinch){ pinch = null; sheet.style.transform = ""; sheet.style.willChange = ""; }   // 2本指の拡大は取りやめ
+  if (cur && !cur.erase){ strokes.pop(); history.pop(); redraw(); } cur = null; down = null;
+  const a = avg(e); tri = {x0: a.x, y0: a.y, x: a.x, y: a.y};
+}, {passive: false});
+ink.addEventListener("touchmove", e => { if (tri && e.touches.length === 3){ e.preventDefault(); const a = avg(e); tri.x = a.x; tri.y = a.y; } }, {passive: false});
+ink.addEventListener("touchend", e => {
+  if (!tri || e.touches.length) return;
+  const dx = tri.x - tri.x0, dy = tri.y - tri.y0; tri = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) (dx < 0 ? undo : redo)();
+});
+ink.addEventListener("touchend", e => { if (e.touches.length < 2 && !tri) endPinch(); });
+ink.addEventListener("touchcancel", endPinch);
+const clampZ = z => Math.max(Math.min(ZFIT, ZMIN), Math.min(ZFIT * 3, z));   // 100%より小さくはしない（本人 2026-10-22）。例外は問題全体を入れる時だけ
+function setZoom(z, cx, cy, mx, my){
+  // 面上の点(cx,cy)が画面上の(mx,my)に留まるように拡大する
+  Z = clampZ(z);
+  place();
+  scroller.scrollLeft = cx * Z - mx; scroller.scrollTop = cy * Z - my;
+}
+function zoomBy(f){ const mx = scroller.clientWidth / 2, my = scroller.clientHeight / 2; setZoom(Z * f, (scroller.scrollLeft + mx) / Z, (scroller.scrollTop + my) / Z, mx, my); }
+$("#zoomIn").onclick = () => zoomBy(1.25);
+$("#zoomOut").onclick = () => zoomBy(0.8);
+$("#zoomv").onclick = () => zoomBy(ZFIT / Z);   // 100%＝自動で決めた倍率
+// PC：Ctrl＋ホイールで拡大
+scroller.addEventListener("wheel", e => { if (!e.ctrlKey) return; e.preventDefault(); const r = scroller.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; setZoom(Z * (e.deltaY < 0 ? 1.1 : 0.9), (scroller.scrollLeft + mx) / Z, (scroller.scrollTop + my) / Z, mx, my); }, {passive: false});
+
+/* ---------- 解説の欄だけの拡大・縮小（問題とは別。100%〜300%） ---------- */
+const side = $("#side"), sidein = $("#sidein");
+let EZ = 1, spinch = null;
+function placeSide(){
+  sidein.querySelectorAll("img").forEach(im => im.style.width = im.dataset.nw * BASE * ZFIT * EZ + "px");
+  sidein.querySelectorAll("h3").forEach(h => h.style.fontSize = 13 * EZ + "px");
+  $("#eZv").textContent = Math.round(EZ * 100) + "%";
+}
+const clampE = z => Math.max(1, Math.min(3, z));
+// 欄の中の座標：上の操作の帯（拡大しない）の下にある sidein の左上が原点。OFF＝その帯の高さ
+const OFF = () => sidein.offsetTop;
+const toC = (mx, my) => ({x: (side.scrollLeft + mx) / EZ, y: (side.scrollTop + my - OFF()) / EZ});
+function setEZ(z, c, mx, my){
+  // 欄の中の点 c（倍率1の座標）が、欄の画面上の(mx,my)に留まるように
+  EZ = clampE(z); placeSide();
+  side.scrollLeft = c.x * EZ - mx; side.scrollTop = c.y * EZ + OFF() - my;
+}
+function eZoomBy(f){ const mx = side.clientWidth / 2, my = side.clientHeight / 2; setEZ(EZ * f, toC(mx, my), mx, my); }
+$("#eIn").onclick = () => eZoomBy(1.25);
+$("#eOut").onclick = () => eZoomBy(0.8);
+$("#eZv").onclick = () => eZoomBy(1 / EZ);
+function smid(e){ const r = side.getBoundingClientRect(), [a, b] = e.touches; return {x: (a.clientX + b.clientX) / 2 - r.left, y: (a.clientY + b.clientY) / 2 - r.top}; }
+side.addEventListener("touchstart", e => {
+  if (e.touches.length !== 2) return;
+  e.preventDefault();
+  const m = smid(e);
+  spinch = {d0: dist(...e.touches), z0: EZ, sl: side.scrollLeft, st: side.scrollTop, c: toC(m.x, m.y), m, s: 1};
+}, {passive: false});
+side.addEventListener("touchmove", e => {
+  if (!spinch || e.touches.length !== 2) return;
+  e.preventDefault();
+  const m = smid(e), s = clampE(spinch.z0 * dist(...e.touches) / spinch.d0) / spinch.z0;
+  // 指を動かしている間は見た目だけ（transform）。欄の中の点が指の真ん中に留まる位置へ
+  sidein.style.transform = `translate(${m.x + spinch.sl - s * spinch.c.x * spinch.z0}px, ${m.y + spinch.st - OFF() - s * spinch.c.y * spinch.z0}px) scale(${s})`;
+  spinch.m = m; spinch.s = s;
+}, {passive: false});
+function endSidePinch(){
+  if (!spinch) return;
+  const p = spinch; spinch = null; sidein.style.transform = "";
+  setEZ(p.z0 * p.s, p.c, p.m.x, p.m.y);
+}
+side.addEventListener("touchend", e => { if (e.touches.length < 2) endSidePinch(); });
+side.addEventListener("touchcancel", endSidePinch);
+side.addEventListener("wheel", e => { if (!e.ctrlKey) return; e.preventDefault(); const r = side.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top; setEZ(EZ * (e.deltaY < 0 ? 1.1 : 0.9), toC(mx, my), mx, my); }, {passive: false});
+
+/* ---------- 画面全体は拡大させない（iPad Safari は user-scalable=no を無視するため、ここで止める） ---------- */
+document.addEventListener("gesturestart", e => e.preventDefault());
+document.addEventListener("gesturechange", e => e.preventDefault());
+document.addEventListener("touchmove", e => { if (e.touches.length > 1) e.preventDefault(); }, {passive: false});
+document.addEventListener("wheel", e => { if (e.ctrlKey) e.preventDefault(); }, {passive: false});   // PCの Ctrl＋ホイールで画面全体が拡大しないように
+let lastTap = 0;
+document.addEventListener("touchend", e => { const t = Date.now(); if (t - lastTap < 300 && !e.target.closest("button")) e.preventDefault(); lastTap = t; }, {passive: false});   // ダブルタップでの拡大を止める
+
+/* ---------- 道具 ---------- */
+const setOn = (sel, el) => document.querySelectorAll(sel).forEach(x => x.classList.toggle("on", x === el));
+/* ペン・消しゴム：それぞれ3つの太さ（大きさ）を保存しておき、帯の3つのボタンで切り替える。
+   ペン・消しゴムのボタンを長押し（または選んでいる時にもう一度押す）と、今の枠の太さを変えるメニューが出る。変えた値はその枠に保存される */
+const TOOLKEY = "denken_proto_tools";
+let slots = {pen: [1.2, 2.0, 3.6], erase: [6, 12, 24]}, slotIdx = {pen: 1, erase: 1};
+try { const t = JSON.parse(localStorage.getItem(TOOLKEY) || "null"); if (t){ slots = t.slots; slotIdx = t.slotIdx; emode = t.emode || emode; } } catch(e) {}
+const saveTools = () => { try { localStorage.setItem(TOOLKEY, JSON.stringify({slots, slotIdx, emode})); } catch(e) {} };
+function applySlot(){ width = slots.pen[slotIdx.pen]; eraseR = slots.erase[slotIdx.erase]; }
+function setTool(t){ tool = t; setOn("#tools [data-tool]", document.querySelector(`[data-tool="${t}"]`)); paintSlots(); }
+function paintSlots(){
+  const box = $("#slots"), t = tool;
+  box.innerHTML = slots[t].map((v, i) => {
+    const d = t === "pen" ? Math.max(2, Math.min(18, v * 2)) : Math.max(6, Math.min(28, v * 1.1));
+    const dot = t === "pen" ? `<i style="width:${d}px;height:${d}px;background:${color}"></i>` : `<i class="ring" style="width:${d}px;height:${d}px"></i>`;
+    return `<button class="slot${i === slotIdx[t] ? " on" : ""}" data-i="${i}" title="${t === "pen" ? "太さ" : "消す範囲"} ${i + 1}">${dot}</button>`;
+  }).join("");
+}
+$("#slots").addEventListener("click", e => {
+  const b = e.target.closest(".slot"); if (!b) return;
+  const i = +b.dataset.i;
+  if (i === slotIdx[tool]) return openPop(tool);     // 選んでいる枠をもう一度押したら、太さを変えるメニュー
+  slotIdx[tool] = i; applySlot(); saveTools(); paintSlots();
+});
+// メニュー
+const pop = $("#pop"), popSl = $("#popSl");
+function openPop(t){
+  setTool(t);
+  const btn = document.querySelector(`[data-tool="${t}"]`).getBoundingClientRect();
+  $("#popTitle").textContent = t === "pen" ? `ペンの太さ（枠 ${slotIdx.pen + 1}）` : `消しゴムの大きさ（枠 ${slotIdx.erase + 1}）`;
+  Object.assign(popSl, t === "pen" ? {min: 0.6, max: 8, step: 0.2} : {min: 4, max: 40, step: 1});
+  popSl.value = slots[t][slotIdx[t]];
+  $("#popMode").style.display = t === "erase" ? "flex" : "none";
+  $("#popNote").textContent = "動かすと、今選んでいる枠に保存されます。帯の3つのボタンで切り替えられます。";
+  pop.style.left = Math.max(8, btn.left) + "px"; pop.style.top = btn.bottom + 8 + "px";
+  pop.classList.add("on"); showPopVal();
+}
+function showPopVal(){
+  const v = +popSl.value;
+  $("#popVal").textContent = tool === "pen" ? v.toFixed(1) : Math.round(v * 2) + "px";
+  if (tool === "erase"){   // 実際の大きさの円をメニューの右に見せる
+    const r = pop.getBoundingClientRect();
+    Object.assign(ring.style, {display: "block", left: r.right + v + 16 + "px", top: r.top + r.height / 2 + "px", width: v * 2 + "px", height: v * 2 + "px"});
+  }
+}
+popSl.oninput = () => { slots[tool][slotIdx[tool]] = +popSl.value; applySlot(); saveTools(); paintSlots(); showPopVal(); };
+document.querySelectorAll("#emode button").forEach(b => { b.classList.toggle("on", b.dataset.e === emode); b.onclick = () => { emode = b.dataset.e; setOn("#emode button", b); saveTools(); }; });
+document.addEventListener("pointerdown", e => { if (pop.classList.contains("on") && !e.target.closest("#pop") && !e.target.closest("[data-tool]") && !e.target.closest(".slot")){ pop.classList.remove("on"); ring.style.display = "none"; } }, true);
+// ペン・消しゴムのボタン：押す＝持ち替え、長押し（0.45秒）または選んでいる時にもう一度押す＝メニュー
+document.querySelectorAll("#tools [data-tool]").forEach(b => {
+  let timer = null, longed = false;
+  b.addEventListener("pointerdown", () => { longed = false; timer = setTimeout(() => { longed = true; openPop(b.dataset.tool); }, 450); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(t => b.addEventListener(t, () => clearTimeout(timer)));
+  b.addEventListener("contextmenu", e => e.preventDefault());
+  b.onclick = () => {
+    if (longed) return;
+    if (tool === b.dataset.tool) return pop.classList.contains("on") ? (pop.classList.remove("on"), ring.style.display = "none") : openPop(tool);
+    pop.classList.remove("on"); ring.style.display = "none"; setTool(b.dataset.tool);
+  };
+});
+document.querySelectorAll("#tools [data-color]").forEach(b => b.onclick = () => { color = b.dataset.color; setOn("#tools [data-color]", b); setTool("pen"); });
+applySlot(); paintSlots();
+$("#undo").onclick = undo;
+$("#redo").onclick = redo;
+// PC：Ctrl＋Z で取り消し、Ctrl＋Y／Ctrl＋Shift＋Z でやり直し
+document.addEventListener("keydown", e => {
+  if (!(e.ctrlKey || e.metaKey)) return;
+  const k = e.key.toLowerCase();
+  if (k === "z" && !e.shiftKey){ e.preventDefault(); undo(); }
+  else if (k === "y" || (k === "z" && e.shiftKey)){ e.preventDefault(); redo(); }
+});
+$("#clear").onclick = () => { if (strokes.length){ snapshot(); strokes = []; redraw(); } };
+$("#finger").onclick = () => { fingerDraw = !fingerDraw; $("#finger").classList.toggle("on", fingerDraw); };
+window.addEventListener("resize", () => { const r = Z / ZFIT; fitZoom(); Z = ZFIT * r; place(); });
+
+/* ---------- 記録（localStorage：日時・正誤・かかった時間・選んだ番号） ---------- */
+let REC = {v: 1, log: []};
+try { const r = JSON.parse(localStorage.getItem(RECKEY) || "null"); if (r && Array.isArray(r.log)) REC = r; } catch(e) {}
+const saveRec = () => { try { localStorage.setItem(RECKEY, JSON.stringify(REC)); } catch(e) { toast("記録を保存できませんでした"); } };
+function addRec(r){ REC.log.push(r); saveRec(); }
+function popRec(id){ for (let i = REC.log.length - 1; i >= 0; i--) if (REC.log[i].id === id){ REC.log.splice(i, 1); break; } saveRec(); }
+function lastOf(){ const m = {}; REC.log.forEach(r => m[r.id] = r); return m; }   // 問題ごとの最後の結果
+
+/* ---------- ホーム ---------- */
+const UI = {stars: [1, 2], mode: "todo"};
+try { Object.assign(UI, JSON.parse(localStorage.getItem("denken_ui") || "{}")); } catch(e) {}
+const saveUI = () => { try { localStorage.setItem("denken_ui", JSON.stringify(UI)); } catch(e) {} };
+function pickList(list){
+  const last = lastOf();
+  return list.filter(i => UI.stars.includes(i.stars5) && (UI.mode === "all" || !(last[i.id] && last[i.id].ok)))
+             .sort((a, b) => a.stars5 - b.stars5 || a.id.localeCompare(b.id));
+}
+function renderHome(){
+  const last = lastOf();
+  $("#starChips").innerHTML = [1, 2, 3, 4, 5].map(n => `<button class="chip${UI.stars.includes(n) ? " on" : ""}" data-s="${n}">${"★".repeat(n)}</button>`).join("");
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.m === UI.mode));
+  const inStars = ALL.filter(i => UI.stars.includes(i.stars5));
+  const okN = inStars.filter(i => last[i.id] && last[i.id].ok).length, ngN = inStars.filter(i => last[i.id] && !last[i.id].ok).length;
+  $("#totalStat").innerHTML = `選んだ難易度 <b>${inStars.length}</b>問　正解 <b>${okN}</b>　間違い <b>${ngN}</b>　未着手 <b>${inStars.length - okN - ngN}</b>`;
+  const wrong = ALL.filter(i => last[i.id] && !last[i.id].ok);
+  $("#wrongN").textContent = wrong.length; $("#goWrong").disabled = !wrong.length;
+  const chs = [...new Set(ALL.map(i => i.chapter))];
+  $("#chapList").innerHTML = chs.map(ch => {
+    const all = ALL.filter(i => i.chapter === ch), sel = all.filter(i => UI.stars.includes(i.stars5));
+    const ok = sel.filter(i => last[i.id] && last[i.id].ok).length, ng = sel.filter(i => last[i.id] && !last[i.id].ok).length;
+    const n = pickList(all).length, per = [1, 2, 3, 4, 5].map(s => all.filter(i => i.stars5 === s).length);
+    return `<div class="chap"><div><div class="nm">${ch}</div>
+      <div class="sub">選んだ難易度 ${sel.length}問：正解 ${ok}・間違い ${ng}・未着手 ${sel.length - ok - ng}　（全${all.length}問 ${per.map((c, k) => "★" + (k + 1) + "=" + c).join(" ")}）</div>
+      <div class="bar"><i class="ok" style="width:${sel.length ? ok / sel.length * 100 : 0}%"></i><i class="ng" style="width:${sel.length ? ng / sel.length * 100 : 0}%"></i></div></div>
+      <button class="go" data-ch="${ch}"${n ? "" : " disabled"}>${n ? n + "問 解く" : "なし"}</button></div>`;
+  }).join("") || `<div class="card note2">問題データがまだありません。右上の「問題データ」から読み込んでください。</div>`;
+}
+$("#starChips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; const s = +b.dataset.s; UI.stars = UI.stars.includes(s) ? UI.stars.filter(x => x !== s) : [...UI.stars, s].sort(); saveUI(); renderHome(); });
+document.querySelectorAll("#modeSeg button").forEach(b => b.onclick = () => { UI.mode = b.dataset.m; saveUI(); renderHome(); });
+$("#chapList").addEventListener("click", e => { const b = e.target.closest(".go"); if (!b || b.disabled) return; startQueue(pickList(ALL.filter(i => i.chapter === b.dataset.ch))); });
+$("#goWrong").onclick = () => { const last = lastOf(); startQueue(ALL.filter(i => last[i.id] && !last[i.id].ok)); };
+function startQueue(list){ if (!list.length) return; queue = list; idx = 0; wrongs = []; $("#home").hidden = true; show(); }
+function goHome(){ clearInterval(tick); $("#imp").hidden = true; renderHome(); $("#home").hidden = false; }
+$("#toHome").onclick = goHome;
+// 記録の書き出し・読み込み（機種変・バックアップ用）
+$("#exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(REC)], {type: "application/json"}), a = document.createElement("a");
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  a.href = URL.createObjectURL(blob); a.download = `denken_records_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}.json`; a.click();
+};
+$("#importRec").onclick = () => $("#recFile").click();
+$("#recFile").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const r = JSON.parse(await f.text()); if (!r || !Array.isArray(r.log)) throw 0;
+    const key = x => x.id + "|" + x.t, have = new Set(REC.log.map(key));   // 今の記録に足す（重複は除く）
+    r.log.forEach(x => { if (!have.has(key(x))) REC.log.push(x); });
+    REC.log.sort((a, b) => a.t - b.t); saveRec(); renderHome(); toast(`記録を読み込みました（${r.log.length}件）`);
+  } catch(err) { toast("記録のファイルではありません"); }
+  e.target.value = "";
+};
+
+/* ---------- 問題データの取り込み ---------- */
+async function renderImp(){
+  const packs = Object.values(await dbAll("packs")).sort((a, b) => CH_ORDER.indexOf(a.prefix) - CH_ORDER.indexOf(b.prefix));
+  $("#impHave").textContent = packs.length ? "読み込み済み：" + packs.map(p => `${p.chapter} ${p.count}問`).join("／") : "まだ何も読み込んでいません。";
+}
+const impLog = t => { $("#impLog").textContent = t; };
+$("#toImp").onclick = async () => { $("#home").hidden = true; await renderImp(); $("#imp").hidden = false; };
+$("#impBack").onclick = async () => { await loadAll(); goHome(); };
+$("#impPc").onclick = async () => {
+  try {
+    const ix = await (await fetch("pack/index.json", {cache: "no-store"})).json();
+    for (const [k, p] of ix.packs.entries()){
+      impLog(`${p.chapter}（${k + 1} / ${ix.packs.length}）を取得中…`);
+      const pack = await (await fetch("pack/" + p.file, {cache: "no-store"})).json();
+      await importPack(pack, t => impLog(`（${k + 1} / ${ix.packs.length}）${t}`));
+    }
+    impLog(`読み込み終わり：${ix.packs.length}分野`); await renderImp();
+  } catch(err) { impLog("PCから読み込めませんでした：" + err); }
+};
+$("#impFileBtn").onclick = () => $("#impFile").click();
+$("#impFile").onchange = async e => {
+  const fs = [...e.target.files];
+  try {
+    for (const [k, f] of fs.entries()){
+      impLog(`${f.name}（${k + 1} / ${fs.length}）を読んでいます…`);
+      const pack = JSON.parse(await f.text());
+      if (!pack.items || !pack.imgs) throw f.name + " は問題データではありません";
+      await importPack(pack, t => impLog(`（${k + 1} / ${fs.length}）${t}`));
+    }
+    impLog(`読み込み終わり：${fs.length}ファイル`); await renderImp();
+  } catch(err) { impLog("読み込めませんでした：" + err); }
+  e.target.value = "";
+};
+
+// 公開版（https）では PC から読めない（https のページから家の http は読めない）ので、その行を出さない
+if (location.protocol === "https:") $("#impPcRow").style.display = "none";
+
+/* ---------- 起動 ---------- */
+(async () => {
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
+  await loadAll();
+  if (!ALL.length){ await renderImp(); $("#imp").hidden = false; } else goHome();
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(function(){});
+</script>
+</body></html>

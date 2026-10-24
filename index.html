@@ -213,6 +213,9 @@ button{font:inherit;color:inherit}
   <div class="hh"><h1>問題データ</h1><span class="sp"></span><button class="lnk" id="impBack">ホームへ</button></div>
   <div class="card"><div class="note2" id="impHave"></div></div>
   <div class="card">
+    <div class="row"><button class="go" id="impGh">GitHubから取り込む</button><span class="note2">変わった分野だけを自動で取り込みます（記録のバックアップと同じトークンを使う）。トークンを貼ってあれば、起動のたびに自動で確かめます。</span></div>
+    <div class="row" id="impTokRow" style="margin-top:8px"><span class="lab" style="width:90px">トークン</span><input id="impTok" type="password" autocomplete="off" placeholder="github_pat_…（この端末の中にだけ保存）" style="flex:1;height:36px;font-size:15px;padding:0 8px;border:1px solid var(--line);border-radius:8px"><button class="lnk" id="impTokSave">保存</button></div>
+    <div class="note2" style="margin:10px 0 4px">手で入れる時（GitHubが使えない時）：</div>
     <div class="row" id="impPcRow"><button class="go" id="impPc">このPCから読み込む</button><span class="note2">同じWi-FiのPCで配っている時（PCの pack フォルダを読む）</span></div>
     <div class="row" style="margin-top:10px"><button class="go ghost" id="impFileBtn">ファイルから読み込む</button><span class="note2">LocalSend などで受け取った denken_*.json（いくつでも選べる）</span><input type="file" id="impFile" accept=".json,application/json" multiple hidden></div>
     <div id="impLog"></div>
@@ -965,6 +968,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 
 /* ---------- 問題データの取り込み ---------- */
 async function renderImp(){
+  $("#impTokRow").style.display = GH.token ? "none" : "";
   const packs = Object.values(await dbAll("packs")).sort((a, b) => CH_ORDER.indexOf(a.prefix) - CH_ORDER.indexOf(b.prefix));
   $("#impHave").textContent = packs.length ? "読み込み済み：" + packs.map(p => `${p.chapter} ${p.count}問`).join("／") : "まだ何も読み込んでいません。";
 }
@@ -1000,11 +1004,50 @@ $("#impFile").onchange = async e => {
 // 公開版（https）では PC から読めない（https のページから家の http は読めない）ので、その行を出さない
 if (location.protocol === "https:") $("#impPcRow").style.display = "none";
 
+/* ---------- 問題データの自動取り込み（非公開リポジトリ denken-records/data） ---------- */
+const DATAPATH = "data/";
+async function ghRaw(path){
+  const r = await fetch(`https://api.github.com/repos/${GH.repo}/contents/${path}`, {headers: {...ghHeaders(), "Accept": "application/vnd.github.raw"}, cache: "no-store"});
+  if (!r.ok) throw r.status;
+  return r.json();
+}
+let DS_BUSY = false;
+async function dataSync(say){
+  if (!GH.token || DS_BUSY) return 0;
+  DS_BUSY = true;
+  try {
+    say("問題データの版を確かめています…");
+    const man = await ghRaw(DATAPATH + "manifest.json");
+    const have = await dbAll("packs");
+    const todo = man.packs.filter(pk => !have[pk.prefix] || have[pk.prefix].version !== pk.version);
+    for (const [k, pk] of todo.entries()){
+      say(`${pk.chapter}（${k + 1} / ${todo.length}・${pk.mb}MB）を取り込んでいます…`);
+      const pack = await ghRaw(DATAPATH + pk.file);
+      await importPack(pack, t => say(`（${k + 1} / ${todo.length}）${t}`));
+    }
+    say(todo.length ? `${todo.length}分野を取り込みました` : "問題データは最新です");
+    return todo.length;
+  } catch(st) {
+    say("問題データを取り込めませんでした：" + (typeof st === "number" ? ghErr(st) : st)); return -1;
+  } finally { DS_BUSY = false; }
+}
+$("#impGh").onclick = async () => {
+  if (!GH.token){ impLog("先にトークンを貼って「保存」を押してください"); $("#impTok").focus(); return; }
+  const n = await dataSync(impLog); await renderImp(); if (n > 0){ await loadAll(); }
+};
+$("#impTokSave").onclick = async () => {
+  const t = $("#impTok").value.trim(); if (!t){ impLog("トークンを貼ってください"); return; }
+  GH.token = t; saveGH(); $("#impTok").value = ""; renderGH(); $("#impTokRow").style.display = "none";
+  const n = await dataSync(impLog); await renderImp(); if (n > 0) await loadAll();
+  syncNow();
+};
+
 /* ---------- 起動 ---------- */
 (async () => {
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e) {}
   await loadAll();
   if (GH.token) syncNow();   // 起動時にも1回（別の端末で解いた分を取り込む）
+  if (GH.token) dataSync(t => { if (!/最新/.test(t)) toast(t); }).then(async n => { if (n > 0){ await loadAll(); if (!$("#home").hidden || !ALL.length) goHome(); } });
   if (!ALL.length){ await renderImp(); $("#imp").hidden = false; } else goHome();
 })();
 </script>

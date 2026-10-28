@@ -832,7 +832,17 @@ window.addEventListener("resize", () => { const r = Z / ZFIT; fitZoom(); Z = ZFI
 /* ---------- 記録（localStorage：日時・正誤・かかった時間・選んだ番号） ---------- */
 let REC = {v: 1, log: []};
 try { const r = JSON.parse(localStorage.getItem(RECKEY) || "null"); if (r && Array.isArray(r.log)) REC = r; } catch(e) {}
+// ドリルを作り直した（2026-10-29 03:57 配信）。それより前のドリルの記録は番号がずれるので消す（本人「ドリルの記録消していいよ」）。
+// 消した印（del）も残すので、GitHub の記録と混ぜても生き返らない。過去問の記録は触らない。
+const DRILL_V2 = Date.parse("2026-10-29T03:57:00+09:00");
+const oldDrill = x => String(x.id).startsWith("d:") && x.t < DRILL_V2;
+function dropOldDrill(){
+  const old = REC.log.filter(oldDrill); if (!old.length) return false;
+  REC.del = [...new Set([...(REC.del || []), ...old.map(x => x.id + "|" + x.t)])];
+  REC.log = REC.log.filter(x => !oldDrill(x)); return true;
+}
 const saveRec = () => { try { localStorage.setItem(RECKEY, JSON.stringify(REC)); } catch(e) { toast("記録を保存できませんでした"); } };
+if (dropOldDrill()) saveRec();   // 起動時に1回（GitHub へは次の同期で上がる）
 function addRec(r){ REC.log.push(r); saveRec(); syncSoon(); }
 // 「もう一度解く」で消した記録は、消した印（del）を残す。印がないと、先に GitHub へ上がっていた時に混ぜて生き返るため
 function popRec(id){ for (let i = REC.log.length - 1; i >= 0; i--) if (REC.log[i].id === id){ const r = REC.log.splice(i, 1)[0]; (REC.del = REC.del || []).push(r.id + "|" + r.t); break; } saveRec(); syncSoon(); }
@@ -1012,7 +1022,7 @@ async function syncNow(){
       const key = x => x.id + "|" + x.t, have = new Set(REC.log.map(key));
       const del = new Set([...(REC.del || []), ...(remote.del || [])]);
       (remote.log || []).forEach(x => { if (!have.has(key(x))) REC.log.push(x); });
-      REC.del = [...del]; REC.log = REC.log.filter(x => !del.has(key(x)));
+      REC.del = [...del]; REC.log = REC.log.filter(x => !del.has(key(x))); dropOldDrill();
       REC.log.sort((a, b) => a.t - b.t); saveRec();
     }
     const body = {message: "電験の記録 " + stamp(), content: b64e(JSON.stringify({v: REC.v, log: REC.log, del: REC.del || []}))};

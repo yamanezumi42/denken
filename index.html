@@ -52,6 +52,7 @@ button{font:inherit;color:inherit}
 .sl .pv i{display:block;border-radius:50%;background:var(--ink)}
 .sl .pv i.ring{background:transparent;border:1.5px solid var(--ink)}
 #eraserRing{position:fixed;left:0;top:0;border:1.5px solid rgba(0,0,0,.65);box-shadow:0 0 0 1px rgba(255,255,255,.9);border-radius:50%;pointer-events:none;display:none;z-index:30;transform:translate(-50%,-50%)}
+#laser{position:fixed;left:0;top:0;pointer-events:none;display:none;z-index:12}
 #slots{display:flex;gap:4px}
 .slot{width:38px;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;display:grid;place-items:center;cursor:pointer}
 .slot.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:#eef3fd}
@@ -167,6 +168,7 @@ button{font:inherit;color:inherit}
   <div id="tools">
     <button class="tb on" data-tool="pen" title="ペン"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z"/><path d="M14 6l3 3"/></svg></button>
     <button class="tb" data-tool="erase" title="消しゴム"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 20h12"/><path d="M4.5 15.5l9-9a2 2 0 0 1 2.8 0l2.2 2.2a2 2 0 0 1 0 2.8L12 18H7l-2.5-2.5z"/><path d="M9 11l5 5"/></svg></button>
+    <button class="tb" data-tool="laser" title="レーザーポインター"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l9-9"/><circle cx="15.5" cy="8.5" r="2.5" fill="currentColor" stroke="none"/><path d="M15.5 2.5v1.5"/><path d="M21.5 8.5H20"/><path d="M19.7 4.3l-1.1 1.1"/><path d="M19.7 12.7l-1.1-1.1"/><path d="M11.3 4.3l1.1 1.1"/></svg></button>
     <div id="slots"></div>
     <span class="sepv"></span>
     <button class="tb on" data-color="#1b1b1b" title="黒"><span class="dot" style="background:#1b1b1b"></span></button>
@@ -222,6 +224,7 @@ button{font:inherit;color:inherit}
   </div>
 </div></div>
 <div id="eraserRing"></div>
+<canvas id="laser"></canvas>
 <div id="pop"><div class="ph" id="popTitle"></div><div class="prow"><input type="range" id="popSl"><span id="popVal"></span></div><div class="prow" id="popMode"><div class="seg" id="emode"><button data-e="part" class="on">部分消し</button><button data-e="stroke">線ごと</button></div></div><div class="pnote" id="popNote"></div></div>
 <div id="toast"></div>
 <div id="drill" hidden>
@@ -523,6 +526,42 @@ function showRing(e){
   if (tool !== "erase"){ ring.style.display = "none"; return; }
   Object.assign(ring.style, {display: "block", left: e.clientX + "px", top: e.clientY + "px", width: eraseR * 2 + "px", height: eraseR * 2 + "px"});
 }
+/* レーザーポインター：光る点と線。ペンを離して約1秒たつとフェードして消える。strokes・取り消しの履歴には入れない。
+   画面（#scroller）と同じ大きさの別キャンバスに描く。点は手書きと同じ倍率100%の座標で持つ */
+const laser = $("#laser"), lctx = laser.getContext("2d");
+const LASER_HOLD = 1000, LASER_FADE = 400;
+const LZ = {lines: [], on: false, up: 0, raf: 0, timer: 0, box: null, dpr: 1};
+function laserFit(){
+  const r = scroller.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  Object.assign(laser.style, {display: "block", left: r.left + "px", top: r.top + "px", width: r.width + "px", height: r.height + "px"});
+  const w = Math.round(r.width * d), h = Math.round(r.height * d);
+  if (laser.width !== w || laser.height !== h){ laser.width = w; laser.height = h; }
+  LZ.box = r; LZ.dpr = d;
+}
+const laserKick = () => { if (!LZ.raf) LZ.raf = requestAnimationFrame(laserDraw); };
+function laserDraw(){
+  LZ.raf = 0;
+  const now = Date.now(), t = LZ.on ? 0 : now - LZ.up - LASER_HOLD, a = t > 0 ? 1 - t / LASER_FADE : 1;
+  lctx.setTransform(1, 0, 0, 1, 0, 0); lctx.clearRect(0, 0, laser.width, laser.height);
+  if (a <= 0 || !LZ.box){ LZ.lines = []; laser.style.display = "none"; return; }
+  const ir = ink.getBoundingClientRect(), ox = ir.left - LZ.box.left, oy = ir.top - LZ.box.top;
+  const X = q => ox + q.x * Z, Y = q => oy + q.y * Z;
+  lctx.setTransform(LZ.dpr, 0, 0, LZ.dpr, 0, 0);
+  lctx.globalAlpha = a; lctx.lineCap = "round"; lctx.lineJoin = "round";
+  const path = () => { lctx.beginPath(); for (const L of LZ.lines){ if (L.length < 2) continue; lctx.moveTo(X(L[0]), Y(L[0])); for (let i = 1; i < L.length; i++) lctx.lineTo(X(L[i]), Y(L[i])); } };
+  path(); lctx.shadowColor = "#ff3b30"; lctx.shadowBlur = 12; lctx.strokeStyle = "rgba(255,59,48,.35)"; lctx.lineWidth = 9; lctx.stroke();
+  lctx.shadowBlur = 6; lctx.strokeStyle = "#ff3b30"; lctx.lineWidth = 3.5; lctx.stroke();
+  lctx.shadowBlur = 0; lctx.strokeStyle = "rgba(255,225,220,.9)"; lctx.lineWidth = 1.2; lctx.stroke();
+  const last = LZ.lines[LZ.lines.length - 1], tip = last && last[last.length - 1];
+  if (tip){   // ペン先の光る点
+    lctx.beginPath(); lctx.arc(X(tip), Y(tip), 5.5, 0, 7); lctx.shadowColor = "#ff3b30"; lctx.shadowBlur = 16; lctx.fillStyle = "#ff3b30"; lctx.fill();
+    lctx.beginPath(); lctx.arc(X(tip), Y(tip), 2.2, 0, 7); lctx.shadowBlur = 0; lctx.fillStyle = "#fff0ee"; lctx.fill();
+  }
+  lctx.globalAlpha = 1; lctx.shadowBlur = 0;
+  if (!LZ.on){ const wait = LZ.up + LASER_HOLD - now; if (wait > 16){ clearTimeout(LZ.timer); LZ.timer = setTimeout(laserKick, wait); } else laserKick(); }
+}
+function laserStart(p){ clearTimeout(LZ.timer); laserFit(); LZ.on = true; const L = [p]; LZ.lines.push(L); laserKick(); return L; }
+function laserEnd(){ if (!LZ.on) return; LZ.on = false; LZ.up = Date.now(); laserKick(); }
 ink.addEventListener("pointerleave", () => { if (!cur) ring.style.display = "none"; });
 let down = null;   // 押した位置と時刻（動かさずに離したら「選ぶ」）
 ink.addEventListener("pointerdown", e => {
@@ -530,24 +569,29 @@ ink.addEventListener("pointerdown", e => {
   down = {x: e.clientX, y: e.clientY, t: Date.now(), type: e.pointerType};
   if (!canDraw(e)) return;
   e.preventDefault(); try { ink.setPointerCapture(e.pointerId); } catch(err) {}
-  snapshot();
   const p = pt(e);
+  if (tool === "laser"){ cur = {laser: true, pts: laserStart(p)}; return; }   // 履歴に入れない
+  snapshot();
   if (tool === "erase"){ cur = {erase: true}; showRing(e); eraseAt(p); return; }
   cur = {color, w: width, pts: [p]}; strokes.push(cur); drawStroke(cur);
 });
 ink.addEventListener("pointermove", e => {
   if (canDraw(e) && !pinch) showRing(e);           // 消しゴムの時は、ペンの位置に円を出す（PCはマウスを乗せただけでも）
   if (!cur || pinch) return;
-  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  if (!evs.length) evs = [e];   // 合成したイベントでは空になる
   for (const ev of evs){
     const p = pt(ev);
     if (cur.erase){ eraseAt(p); continue; }
+    if (cur.laser){ cur.pts.push(p); continue; }
     const a = cur.pts[cur.pts.length - 1]; cur.pts.push(p);
     ctx.strokeStyle = cur.color; ctx.lineCap = "round"; seg(a, p, cur.w);
   }
+  if (cur.laser) laserKick();
 });
 ink.addEventListener("pointerup", e => {
-  const wasDrawing = cur && !cur.erase;
+  const wasDrawing = cur && !cur.erase && !cur.laser;
+  if (cur && cur.laser) laserEnd();
   if (e.pointerType !== "mouse") ring.style.display = "none";   // iPadは離したら円を消す
   cur = null;
   if (!down || pinch) return;
@@ -563,7 +607,7 @@ ink.addEventListener("pointerup", e => {
   }
   down = null;
 });
-ink.addEventListener("pointercancel", () => { cur = null; down = null; });
+ink.addEventListener("pointercancel", () => { laserEnd(); cur = null; down = null; });
 
 /* ---------- 指2本で拡大・縮小（書いた線と選択肢の枠も一緒に） ----------
    指を動かしている間は #sheet を transform で見た目だけ拡大し（軽い）、離した時に倍率を確定して作り直す。
@@ -576,7 +620,7 @@ ink.addEventListener("touchstart", e => {
   if (stylus || (fingerDraw && e.touches.length === 1)) e.preventDefault();          // ペンで触れた時はスクロールしない
   if (e.touches.length === 2 && !stylus && !tri){
     e.preventDefault();
-    if (cur && !cur.erase){ strokes.pop(); history.pop(); } cur = null; down = null; redraw();
+    if (cur && !cur.erase && !cur.laser){ strokes.pop(); history.pop(); } laserEnd(); cur = null; down = null; redraw();
     const m = mid(e);
     pinch = {d0: dist(...e.touches), z0: Z, sl: scroller.scrollLeft, st: scroller.scrollTop,
              cx: (scroller.scrollLeft + m.x) / Z, cy: (scroller.scrollTop + m.y) / Z, m, m0: m, s: 1, t0: Date.now()};
@@ -611,7 +655,7 @@ ink.addEventListener("touchstart", e => {
   if (e.touches.length !== 3) return;
   e.preventDefault();
   if (pinch){ pinch = null; sheet.style.transform = ""; sheet.style.willChange = ""; }   // 2本指の拡大は取りやめ
-  if (cur && !cur.erase){ strokes.pop(); history.pop(); redraw(); } cur = null; down = null;
+  if (cur && !cur.erase && !cur.laser){ strokes.pop(); history.pop(); redraw(); } laserEnd(); cur = null; down = null;
   const a = avg(e); tri = {x0: a.x, y0: a.y, x: a.x, y: a.y};
 }, {passive: false});
 ink.addEventListener("touchmove", e => { if (tri && e.touches.length === 3){ e.preventDefault(); const a = avg(e); tri.x = a.x; tri.y = a.y; } }, {passive: false});
@@ -701,6 +745,7 @@ function applySlot(){ width = slots.pen[slotIdx.pen]; eraseR = slots.erase[slotI
 function setTool(t){ tool = t; setOn("#tools [data-tool]", document.querySelector(`[data-tool="${t}"]`)); paintSlots(); }
 function paintSlots(){
   const box = $("#slots"), t = tool;
+  if (t === "laser"){ box.innerHTML = ""; return; }   // レーザーは太さ固定
   box.innerHTML = slots[t].map((v, i) => {
     const d = t === "pen" ? Math.max(2, Math.min(18, v * 2)) : Math.max(6, Math.min(28, v * 1.1));
     const dot = t === "pen" ? `<i style="width:${d}px;height:${d}px;background:${color}"></i>` : `<i class="ring" style="width:${d}px;height:${d}px"></i>`;
@@ -717,6 +762,7 @@ $("#slots").addEventListener("click", e => {
 const pop = $("#pop"), popSl = $("#popSl");
 function openPop(t){
   setTool(t);
+  if (t === "laser") return;   // レーザーにはメニューを出さない
   const btn = document.querySelector(`[data-tool="${t}"]`).getBoundingClientRect();
   $("#popTitle").textContent = t === "pen" ? `ペンの太さ（枠 ${slotIdx.pen + 1}）` : `消しゴムの大きさ（枠 ${slotIdx.erase + 1}）`;
   Object.assign(popSl, t === "pen" ? {min: 0.6, max: 8, step: 0.2} : {min: 4, max: 40, step: 1});

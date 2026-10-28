@@ -663,8 +663,7 @@ function endPinch(){
   if (!pinch) return;
   const p = pinch; pinch = null;
   sheet.style.transform = ""; sheet.style.willChange = "";
-  // 2本指で軽くタップ（短く・ほとんど動かさず・大きさも変えず）＝取り消し（GoodNotes と同じ）
-  if (Date.now() - p.t0 < 300 && Math.abs(p.s - 1) < 0.05 && Math.hypot(p.m.x - p.m0.x, p.m.y - p.m0.y) < 12){ undo(); return; }
+  // 2本指のタップで取り消す機能は外した（2026-10-29 本人「2本指でタップしたときに取り消しにするのなしにして」）
   setZoom(p.z0 * p.s, p.cx, p.cy, p.m.x, p.m.y);
 }
 // 3本指で左にスライド＝取り消し、右にスライド＝やり直し（GoodNotes と同じ）。

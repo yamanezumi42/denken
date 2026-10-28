@@ -122,6 +122,8 @@ button{font:inherit;color:inherit}
 .vid{height:42px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;cursor:pointer;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:4px}
 .vid svg{width:18px;height:18px}
 .secth{font-size:13px;color:var(--sub);margin:16px 4px 6px}
+.unit .sub.split{margin-top:2px}
+.outh{display:inline-block;font-size:11px;padding:0 6px;border-radius:8px;background:#fff3cd;color:#7a5b00}
 .tag2{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:#fff3cd;color:#7a5b00;white-space:nowrap}
 #unitTag{display:none}
 /* ドリル */
@@ -209,7 +211,7 @@ button{font:inherit;color:inherit}
       <div class="note2" style="margin-top:6px">トークンは「Fine-grained」で、リポジトリ denken-records だけ・Contents の読み書きだけを許可したものを作って貼ってください。トークンは記録の書き出しにも GitHub にも入りません。</div>
     </div>
   </div>
-  <div class="note2">難易度は電験王の★（5段階）。「まだ正解していない」＝最後に解いた時に正解していない問題と、まだ解いていない問題。同じ分野の中は ★の少ない順 → 本の順。</div>
+  <div class="note2">難易度は電験王の★（5段階）。「まだ正解していない」＝最後に解いた時に正解していない問題と、まだ解いていない問題。単元の中は 動画で足りる問題 → 動画の外 の順、それぞれ ★の少ない順 → 本の順。</div>
 </div></div>
 <div id="imp" hidden><div class="wrap">
   <div class="hh"><h1>問題データ</h1><span class="sp"></span><button class="lnk" id="impBack">ホームへ</button></div>
@@ -364,6 +366,7 @@ async function show(){
   $("#chapName").textContent = it.unit && unitOf(it.unit) ? unitOf(it.unit).title : it.chapter;
   { const t = $("#unitTag"), parts = [];
     if (it.need && it.unit && it.need > it.unit && unitOf(it.need)) parts.push("動画" + it.need + "も必要");
+    if (outside(it)) parts.unshift("動画の外");
     if (it.covered === "no") parts.push("動画に無い内容（解説で学ぶ）"); else if (it.covered === "partial") parts.push("動画に無い知識を含む");
     t.textContent = parts.join("・"); t.style.display = parts.length ? "inline-block" : "none"; }
   $("#src").textContent = `${it.src}　${"★".repeat(it.stars)}${"☆".repeat(5 - it.stars)}`;
@@ -823,10 +826,12 @@ function lastOf(){ const m = {}; REC.log.forEach(r => m[r.id] = r); return m; } 
 const UI = {stars: [1, 2], mode: "todo"};
 try { Object.assign(UI, JSON.parse(localStorage.getItem("denken_ui") || "{}")); } catch(e) {}
 const saveUI = () => { try { localStorage.setItem("denken_ui", JSON.stringify(UI)); } catch(e) {} };
+// 動画の外＝covered が partial / no（応急：単元の紐づけをやり直すまで、単元の中では動画で足りる問題を先に出し、動画の外は末尾にまとめる）
+const outside = i => i.covered === "partial" || i.covered === "no";
 function pickList(list){
   const last = lastOf();
   return list.filter(i => UI.stars.includes(i.stars5) && (UI.mode === "all" || !(last[i.id] && last[i.id].ok)))
-             .sort((a, b) => a.stars5 - b.stars5 || a.id.localeCompare(b.id));
+             .sort((a, b) => outside(a) - outside(b) || a.stars5 - b.stars5 || a.id.localeCompare(b.id));
 }
 function renderHome(){
   const last = lastOf();
@@ -850,11 +855,12 @@ function renderHome(){
   $("#chapList").innerHTML = UNITS.units.filter(u => u.n >= 1 && u.n <= 39).map(u => {
     const all = ALL.filter(i => i.unit === u.n), sel = all.filter(i => UI.stars.includes(i.stars5));
     const ok = sel.filter(i => last[i.id] && last[i.id].ok).length, ng = sel.filter(i => last[i.id] && !last[i.id].ok).length;
-    const n = pickList(all).length, dr = (DRILLS["u" + String(u.n).padStart(2, "0")] || []).length;
+    const pk = pickList(all), n = pk.length, nOut = pk.filter(outside).length, dr = (DRILLS["u" + String(u.n).padStart(2, "0")] || []).length;
     const dOk = (DRILLS["u" + String(u.n).padStart(2, "0")] || []).filter((_, k) => { const r = last[`d:${u.n}:${k}`]; return r && r.ok; }).length;
     const head = sec(u.n) !== lastSec ? `<div class="secth">${lastSec = sec(u.n)}</div>` : "";
     return head + `<div class="unit"><div class="no">${u.n}</div><div><div class="nm">${u.title.replace(/^\d+\./, "")}</div>
       <div class="sub">毎回 <b>${u.per_session.toFixed(2)}</b>問・<b>${u.pts_per_session.toFixed(1)}</b>点　｜　過去問 ${all.length}問（選んだ難易度 ${sel.length}問：正解 ${ok}・間違い ${ng}）${dr ? `　｜　ドリル ${dOk}/${dr}` : ""}</div>
+      ${n ? `<div class="sub split">動画で足りる <b>${n - nOut}</b>問${nOut ? `　<span class="outh">動画の外</span> <b>${nOut}</b>問` : ""}</div>` : ""}
       <div class="bar"><i class="ok" style="width:${sel.length ? ok / sel.length * 100 : 0}%"></i><i class="ng" style="width:${sel.length ? ng / sel.length * 100 : 0}%"></i></div></div>
       <div class="acts"><a class="vid" href="${u.url}" target="_blank" rel="noopener">${play}${u.min}分</a>
         <button class="go ghost" data-dr="${u.n}"${dr ? "" : " disabled"}>ドリル</button>

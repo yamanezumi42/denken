@@ -2,6 +2,7 @@
 <html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>電験 理論</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="katex/katex.min.css">
 <script src="katex/katex.min.js"></script>
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -124,9 +125,24 @@ button{font:inherit;color:inherit}
 .vid svg{width:18px;height:18px}
 .secth{font-size:13px;color:var(--sub);margin:16px 4px 6px}
 .unit .sub.split{margin-top:2px}
-.outh{display:inline-block;font-size:11px;padding:0 6px;border-radius:8px;background:#fff3cd;color:#7a5b00}
 .tag2{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;background:#fff3cd;color:#7a5b00;white-space:nowrap}
 #unitTag{display:none}
+#unitTag svg{width:14px;height:14px;vertical-align:-2px;margin-right:2px}
+/* 正解・間違いのアイコン（丸・バツ） */
+.ic{display:inline-block;width:1em;height:1em;vertical-align:-.12em}
+.ic.ok{color:var(--ok)}
+.ic.ng{color:var(--ng)}
+.unit .sub .ic{width:13px;height:13px;vertical-align:-2px;margin:0 2px 0 6px}
+#judge .ic,#dJudge .ic{width:18px;height:18px;vertical-align:-4px}
+#judge .ic + .ic{margin-left:8px}
+#doneText .ic{width:22px;height:22px;vertical-align:-4px;margin:0 4px 0 12px}
+/* ホーム下のタブ */
+#home .wrap{padding-bottom:96px}
+#foot{position:fixed;left:0;right:0;bottom:0;z-index:16;display:flex;background:#fff;border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#foot button{flex:1;height:58px;border:0;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;color:var(--sub);cursor:pointer;position:relative}
+#foot button svg{width:24px;height:24px}
+#foot button.on{color:var(--accent);font-weight:bold}
+#foot button.on::before{content:"";position:absolute;top:0;left:30%;right:30%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
 /* ドリル */
 #drill{position:fixed;inset:0;background:var(--bg);z-index:18;display:flex;flex-direction:column}
 #drill[hidden]{display:none}
@@ -202,27 +218,25 @@ button{font:inherit;color:inherit}
       <button class="go ghost" id="goWrong">間違えた問題（<span id="wrongN">0</span>）</button></div>
   </div>
   <div id="chapList"></div>
-  <div class="note2" style="margin:8px 4px 16px">毎回＝24回分（平成18年〜令和7年下期）の過去問を単元に分けて数えた、1回の試験あたりの問題数と点数（A問題5点・B問題10点。B問題の選択問題は両方を数えている）。</div>
   <div class="card" id="ghCard">
     <div class="row"><span class="lab">記録のバックアップ（GitHub）</span><span class="sp"></span><span class="note2" id="ghState"></span><button class="lnk" id="ghNow">今すぐ上げる</button><button class="lnk" id="ghEdit">設定</button></div>
     <div id="ghForm" hidden style="margin-top:10px">
       <div class="row"><span class="lab" style="width:90px">リポジトリ</span><input id="ghRepo" style="flex:1;height:36px;font-size:15px;padding:0 8px;border:1px solid var(--line);border-radius:8px" value="yamanezumi42/denken-records"></div>
-      <div class="row" style="margin-top:8px"><span class="lab" style="width:90px">トークン</span><input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_…（この端末の中にだけ保存）" style="flex:1;height:36px;font-size:15px;padding:0 8px;border:1px solid var(--line);border-radius:8px"></div>
+      <div class="row" style="margin-top:8px"><span class="lab" style="width:90px">トークン</span><input id="ghToken" type="password" autocomplete="off" placeholder="github_pat_…" style="flex:1;height:36px;font-size:15px;padding:0 8px;border:1px solid var(--line);border-radius:8px"></div>
       <div class="row" style="margin-top:8px"><button class="go" id="ghSave">保存して上げる</button><button class="lnk" id="ghClear">トークンを消す</button></div>
-      <div class="note2" style="margin-top:6px">トークンは「Fine-grained」で、リポジトリ denken-records だけ・Contents の読み書きだけを許可したものを作って貼ってください。トークンは記録の書き出しにも GitHub にも入りません。</div>
     </div>
   </div>
-  <div class="note2">難易度は電験王の★（5段階）。「まだ正解していない」＝最後に解いた時に正解していない問題と、まだ解いていない問題。単元の中は 動画で足りる問題 → 動画の外 の順、それぞれ ★の少ない順 → 本の順。</div>
-</div></div>
+</div>
+<nav id="foot"><button data-tab="video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg>動画</button><button data-tab="unit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.5C10 5 7 4.5 4 5v13c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V5c-3-.5-6 0-8 1.5z"/><path d="M12 6.5v13"/></svg>単元学習</button></nav>
+</div>
 <div id="imp" hidden><div class="wrap">
   <div class="hh"><h1>問題データ</h1><span class="sp"></span><button class="lnk" id="impBack">ホームへ</button></div>
   <div class="card"><div class="note2" id="impHave"></div></div>
   <div class="card">
-    <div class="row"><button class="go" id="impGh">GitHubから取り込む</button><span class="note2">変わった分野だけを自動で取り込みます（記録のバックアップと同じトークンを使う）。トークンを貼ってあれば、起動のたびに自動で確かめます。</span></div>
-    <div class="row" id="impTokRow" style="margin-top:8px"><span class="lab" style="width:90px">トークン</span><input id="impTok" type="password" autocomplete="off" placeholder="github_pat_…（この端末の中にだけ保存）" style="flex:1;height:36px;font-size:15px;padding:0 8px;border:1px solid var(--line);border-radius:8px"><button class="lnk" id="impTokSave">保存</button></div>
-    <div class="note2" style="margin:10px 0 4px">手で入れる時（GitHubが使えない時）：</div>
-    <div class="row" id="impPcRow"><button class="go" id="impPc">このPCから読み込む</button><span class="note2">同じWi-FiのPCで配っている時（PCの pack フォルダを読む）</span></div>
-    <div class="row" style="margin-top:10px"><button class="go ghost" id="impFileBtn">ファイルから読み込む</button><span class="note2">LocalSend などで受け取った denken_*.json（いくつでも選べる）</span><input type="file" id="impFile" accept=".json,application/json" multiple hidden></div>
+    <div class="row"><button class="go" id="impGh">GitHubから取り込む</button></div>
+    <div class="row" id="impTokRow" style="margin-top:8px"><span class="lab" style="width:90px">トークン</span><input id="impTok" type="password" autocomplete="off" placeholder="github_pat_…" style="flex:1;height:36px;font-size:15px;padding:0 8px;border:1px solid var(--line);border-radius:8px"><button class="lnk" id="impTokSave">保存</button></div>
+    <div class="row" id="impPcRow" style="margin-top:10px"><button class="go" id="impPc">このPCから読み込む</button></div>
+    <div class="row" style="margin-top:10px"><button class="go ghost" id="impFileBtn">ファイルから読み込む</button><input type="file" id="impFile" accept=".json,application/json" multiple hidden></div>
     <div id="impLog"></div>
   </div>
 </div></div>
@@ -239,7 +253,7 @@ button{font:inherit;color:inherit}
     <div id="dwrite" hidden>
       <canvas id="dpad"></canvas>
       <div class="drow"><button class="lnk" id="dClear">書いたものを消す</button><span class="sp"></span><button class="go" id="dShow">模範解答を見る</button></div>
-      <div class="drow" id="dSelf" hidden><span class="lab">書けた？</span><button class="go" id="dOk">書けた</button><button class="go ghost" id="dNg">書けなかった</button></div>
+      <div class="drow" id="dSelf" hidden><button class="go ghost" id="dOk" title="書けた" style="min-width:64px"><svg class="ic ok" style="width:22px;height:22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="8"/></svg></button><button class="go ghost" id="dNg" title="書けなかった" style="min-width:64px"><svg class="ic ng" style="width:22px;height:22px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     </div>
     <div id="dexp" hidden></div>
   </div></div>
@@ -285,6 +299,10 @@ const unitOf = n => UNITS && UNITS.units.find(u => u.n === n);
 const ZOOM = 3, PX_PER_PT = 14 / 10.5, BASE = PX_PER_PT / ZOOM;   // 画像1px → 画面のpx（倍率100%）
 const MARGIN = 10, GAP = 24, PAD_BELOW = 520;
 const $ = s => document.querySelector(s);
+// 正解＝丸、間違い＝バツ、動画＝再生の枠（自作の単色アイコン）
+const IC_OK = '<svg class="ic ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="12" cy="12" r="8"/></svg>';
+const IC_NG = '<svg class="ic ng" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const PLAY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg>';
 const sheet = $("#sheet"), scroller = $("#scroller"), ink = $("#ink"), ctx = ink.getContext("2d");
 
 let queue = [], idx = 0, wrongs = [], picked = [], answered = false, startAt = 0, tick = null;
@@ -365,11 +383,8 @@ async function show(){
   answered = false; picked = it.answer.map(() => null);
   $("#pos").textContent = `${idx + 1} / ${queue.length}`;
   $("#chapName").textContent = it.unit && unitOf(it.unit) ? unitOf(it.unit).title : it.chapter;
-  { const t = $("#unitTag"), parts = [];
-    if (it.need && it.unit && it.need > it.unit && unitOf(it.need)) parts.push("動画" + it.need + "も必要");
-    if (outside(it)) parts.unshift("動画の外");
-    if (it.covered === "no") parts.push("動画に無い内容（解説で学ぶ）"); else if (it.covered === "partial") parts.push("動画に無い知識を含む");
-    t.textContent = parts.join("・"); t.style.display = parts.length ? "inline-block" : "none"; }
+  { const t = $("#unitTag"), need = it.need && it.unit && it.need > it.unit && unitOf(it.need);   // 先の単元の動画も使う問題＝動画のアイコン＋単元の番号
+    t.innerHTML = need ? PLAY + it.need : ""; t.style.display = need ? "inline-block" : "none"; }
   $("#src").textContent = `${it.src}　${"★".repeat(it.stars)}${"☆".repeat(5 - it.stars)}`;
   $("#judge").className = ""; $("#judge").textContent = "";
   $("#next").disabled = true; $("#next").textContent = "次の問題へ";
@@ -411,7 +426,7 @@ async function judge(){
   const sec = Math.round((Date.now() - startAt) / 1000);
   const ok = it.answer.every((a, r) => picked[r] === a);
   const j = $("#judge"); j.className = ok ? "ok" : "ng";
-  j.textContent = ok ? `正解（${sec}秒）` : `不正解　正解は ${it.answer.map((a, r) => (it.answer.length > 1 ? `(${"ab"[r]})` : "") + "①②③④⑤"[a-1]).join(" ")}`;
+  j.innerHTML = ok ? `${IC_OK}${sec}秒` : `${IC_NG}${IC_OK}${it.answer.map((a, r) => (it.answer.length > 1 ? `(${"ab"[r]})` : "") + "①②③④⑤"[a-1]).join(" ")}`;
   addRec({id: it.id, t: Date.now(), ok, sec, picked: picked.slice()});
   lastWrongAdded = !ok && !wrongs.includes(it);
   if (lastWrongAdded) wrongs.push(it);
@@ -456,7 +471,7 @@ $("#retry").onclick = () => {
 $("#next").onclick = () => {
   idx++;
   if (idx < queue.length) return show();
-  $("#doneText").textContent = wrongs.length ? `${queue.length}問中 ${queue.length - wrongs.length}問正解。間違えた問題が${wrongs.length}問あります。` : `${queue.length}問 全部正解です。`;
+  $("#doneText").innerHTML = `${IC_OK}<b>${queue.length - wrongs.length}</b> / ${queue.length}` + (wrongs.length ? `${IC_NG}<b>${wrongs.length}</b>` : "");
   $("#again").hidden = !wrongs.length;
   $("#done").classList.add("on");
 };
@@ -774,7 +789,6 @@ function openPop(t){
   Object.assign(popSl, t === "pen" ? {min: 0.6, max: 8, step: 0.2} : {min: 4, max: 40, step: 1});
   popSl.value = slots[t][slotIdx[t]];
   $("#popMode").style.display = t === "erase" ? "flex" : "none";
-  $("#popNote").textContent = "動かすと、今選んでいる枠に保存されます。帯の3つのボタンで切り替えられます。";
   pop.style.left = Math.max(8, btn.left) + "px"; pop.style.top = btn.bottom + 8 + "px";
   pop.classList.add("on"); showPopVal();
 }
@@ -826,57 +840,61 @@ function popRec(id){ for (let i = REC.log.length - 1; i >= 0; i--) if (REC.log[i
 function lastOf(){ const m = {}; REC.log.forEach(r => m[r.id] = r); return m; }   // 問題ごとの最後の結果（ドリルは id が "d:単元:番号"）
 
 /* ---------- ホーム ---------- */
-const UI = {stars: [1, 2], mode: "todo"};
+const UI = {stars: [1, 2], mode: "todo", tab: "video"};
 try { Object.assign(UI, JSON.parse(localStorage.getItem("denken_ui") || "{}")); } catch(e) {}
+if (UI.tab !== "unit") UI.tab = "video";
 const saveUI = () => { try { localStorage.setItem("denken_ui", JSON.stringify(UI)); } catch(e) {} };
-// 動画の外＝covered が partial / no（応急：単元の紐づけをやり直すまで、単元の中では動画で足りる問題を先に出し、動画の外は末尾にまとめる）
-const outside = i => i.covered === "partial" || i.covered === "no";
+// 下のタブ：動画＝covered が yes（動画で習う問題）／単元学習＝partial と no
+const inTab = i => UI.tab === "video" ? i.covered === "yes" : i.covered !== "yes";
+const TALL = () => ALL.filter(inTab);
 function pickList(list){
   const last = lastOf();
-  return list.filter(i => UI.stars.includes(i.stars5) && (UI.mode === "all" || !(last[i.id] && last[i.id].ok)))
-             .sort((a, b) => outside(a) - outside(b) || a.stars5 - b.stars5 || a.id.localeCompare(b.id));
+  return list.filter(i => inTab(i) && UI.stars.includes(i.stars5) && (UI.mode === "all" || !(last[i.id] && last[i.id].ok)))
+             .sort((a, b) => a.stars5 - b.stars5 || a.id.localeCompare(b.id));
 }
 function renderHome(){
-  const last = lastOf();
+  const last = lastOf(), T = TALL();
+  document.querySelectorAll("#foot button").forEach(b => b.classList.toggle("on", b.dataset.tab === UI.tab));
   $("#starChips").innerHTML = [1, 2, 3, 4, 5].map(n => `<button class="chip${UI.stars.includes(n) ? " on" : ""}" data-s="${n}">${"★".repeat(n)}</button>`).join("");
   document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.m === UI.mode));
-  const inStars = ALL.filter(i => UI.stars.includes(i.stars5));
+  const inStars = T.filter(i => UI.stars.includes(i.stars5));
   const okN = inStars.filter(i => last[i.id] && last[i.id].ok).length, ngN = inStars.filter(i => last[i.id] && !last[i.id].ok).length;
-  $("#totalStat").innerHTML = `選んだ難易度 <b>${inStars.length}</b>問　正解 <b>${okN}</b>　間違い <b>${ngN}</b>　未着手 <b>${inStars.length - okN - ngN}</b>`;
-  const wrong = ALL.filter(i => last[i.id] && !last[i.id].ok);
+  $("#totalStat").innerHTML = `選んだ難易度 <b>${inStars.length}</b>問　${IC_OK} <b>${okN}</b>　${IC_NG} <b>${ngN}</b>　未着手 <b>${inStars.length - okN - ngN}</b>`;
+  const wrong = T.filter(i => last[i.id] && !last[i.id].ok);
   $("#wrongN").textContent = wrong.length; $("#goWrong").disabled = !wrong.length;
   if (!UNITS){   // 単元の一覧がまだ無い時（古い包みだけ入っている）は分野の順で出す
     const chs = [...new Set(ALL.map(i => i.chapter))];
     $("#chapList").innerHTML = chs.map(ch => { const n = pickList(ALL.filter(i => i.chapter === ch)).length;
-      return `<div class="unit"><div class="no">-</div><div><div class="nm">${ch}</div><div class="sub">問題データを入れ直すと、電験革命の単元順になります</div></div><div class="acts"><button class="go" data-ch="${ch}"${n ? "" : " disabled"}>${n ? n + "問 解く" : "なし"}</button></div></div>`; }).join("")
-      || `<div class="card note2">問題データがまだありません。右上の「問題データ」から読み込んでください。</div>`;
+      return `<div class="unit"><div class="no">-</div><div><div class="nm">${ch}</div></div><div class="acts"><button class="go" data-ch="${ch}"${n ? "" : " disabled"}>${n ? n + "問 解く" : "なし"}</button></div></div>`; }).join("")
+      || `<div class="card note2">問題データなし</div>`;
     return;
   }
-  const play = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor"/></svg>';
   const sec = n => n <= 13 ? "直流回路・過渡現象" : n <= 22 ? "単相交流" : n <= 26 ? "三相交流" : n <= 30 ? "静電気" : n <= 35 ? "磁気" : n <= 38 ? "電子理論" : "電気計測";
   let lastSec = "";
-  $("#chapList").innerHTML = UNITS.units.filter(u => u.n >= 1 && u.n <= 39).map(u => {
-    const all = ALL.filter(i => i.unit === u.n), sel = all.filter(i => UI.stars.includes(i.stars5));
+  // 動画タブは全39単元（0問の単元も行を残す・解くは出さない）。単元学習タブはこの組の問題がある単元だけ
+  $("#chapList").innerHTML = UNITS.units.filter(u => u.n >= 1 && u.n <= 39 && (UI.tab === "video" || T.some(i => i.unit === u.n))).map(u => {
+    const all = T.filter(i => i.unit === u.n), sel = all.filter(i => UI.stars.includes(i.stars5));
     const ok = sel.filter(i => last[i.id] && last[i.id].ok).length, ng = sel.filter(i => last[i.id] && !last[i.id].ok).length;
-    const pk = pickList(all), n = pk.length, nOut = pk.filter(outside).length, dr = (DRILLS["u" + String(u.n).padStart(2, "0")] || []).length;
+    const n = pickList(all).length, dr = (DRILLS["u" + String(u.n).padStart(2, "0")] || []).length;
     const dOk = (DRILLS["u" + String(u.n).padStart(2, "0")] || []).filter((_, k) => { const r = last[`d:${u.n}:${k}`]; return r && r.ok; }).length;
     const head = sec(u.n) !== lastSec ? `<div class="secth">${lastSec = sec(u.n)}</div>` : "";
+    const solve = !all.length ? "" : `<button class="go" data-un="${u.n}"${n ? "" : " disabled"}>${n ? n + "問 解く" : "なし"}</button>`;
     return head + `<div class="unit"><div class="no">${u.n}</div><div><div class="nm">${u.title.replace(/^\d+\./, "")}</div>
-      <div class="sub">毎回 <b>${u.per_session.toFixed(2)}</b>問・<b>${u.pts_per_session.toFixed(1)}</b>点　｜　過去問 ${all.length}問（選んだ難易度 ${sel.length}問：正解 ${ok}・間違い ${ng}）${dr ? `　｜　ドリル ${dOk}/${dr}` : ""}</div>
-      ${n ? `<div class="sub split">動画で足りる <b>${n - nOut}</b>問${nOut ? `　<span class="outh">動画の外</span> <b>${nOut}</b>問` : ""}</div>` : ""}
+      <div class="sub">毎回 <b>${u.per_session.toFixed(2)}</b>問・<b>${u.pts_per_session.toFixed(1)}</b>点　｜　過去問 ${all.length}問（選んだ難易度 ${sel.length}問${IC_OK}${ok}${IC_NG}${ng}）${dr ? `　｜　ドリル ${dOk}/${dr}` : ""}</div>
       <div class="bar"><i class="ok" style="width:${sel.length ? ok / sel.length * 100 : 0}%"></i><i class="ng" style="width:${sel.length ? ng / sel.length * 100 : 0}%"></i></div></div>
-      <div class="acts"><a class="vid" href="${u.url}" target="_blank" rel="noopener">${play}${u.min}分</a>
+      <div class="acts"><a class="vid" href="${u.url}" target="_blank" rel="noopener">${PLAY}${u.min}分</a>
         <button class="go ghost" data-dr="${u.n}"${dr ? "" : " disabled"}>ドリル</button>
-        <button class="go" data-un="${u.n}"${n ? "" : " disabled"}>${n ? n + "問 解く" : "なし"}</button></div></div>`;
+        ${solve}</div></div>`;
   }).join("");
 }
+document.querySelectorAll("#foot button").forEach(b => b.onclick = () => { if (UI.tab === b.dataset.tab) return; UI.tab = b.dataset.tab; saveUI(); renderHome(); $("#home").scrollTop = 0; });
 $("#starChips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; const s = +b.dataset.s; UI.stars = UI.stars.includes(s) ? UI.stars.filter(x => x !== s) : [...UI.stars, s].sort(); saveUI(); renderHome(); });
 document.querySelectorAll("#modeSeg button").forEach(b => b.onclick = () => { UI.mode = b.dataset.m; saveUI(); renderHome(); });
 $("#chapList").addEventListener("click", e => { const b = e.target.closest(".go"); if (!b || b.disabled) return;
   if (b.dataset.dr) return startDrill(+b.dataset.dr);
   if (b.dataset.un) return startQueue(pickList(ALL.filter(i => i.unit === +b.dataset.un)));
   startQueue(pickList(ALL.filter(i => i.chapter === b.dataset.ch))); });
-$("#goWrong").onclick = () => { const last = lastOf(); startQueue(ALL.filter(i => last[i.id] && !last[i.id].ok)); };
+$("#goWrong").onclick = () => { const last = lastOf(); startQueue(TALL().filter(i => last[i.id] && !last[i.id].ok)); };
 function startQueue(list){ if (!list.length) return; queue = list; idx = 0; wrongs = []; $("#home").hidden = true; show(); }
 function goHome(){ clearInterval(tick); $("#imp").hidden = true; renderHome(); renderGH(); $("#home").hidden = false; }
 $("#toHome").onclick = goHome;
@@ -930,7 +948,7 @@ function drillDone(ok){
   const it = DQ.list[DQ.i];
   addRec({id: `d:${DQ.unit}:${it.k}`, t: Date.now(), ok, sec: Math.round((Date.now() - DQ.start) / 1000), drill: 1});
   if (!ok) DQ.wrong.push(it);
-  const j = $("#dJudge"); j.textContent = ok ? "正解" : "不正解"; j.style.cssText = "font-weight:bold;padding:6px 12px;border-radius:8px;" + (ok ? "background:var(--okbg);color:var(--ok)" : "background:var(--ngbg);color:var(--ng)");
+  const j = $("#dJudge"); j.innerHTML = ok ? IC_OK : IC_NG; j.style.cssText = "font-weight:bold;padding:6px 12px;border-radius:8px;" + (ok ? "background:var(--okbg);color:var(--ok)" : "background:var(--ngbg);color:var(--ng)");
   $("#dexp").innerHTML = (it.type === "write" ? "<b>模範解答</b>　" + tex(it.model) + "<br>" : "") + tex(it.exp || ""); $("#dexp").hidden = false;
   $("#dNext").disabled = false; $("#dNext").textContent = DQ.i + 1 < DQ.list.length ? "次へ" : (DQ.wrong.length ? "間違えた問題をもう一度" : "終わる");
 }
@@ -968,7 +986,7 @@ const b64e = s => btoa(unescape(encodeURIComponent(s))), b64d = s => decodeURICo
 const stamp = () => { const d = new Date(), p = n => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
 function ghErr(st){ return st === 401 ? "トークンが正しくありません" : st === 403 ? "トークンに書き込みの許可がありません" : st === 404 ? "リポジトリが見つかりません（名前か、トークンの対象を確認）" : "上げられませんでした（" + st + "）"; }
 function renderGH(){
-  $("#ghState").textContent = !GH.token ? "未設定（記録は端末の中だけ）" : GH.err ? "失敗：" + GH.err : GH.at ? "最後に上げた時刻 " + GH.at : "まだ上げていません";
+  $("#ghState").textContent = !GH.token ? "未設定" : GH.err ? "失敗：" + GH.err : GH.at ? "最後に上げた時刻 " + GH.at : "まだ上げていません";
   $("#ghState").style.color = GH.err ? "var(--ng)" : "";
   $("#ghNow").hidden = !GH.token;
 }

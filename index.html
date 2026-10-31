@@ -849,6 +849,10 @@ function popRec(id){ for (let i = REC.log.length - 1; i >= 0; i--) if (REC.log[i
 function lastOf(){ const m = {}; REC.log.forEach(r => m[r.id] = r); return m; }   // 問題ごとの最後の結果（ドリルは id が "d:単元:番号"）
 
 /* ---------- ホーム ---------- */
+// 2026-10-31 教科書の形に作り直すまで、単元の一覧・下のタブ・絞り込み・間違えた問題・ドリルの入口・GitHubの設定欄を隠す。
+// true に戻せば元の画面に戻る（コードは消していない）。記録・GitHub への自動バックアップ・問題データの自動取り込みは動いたまま。
+const SHOW_UNITS = false;
+if (!SHOW_UNITS) ["#home .wrap > .card:not(#ghCard)", "#chapList", "#ghCard", "#foot"].forEach(q => document.querySelectorAll(q).forEach(el => el.style.display = "none"));
 const UI = {stars: [1, 2], mode: "todo", tab: "video"};
 try { Object.assign(UI, JSON.parse(localStorage.getItem("denken_ui") || "{}")); } catch(e) {}
 if (UI.tab !== "unit") UI.tab = "video";

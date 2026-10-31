@@ -1,13 +1,11 @@
 /* 単元3「合成抵抗」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(3, function(H){
 var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
-// 単元3の図（自作）。共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
-// 3-1：直列（pser）・直並列（psp）に、電位を見る点を足した物。形と部品の id は単元2の ser・sp と同じ（check_iarrow.py が id で図の種類を見分ける）。
-//   線の部品の id は「同じ電位の線」のまとまりで強調する（u03.py の zhi・zmid・zlo）。
+// 単元3の図（自作）の、節の間で共通の部品。共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
+// 節の図は u03/sN_scenes.js（u03.py が番号順につなぎ、KINDS・FLOWK を1つにまとめる）。このファイルは書き換えない（足したい部品は自分の節のファイルへ）。
 // 名前 L[k]：文字（そのまま）か [前, 後]（p[k + "v"] で前→後へ入れ替える）。矢印の濃さ＝p[k + "o"]（無ければ 1）、
 // 電圧の矢印の伸び＝p[k + "d"]（無ければ 1）。問題の画面の図は p を渡さない＝全部出た形。
 // 電流は＋極（電池の長い線・x=752）から出て、下の線を左へ → 左の線を上へ → 上の線を右へ。抵抗は左の端が高い電位。
-// 3-2 以降の図はこのファイルに足す（KINDS・FLOWK に入れる）。
 function lab3(d, id, x, y, spec, p, k, o, opt){
   if (spec === undefined || spec === null) return;
   if (Array.isArray(spec)) swapText(d, id, x, y, spec[0], spec[1], pv(p, k + "v"), o, opt);
@@ -52,6 +50,8 @@ function pt3(d, k, x, y, L, p, side){
     if (P.v !== undefined) lab3(d, "p" + k + "t", x, y - 32, P.v, p, "p" + k, vo);
   }
 }
+// ---- 3-1 の図：直列（pser）・直並列（psp）に、電位を見る点を足した物。形は単元2の ser・sp と同じ。
+//   線の部品の id は「同じ電位の線」のまとまりで強調する（s1.py の zhi・zmid・zlo）。
 // ---- 3-1 直列と電位：上の線に R1（x=640）・R2（x=880）。
 // 点：a（上の線・R1 の前）・d（下の線・＋極の側）＝＋極と同じ電位／c（R1 と R2 の間）／b（上の線・R2 の後）・e（下の線・－極の側）＝－極と同じ電位
 // 線のまとまり：＋極の側＝L・w1、R1 と R2 の間＝wm、－極の側＝w2・Rw
@@ -86,29 +86,59 @@ function tbPsp(d, p, L){
   vArrow3(d, "v1", 580, 360, L, "v1", p);
   pt3(d, "a", 600, yb, L, p); pt3(d, "c", 725, 440, L, p); pt3(d, "b", 930, yb, L, p);
 }
-var KINDS = {pser: tbPser, psp: tbPsp};
-// 電流の点の通り道（＋極から出る向き）。点の間隔＝base / I。L.fl＝[全体, 上の道, 下の道] の電流の比
+// ---- 3-2 直列の合成抵抗（s2ser）：上の線に抵抗を2つか3つ直列に並べ、その下に「端から端まで＝合成抵抗 R」の寸法線。
+// 抵抗の置き場所：3つ（L.r3 がある）＝x=600・760・920／2つ＝x=640・880。名前は抵抗の上（y=330）。
+// 寸法線：R1 の左の端から最後の抵抗の右の端まで（y=430）、名前 L.R は寸法線の下（y=462）。伸び＝p.Rd（無ければ 1）、名前の入れ替え＝p.Rv。
+// 説明のスライドで R3 を後から出す：p.r3o（0＝R3 の所はただの線・1＝R3）、寸法線の右の端＝p.Rx（0＝R2 の右の端・1＝R3 の右の端）。
+// L.Rx があれば、寸法線が伸びるのに合わせて名前を L.R から L.Rx へ入れ替える（R3 をつないだ後の値）。
+// 線の部品の id：s2w0（左の角〜R1）・s2w1（R1〜R2）・s2w2（R2〜R3 または R2〜右の角）・s2w3（R3〜右の角）・s2wx（R3 が無い時の R3 の所の線）、
+// 左と下の線＝L・Rw（電池は下の線の真ん中）。電流は＋極から出て、下の線を左へ → 左の線を上へ → 上の線を右へ。
+function tbS2ser(d, p, L){
+  var yb = 560, y = 360, three = L.r3 !== undefined, xs = three ? [600, 760, 920] : [640, 880];
+  var r3o = three ? pv(p, "r3o", 1) : 0;
+  d.wire("L", [[478, y], [478, yb], [752, yb]]);
+  d.wire("Rw", [[772, yb], [1045, yb], [1045, y]]);
+  d.wire("s2w0", [[478, y], [xs[0] - 30, y]]);
+  d.wire("s2w1", [[xs[0] + 30, y], [xs[1] - 30, y]]);
+  if (three) {
+    d.wire("s2w2", [[xs[1] + 30, y], [xs[2] - 30, y]]);
+    d.wire("s2w3", [[xs[2] + 30, y], [1045, y]]);
+    if (r3o < 1) d.wire("s2wx", [[xs[2] - 30, y], [xs[2] + 30, y]], {o: 1 - r3o});
+    d.res("r3", xs[2], y, "h", {o: r3o});
+    lab3(d, "r3t", xs[2], y - 30, L.r3, p, "r3", r3o);
+  } else d.wire("s2w2", [[xs[1] + 30, y], [1045, y]]);
+  srcPart3(d, yb, L, p);
+  resL3(d, "r1", xs[0], y, L, "r1", p); resL3(d, "r2", xs[1], y, L, "r2", p);
+  if (L.R !== undefined) {
+    var xl = xs[0] - 30, xr2 = xs[1] + 30, xr = three ? xr2 + (xs[2] + 30 - xr2) * pv(p, "Rx", 1) : xr2;
+    var w = d.dim("Rd", xl, xr, 384, 440, 430, pv(p, "Rd", 1), {}), rx = three && L.Rx !== undefined ? pv(p, "Rx", 1) : 0;
+    lab3(d, "Rt", (xl + xr) / 2, 464, L.R, p, "R", w * (1 - rx));
+    if (rx > 0) d.text("Rut", (xl + xr) / 2, 464, L.Rx, {o: w * rx});     // R3 をつないだ後の合成抵抗の名前（L.Rx）
+  }
+}
+var KINDS = {pser: tbPser, psp: tbPsp, s2ser: tbS2ser};
+// 電流の点の通り道（＋極から出る向き）。点の間隔＝base / I（I＝その道の電流の比）
 var FLOWK = {
   pser: function(p, L){
     var yb = 560;
     return {o: pv(p, "co"), base: 110, paths: [{I: 1, pts: [[752, yb], [478, yb], [478, 360], [1045, 360], [1045, yb], [772, yb]]}]};
   },
-  psp: function(p, L){
+  psp: function(p, L){              // L.fl＝[全体, 上の道, 下の道] の電流の比
     var yb = 640, f = L.fl || [2, 1, 1], xl = 680, xr = 1010;
     return {o: pv(p, "co"), base: 200, paths: [
       {I: f[0], pts: [[752, yb], [478, yb], [478, 360], [xl, 360]]},
       {I: f[1], pts: [[xl, 360], [xl, 280], [xr, 280], [xr, 360]]},
       {I: f[2], pts: [[xl, 360], [xl, 440], [xr, 440], [xr, 360]]},
       {I: f[0], pts: [[xr, 360], [1045, 360], [1045, yb], [772, yb]]}]};
+  },
+  s2ser: function(p, L){
+    var yb = 560;
+    return {o: pv(p, "co"), base: 110, paths: [{I: 1, pts: [[752, yb], [478, yb], [478, 360], [1045, 360], [1045, yb], [772, yb]]}]};
   }
 };
 
-// 単元3の練習問題の作り方。共通の道具（rngOf・pick・choices・num・qv・qf・nice・distinct など）は tb_gen.js。
-// 3-1 電位と電圧降下：抵抗の無い線でつながった点は同じ電位・抵抗で下がった電位の分が電圧降下。
-// 形は「言葉の穴埋め」と「数字の計算（単元1のオームの法則・単元2の直列・直並列と組み合わせる）」。図は全問に付ける。
-// まちがいの選択肢は、よくある取り違え（電圧降下と電位の取り違え・抵抗を通っても下がらない・上がると考えた・
-// 下の線は 0 V と考えた・引く順が逆 など）。理由を1行付ける。分圧・分流（単元4）の式は使わない。
-// 3-2 以降の節は GEN に 2: … と足す（節の番号＝GEN の番号）。
+// 単元3の練習問題の作り方の、節の間で共通の道具。共通の道具（rngOf・pick・choices・num・qv・qf・nice・distinct など）は tb_gen.js。
+// 節の練習は u03/sN_gen.js（u03.py が番号順につなぎ、GEN を1つにまとめる）。このファイルは書き換えない（足したい道具は自分の節のファイルへ）。
 function PSER(L){ return {kind: "pser", L: Object.assign({pm: 1, r1: "{R}_1", r2: "{R}_2"}, L), P: {}}; }
 function PSP(L){ return {kind: "psp", L: Object.assign({pm: 1, j: 1, r1: "{R}_1", r2: "{R}_2", r3: "{R}_3"}, L), P: {}}; }
 // 言葉の選択肢。list の先頭が正しい物：[t, v, why]
@@ -122,6 +152,16 @@ var VS3 = [10, 12, 15, 20, 24, 30, 36, 40, 48, 50, 60, 80, 90, 100];
 var PARTS3 = [2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24, 25, 30, 32, 36, 40, 45, 48, 50, 60, 64, 70, 72, 75, 80, 90];
 function part3(r, V){ return pick(r, PARTS3.filter(function(x){ return x < V; })); }   // V より小さい、きりのよい値（下がった分・途中の電位）
 var BASE3 = "－極の側を基準の $0\\,\\mathrm{V}$ とすると、";
+// 3-1 電位と電圧降下：抵抗の無い線でつながった点は同じ電位・抵抗で下がった電位の分が電圧降下。
+// 形は「言葉の穴埋め」と「数字の計算（単元1のオームの法則・単元2の直列・直並列と組み合わせる）」。図は全問に付ける。
+// まちがいの選択肢は、よくある取り違え（電圧降下と電位の取り違え・抵抗を通っても下がらない・上がると考えた・
+// 下の線は 0 V と考えた・引く順が逆 など）。理由を1行付ける。分圧・分流（単元4）の式は使わない。
+// 3-2 直列の合成抵抗：合成抵抗＝2つ以上の抵抗を1つに置き換えた抵抗・直列は全部足す（3つ以上でも）。図は全問に付ける（s2ser）。
+// 形：def（合成抵抗とは）／law（直列の合成抵抗の式・2つか3つ）／sum2・sum3（足して合成抵抗）／rest・rest3（合成抵抗から残りの抵抗）。
+// まちがいの選択肢は、よくある取り違え（掛けた・引いた・足し忘れた・片方だけ答えた・直列の電流の決まりと取り違えた など）。理由を1行付ける。
+function S2SER(L){ return {kind: "s2ser", L: Object.assign({pm: 1, r1: "{R}_1", r2: "{R}_2"}, L), P: {}}; }
+var RS2 = [2, 3, 4, 5, 6, 8, 10, 12, 15, 16, 18, 20, 24, 25, 30, 40, 45, 50, 60, 80];
+function ohm2(x){ return "{R}" + x.k + "=" + qf(x.v, "O"); }
 var GEN = {
   // 3-1 電位と電圧降下
   1: function(r){
@@ -199,8 +239,74 @@ var GEN = {
             fig: PSP({src: "{V}=" + qf(V, "V"), v1: "{V}_1=" + qf(V1, "V"), pa: {}, pc: {}}), ch: c.ch, ans: c.ans,
             ex: ["点 c は、$R_1$ の右の端と抵抗の無い線でつながっている", "点 c の電位は $V - V_1 = " + fmt(V) + " - " + fmt(V1) + " = " + qv(ok, "V") + "$"],
             chk: {form: "sp", p: {V: V, V1: V1}}};
+  },
+  // 3-2 直列の合成抵抗
+  2: function(r){
+    var f = pick(r, ["def", "law", "law", "sum2", "sum2", "sum3", "sum3", "rest", "rest3"]);
+    if (f === "def") return rule3(r, "合成抵抗とは □ である。", S2SER({R: "{R}"}),
+      [["2つ以上の抵抗を、1つに置き換えた抵抗", "one"], ["つないだ中で、いちばん大きい抵抗", "max", "1つの抵抗の値ではなく、まとめて1つと見た値"],
+       ["抵抗を流れる電流", "cur", "合成抵抗は抵抗（単位 Ω）で、電流ではない"], ["抵抗にかかる電圧", "volt", "合成抵抗は抵抗（単位 Ω）で、電圧ではない"]],
+      ["2つ以上の抵抗を1つの抵抗に置き換えた物が、合成抵抗", "図の $R_1$ と $R_2$ をまとめた $R$"], "def");
+    if (f === "law") {
+      if (r() < 0.5) return Object.assign(rule3(r, "図のように、$R_1$ と $R_2$ を直列につないだ。合成抵抗 $R$ は □ である。", S2SER({R: "{R}"}),
+        [["$R = R_1 + R_2$", "add"], ["$R = R_1 \\times R_2$", "mul", "足すところを掛けた"], ["$R = R_1 - R_2$", "sub", "足すところを引いた"],
+         ["$R = R_1 = R_2$", "eq", "直列の電流の決まり $I = I_1 = I_2$ と取り違えた"]],
+        ["直列の合成抵抗は、抵抗を足した値", "$R = R_1 + R_2$"], "law"), {chk: {form: "law", p: {n: 2}}});
+      return Object.assign(rule3(r, "図のように、$R_1$・$R_2$・$R_3$ を直列につないだ。合成抵抗 $R$ は □ である。", S2SER({r3: "{R}_3", R: "{R}"}),
+        [["$R = R_1 + R_2 + R_3$", "add3"], ["$R = R_1 + R_2$", "add2", "$R_3$ を足し忘れた（3つ以上でも全部足す）"],
+         ["$R = R_1 \\times R_2 \\times R_3$", "mul3", "足すところを掛けた"], ["$R = R_3$", "last", "いちばん後ろの抵抗だけと考えた"]],
+        ["直列の合成抵抗は、3つ以上でも全部足す", "$R = R_1 + R_2 + R_3$"], "law"), {chk: {form: "law", p: {n: 3}}});
+    }
+    var a, b, c, R, ok, w, ch;
+    if (f === "sum2") {               // R1・R2 から R
+      for (;;) {
+        a = pick(r, RS2); b = pick(r, RS2); ok = a + b;
+        w = [{x: a * b, why: "足すところを掛けた"}, {x: Math.abs(a - b), why: "足すところを引いた"}, {x: Math.max(a, b), why: "大きい方の抵抗だけを答えた"}];
+        if (a !== b && okNums3(ok, w)) break;
+      }
+      ch = num(r, null, "O", ok, w);
+      return {form: "sum2", text: "図のように、$R_1 = " + qv(a, "O") + "$ と $R_2 = " + qv(b, "O") + "$ を直列につないだ。合成抵抗 $R$ は何 Ω か。",
+              fig: S2SER({r1: ohm2({k: "_1", v: a}), r2: ohm2({k: "_2", v: b}), R: "{R}"}), ch: ch.ch, ans: ch.ans,
+              ex: ["直列の合成抵抗は、抵抗を足した値", "$R = R_1 + R_2 = " + fmt(a) + " + " + fmt(b) + " = " + qv(ok, "O") + "$"],
+              chk: {form: "sum2", p: {R1: a, R2: b}}};
+    }
+    if (f === "sum3") {               // R1・R2・R3 から R
+      for (;;) {
+        a = pick(r, RS2); b = pick(r, RS2); c = pick(r, RS2); ok = a + b + c;
+        w = [{x: a + b, why: "$R_3$ を足し忘れた（3つ以上でも全部足す）"}, {x: a * b * c, why: "足すところを掛けた"},
+             {x: Math.max(a, b, c), why: "いちばん大きい抵抗だけを答えた"}];
+        if (okNums3(ok, w)) break;
+      }
+      ch = num(r, null, "O", ok, w);
+      return {form: "sum3", text: "図のように、$R_1 = " + qv(a, "O") + "$、$R_2 = " + qv(b, "O") + "$、$R_3 = " + qv(c, "O") + "$ を直列につないだ。合成抵抗 $R$ は何 Ω か。",
+              fig: S2SER({r1: ohm2({k: "_1", v: a}), r2: ohm2({k: "_2", v: b}), r3: ohm2({k: "_3", v: c}), R: "{R}"}), ch: ch.ch, ans: ch.ans,
+              ex: ["直列の合成抵抗は、3つ以上でも全部足す", "$R = " + fmt(a) + " + " + fmt(b) + " + " + fmt(c) + " = " + qv(ok, "O") + "$"],
+              chk: {form: "sum3", p: {R1: a, R2: b, R3: c}}};
+    }
+    if (f === "rest") {               // R と R1 から R2（R = R1 + R2 なので R2 = R − R1）
+      for (;;) {
+        a = pick(r, RS2); b = pick(r, RS2); R = a + b; ok = b;
+        w = [{x: R + a, why: "合成抵抗に $R_1$ をさらに足した"}, {x: a, why: "$R_1$ の値と取り違えた"}, {x: R / 2, why: "2つの抵抗が同じ値と考えた"}];
+        if (okNums3(ok, w)) break;
+      }
+      ch = num(r, null, "O", ok, w);
+      return {form: "rest", text: "図のように、$R_1 = " + qv(a, "O") + "$ と $R_2$ を直列につないだ。合成抵抗は $R = " + qv(R, "O") + "$ である。$R_2$ は何 Ω か。",
+              fig: S2SER({r1: ohm2({k: "_1", v: a}), R: "{R}=" + qf(R, "O")}), ch: ch.ch, ans: ch.ans,
+              ex: ["直列なので $R = R_1 + R_2$。$R_2$ は $R$ から $R_1$ を引いた値", "$R_2 = " + fmt(R) + " - " + fmt(a) + " = " + qv(ok, "O") + "$"],
+              chk: {form: "rest", p: {R: R, R1: a}}};
+    }
+    for (;;) {                        // R・R1・R2 から R3
+      a = pick(r, RS2); b = pick(r, RS2); c = pick(r, RS2); R = a + b + c; ok = c;
+      w = [{x: R - a, why: "$R_2$ を引き忘れた"}, {x: R + a + b, why: "合成抵抗に $R_1$ と $R_2$ をさらに足した"}, {x: a + b, why: "$R_1 + R_2$ を答えた"}];
+      if (okNums3(ok, w)) break;
+    }
+    ch = num(r, null, "O", ok, w);
+    return {form: "rest3", text: "図のように、$R_1 = " + qv(a, "O") + "$、$R_2 = " + qv(b, "O") + "$、$R_3$ を直列につないだ。合成抵抗は $R = " + qv(R, "O") + "$ である。$R_3$ は何 Ω か。",
+            fig: S2SER({r1: ohm2({k: "_1", v: a}), r2: ohm2({k: "_2", v: b}), r3: "{R}_3", R: "{R}=" + qf(R, "O")}), ch: ch.ch, ans: ch.ans,
+            ex: ["直列なので $R = R_1 + R_2 + R_3$。$R_3$ は $R$ から $R_1$ と $R_2$ を引いた値", "$R_3 = " + fmt(R) + " - " + fmt(a) + " - " + fmt(b) + " = " + qv(ok, "O") + "$"],
+            chk: {form: "rest3", p: {R: R, R1: a, R2: b}}};
   }
 };
 
-return {kinds: KINDS, flowk: FLOWK, gen: GEN, data: {"slides":[{"id":"t3s1e","scene":"t3s1e","kind":"pser","lab":{"pm":1,"src":["{V}","{V}=30 V"],"r1":"{R}_1","r2":"{R}_2","v1":["{V}_1","{V}_1=18 V"],"v2":["{V}_2","{V}_2=12 V"],"pa":{"v":"30 V"},"pd":{"v":"30 V"},"pb":{"v":"0 V"},"pe":{"v":"0 V"},"pc":{"v":"12 V"}},"viewbox":"464 232 595 400","band":{"want":"電位と電圧降下","ans":"抵抗の無い線は同じ電位・電圧降下＝抵抗で下がった電位の分","full":"抵抗の無い線でつながった点は、どこも同じ電位（同電位）。抵抗を通ると電位が下がり、下がった分をその抵抗の電圧降下という。"},"narr":{"start":{"co":1,"srcv":0,"v1d":0,"v2d":0,"v1v":0,"v2v":0,"pao":0,"pdo":0,"pbo":0,"peo":0,"pco":0},"steps":[{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"①抵抗の無い線\n②電圧降下\n③数字で見る\nこの順に見ます。","at":{"道筋":1.0},"after":[],"route":0}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"電源の電圧を $V = 30\\,\\mathrm{V}$ とし、－極の側を基準の $0\\,\\mathrm{V}$ とします。","at":{"道筋":1.0,"強調":1.0,"動き":1.0},"after":[],"route":1,"emph":["src"],"move":"srcv"},{"text":"＋極から $R_1$ までの線には、抵抗がありません。","at":{"強調":1.0},"after":[],"emph":["zhi","src","R1"]},{"text":"抵抗の無い線の上は、どこも同じ電位です。点 a も点 d も $30\\,\\mathrm{V}$ です。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["zhi","pa","pd","src"],"move":"pad"},{"text":"－極の側の線も同じで、どこも $0\\,\\mathrm{V}$ です。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["zlo","pb","pe"],"move":"pbe"}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"電流が $R_1$ を通ると、電位が下がります。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["R1","zhi","zmid"]},{"text":"抵抗で下がった電位の分を、電圧降下といいます。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["R1","V1"],"move":"v1arrow"},{"text":"$R_1$ の電圧降下は、$R_1$ にかかる電圧 $V_1$ と同じです。","at":{"強調":1.0},"after":[],"emph":["R1","V1"]}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"$R_1$ の電圧降下が $V_1 = 18\\,\\mathrm{V}$ のときを考えます。","at":{"道筋":1.0,"強調":1.0,"動き":1.0},"after":[],"route":3,"emph":["R1","V1"],"move":"v1val"},{"text":"点 c の電位は、点 a の電位から $V_1$ だけ下がった値です。","at":{"強調":1.0,"式":1.0,"動き":1.0},"after":["動き","強調"],"emph":["pa","pc","V1","src","zmid"],"eq":[{"cont":false,"items":[["V - V_1"],["30 - 18 = 12\\,\\mathrm{V}"]]}],"move":"pc","emphPre":["pa","pc","V1","src","zmid"]},{"text":"$R_2$ を通ると、さらに $12\\,\\mathrm{V}$ 下がって $0\\,\\mathrm{V}$ になります。これが $R_2$ の電圧降下 $V_2$ です。","at":{"強調":1.0,"動き":1.0,"答え":1.0},"after":[],"emph":["R2","V2","pc","pb","zlo"],"move":"v2all","ans":true}]}],"groups":{"src":["c:L","c:S","pp","pm","e0","e1"],"R1":["r1","r1t0","r1t1"],"R2":["r2","r2t0","r2t1"],"V1":["v1d:e","v1d:f","v1d:a","v1t0","v1t1"],"V2":["v2d:e","v2d:f","v2d:a","v2t0","v2t1"],"pa":["da","na","pat0","pat1"],"pb":["db","nb","pbt0","pbt1"],"pc":["dc","nc","pct0","pct1"],"pd":["dd","nd","pdt0","pdt1"],"pe":["de","ne","pet0","pet1"],"zhi":["L","w1"],"zmid":["wm"],"zlo":["w2","Rw"]},"moves":{"srcv":{"to":{"srcv":1},"dur":0.5},"pad":{"to":{"pao":1,"pdo":1},"dur":0.6},"pbe":{"to":{"pbo":1,"peo":1},"dur":0.6},"v1arrow":{"to":{"v1d":1},"dur":0.8},"v1val":{"to":{"v1v":1},"dur":0.4},"pc":{"to":{"pco":1},"dur":0.5},"v2all":{"to":{"v2d":1,"v2v":1},"dur":0.8}},"route":["抵抗の無い線","電圧降下","数字で見る"]}},{"id":"t3s1x","scene":"t3s1x","kind":"psp","lab":{"pm":1,"j":1,"src":"{V}=60 V","r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","v1":"{V}_1=36 V","pa":{"v":"60 V"},"pc":{"v":"24 V"},"fl":[2,1,1]},"viewbox":"464 152 595 560","band":{"want":"点 c の電位","known":"$V = 60\\,\\mathrm{V},\\;\\; V_1 = 36\\,\\mathrm{V}$","ans":"点 c は $24\\,\\mathrm{V}$"},"narr":{"start":{"co":1,"pavo":0,"pcvo":0},"steps":[{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"求めるのは、点 c の電位です。","at":{"強調":1.0},"after":[],"emph":["pc"]},{"text":"分かっているのは、電源の電圧 $V$ と、$R_1$ の電圧降下 $V_1$ です。","at":{"強調":1.0},"after":[],"emph":["src","V1","R1"]},{"text":"①点 a の電位\n②点 c の電位\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["pa","pc"]}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"点 a は、＋極と抵抗の無い線でつながっているので、電源の電圧と同じ $60\\,\\mathrm{V}$ です。","at":{"道筋":1.0,"強調":1.0,"動き":1.0},"after":[],"route":1,"emph":["pa","src","zhi"],"move":"pav"}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"点 a から $R_1$ を通ると、電位は $V_1$ の分だけ下がります。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["pa","R1","V1"]},{"text":"点 c と $R_1$ の右の端の間には、抵抗がありません。なので同じ電位です。","at":{"強調":1.0},"after":[],"emph":["pc","R1","zmid"]},{"text":"点 c の電位は、次の式で求めます。","at":{"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"emph":["pa","src","V1","pc","zmid"],"eq":[{"cont":false,"items":[["V - V_1"],["60 - 36 = 24\\,\\mathrm{V}"]]}],"move":"pcv","ans":true,"emphPre":["pa","src","V1","pc","zmid"]}]}],"groups":{"src":["c:L","c:S","pp","pm","e0","e1"],"R1":["r1","r1t0","r1t1"],"R2":["r2","r2t0","r2t1"],"R3":["r3","r3t0","r3t1"],"V1":["v1d:e","v1d:f","v1d:a","v1t0","v1t1"],"j":["dj1","dj2"],"pa":["da","na","pat0","pat1"],"pb":["db","nb","pbt0","pbt1"],"pc":["dc","nc","pct0","pct1"],"zhi":["L"],"zmid":["w1","bl","w2l","w3l"],"zlo":["w2r","w3r","br","Rw"]},"moves":{"pav":{"to":{"pavo":1},"dur":0.4},"pcv":{"to":{"pcvo":1},"dur":0.4}},"route":["点 a の電位","点 c の電位"]}}],"secs":[{"ex":{"text":"図の回路で、電源の電圧は $V = 60\\,\\mathrm{V}$、$R_1$ の電圧降下は $V_1 = 36\\,\\mathrm{V}$ である。－極の側を基準の $0\\,\\mathrm{V}$ とすると、点 c の電位は何 V か。","fig":{"kind":"psp","L":{"pm":1,"j":1,"src":"{V}=60 V","r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","v1":"{V}_1=36 V","pa":{},"pc":{}},"P":{}},"ch":[{"t":"$36\\,\\mathrm{V}$","v":36,"why":"電圧降下 $V_1$ を、点 c の電位と取り違えた"},{"t":"$24\\,\\mathrm{V}$","v":24,"why":""},{"t":"$60\\,\\mathrm{V}$","v":60,"why":"$R_1$ を通っても電位が下がらないと考えた"},{"t":"$12\\,\\mathrm{V}$","v":12,"why":"点 c の電位が $R_2$ と $R_3$ に分かれると考えた"}],"ans":1}}],"past":[]}};
+return {kinds: KINDS, flowk: FLOWK, gen: GEN, data: {"slides":[{"id":"t3s1e","scene":"t3s1e","kind":"pser","lab":{"pm":1,"src":["{V}","{V}=30 V"],"r1":"{R}_1","r2":"{R}_2","v1":["{V}_1","{V}_1=18 V"],"v2":["{V}_2","{V}_2=12 V"],"pa":{"v":"30 V"},"pd":{"v":"30 V"},"pb":{"v":"0 V"},"pe":{"v":"0 V"},"pc":{"v":"12 V"}},"viewbox":"464 232 595 400","band":{"want":"電位と電圧降下","ans":"抵抗の無い線は同じ電位・電圧降下＝抵抗で下がった電位の分","full":"抵抗の無い線でつながった点は、どこも同じ電位（同電位）。抵抗を通ると電位が下がり、下がった分をその抵抗の電圧降下という。"},"narr":{"start":{"co":1,"srcv":0,"v1d":0,"v2d":0,"v1v":0,"v2v":0,"pao":0,"pdo":0,"pbo":0,"peo":0,"pco":0},"steps":[{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"①抵抗の無い線\n②電圧降下\n③数字で見る\nこの順に見ます。","at":{"道筋":1.0},"after":[],"route":0}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"電源の電圧を $V = 30\\,\\mathrm{V}$ とし、－極の側を基準の $0\\,\\mathrm{V}$ とします。","at":{"道筋":1.0,"強調":1.0,"動き":1.0},"after":[],"route":1,"emph":["src"],"move":"srcv"},{"text":"＋極から $R_1$ までの線には、抵抗がありません。","at":{"強調":1.0},"after":[],"emph":["zhi","src","R1"]},{"text":"抵抗の無い線の上は、どこも同じ電位です。点 a も点 d も $30\\,\\mathrm{V}$ です。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["zhi","pa","pd","src"],"move":"pad"},{"text":"－極の側の線も同じで、どこも $0\\,\\mathrm{V}$ です。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["zlo","pb","pe"],"move":"pbe"}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"電流が $R_1$ を通ると、電位が下がります。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["R1","zhi","zmid"]},{"text":"抵抗で下がった電位の分を、電圧降下といいます。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["R1","V1"],"move":"v1arrow"},{"text":"$R_1$ の電圧降下は、$R_1$ にかかる電圧 $V_1$ と同じです。","at":{"強調":1.0},"after":[],"emph":["R1","V1"]}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"$R_1$ の電圧降下が $V_1 = 18\\,\\mathrm{V}$ のときを考えます。","at":{"道筋":1.0,"強調":1.0,"動き":1.0},"after":[],"route":3,"emph":["R1","V1"],"move":"v1val"},{"text":"点 c の電位は、点 a の電位から $V_1$ だけ下がった値です。","at":{"強調":1.0,"式":1.0,"動き":1.0},"after":["動き","強調"],"emph":["pa","pc","V1","src","zmid"],"eq":[{"cont":false,"items":[["V - V_1"],["30 - 18 = 12\\,\\mathrm{V}"]]}],"move":"pc","emphPre":["pa","pc","V1","src","zmid"]},{"text":"$R_2$ を通ると、さらに $12\\,\\mathrm{V}$ 下がって $0\\,\\mathrm{V}$ になります。これが $R_2$ の電圧降下 $V_2$ です。","at":{"強調":1.0,"動き":1.0,"答え":1.0},"after":[],"emph":["R2","V2","pc","pb","zlo"],"move":"v2all","ans":true}]}],"groups":{"src":["c:L","c:S","pp","pm","e0","e1"],"R1":["r1","r1t0","r1t1"],"R2":["r2","r2t0","r2t1"],"V1":["v1d:e","v1d:f","v1d:a","v1t0","v1t1"],"V2":["v2d:e","v2d:f","v2d:a","v2t0","v2t1"],"pa":["da","na","pat0","pat1"],"pb":["db","nb","pbt0","pbt1"],"pc":["dc","nc","pct0","pct1"],"pd":["dd","nd","pdt0","pdt1"],"pe":["de","ne","pet0","pet1"],"zhi":["L","w1"],"zmid":["wm"],"zlo":["w2","Rw"]},"moves":{"srcv":{"to":{"srcv":1},"dur":0.5},"pad":{"to":{"pao":1,"pdo":1},"dur":0.6},"pbe":{"to":{"pbo":1,"peo":1},"dur":0.6},"v1arrow":{"to":{"v1d":1},"dur":0.8},"v1val":{"to":{"v1v":1},"dur":0.4},"pc":{"to":{"pco":1},"dur":0.5},"v2all":{"to":{"v2d":1,"v2v":1},"dur":0.8}},"route":["抵抗の無い線","電圧降下","数字で見る"]}},{"id":"t3s1x","scene":"t3s1x","kind":"psp","lab":{"pm":1,"j":1,"src":"{V}=60 V","r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","v1":"{V}_1=36 V","pa":{"v":"60 V"},"pc":{"v":"24 V"},"fl":[2,1,1]},"viewbox":"464 152 595 560","band":{"want":"点 c の電位","known":"$V = 60\\,\\mathrm{V},\\;\\; V_1 = 36\\,\\mathrm{V}$","ans":"点 c は $24\\,\\mathrm{V}$"},"narr":{"start":{"co":1,"pavo":0,"pcvo":0},"steps":[{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"求めるのは、点 c の電位です。","at":{"強調":1.0},"after":[],"emph":["pc"]},{"text":"分かっているのは、電源の電圧 $V$ と、$R_1$ の電圧降下 $V_1$ です。","at":{"強調":1.0},"after":[],"emph":["src","V1","R1"]},{"text":"①点 a の電位\n②点 c の電位\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["pa","pc"]}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"点 a は、＋極と抵抗の無い線でつながっているので、電源の電圧と同じ $60\\,\\mathrm{V}$ です。","at":{"道筋":1.0,"強調":1.0,"動き":1.0},"after":[],"route":1,"emph":["pa","src","zhi"],"move":"pav"}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"点 a から $R_1$ を通ると、電位は $V_1$ の分だけ下がります。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["pa","R1","V1"]},{"text":"点 c と $R_1$ の右の端の間には、抵抗がありません。なので同じ電位です。","at":{"強調":1.0},"after":[],"emph":["pc","R1","zmid"]},{"text":"点 c の電位は、次の式で求めます。","at":{"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"emph":["pa","src","V1","pc","zmid"],"eq":[{"cont":false,"items":[["V - V_1"],["60 - 36 = 24\\,\\mathrm{V}"]]}],"move":"pcv","ans":true,"emphPre":["pa","src","V1","pc","zmid"]}]}],"groups":{"src":["c:L","c:S","pp","pm","e0","e1"],"R1":["r1","r1t0","r1t1"],"R2":["r2","r2t0","r2t1"],"R3":["r3","r3t0","r3t1"],"V1":["v1d:e","v1d:f","v1d:a","v1t0","v1t1"],"j":["dj1","dj2"],"pa":["da","na","pat0","pat1"],"pb":["db","nb","pbt0","pbt1"],"pc":["dc","nc","pct0","pct1"],"zhi":["L"],"zmid":["w1","bl","w2l","w3l"],"zlo":["w2r","w3r","br","Rw"]},"moves":{"pav":{"to":{"pavo":1},"dur":0.4},"pcv":{"to":{"pcvo":1},"dur":0.4}},"route":["点 a の電位","点 c の電位"]}},{"id":"t3s2e","scene":"t3s2e","kind":"s2ser","lab":{"pm":1,"r1":["{R}_1","{R}_1=4 Ω"],"r2":["{R}_2","{R}_2=6 Ω"],"r3":"{R}_3=5 Ω","R":["{R}","{R}=10 Ω"],"Rx":"{R}=15 Ω"},"viewbox":"464 232 595 400","band":{"want":"直列の合成抵抗","ans":"直列の合成抵抗は全部足す　$R = R_1 + R_2$","full":"2つ以上の抵抗を1つの抵抗に置き換えた物が合成抵抗。直列の合成抵抗は、抵抗を全部足した値（3つ以上でも全部足す）。"},"narr":{"start":{"co":1,"r3o":0,"Rx":0,"Rd":0,"Rv":0,"r1v":0,"r2v":0},"steps":[{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"①合成抵抗とは\n②直列の合成抵抗\n③3つ以上のとき\nこの順に見ます。","at":{"道筋":1.0},"after":[],"route":0}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"2つ以上の抵抗を、1つの抵抗に置き換えた物を、合成抵抗といいます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":1,"emph":["R1","R2"]},{"text":"$R_1$ の左の端から $R_2$ の右の端までを、1つの抵抗と見ます。これが合成抵抗 $R$ です。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["R1","R2","R"],"move":"rd"}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"$R_1$ と $R_2$ は、分かれ道の無い1本の道に並んでいるので、直列です。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["R1","R2","wire"]},{"text":"直列の合成抵抗は、抵抗を足した値です。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["R1","R2","R"],"eq":[{"cont":false,"items":[["R = R_1 + R_2"]]}],"emphPre":["R1","R2","R"]},{"text":"$R_1 = 4\\,\\Omega$、$R_2 = 6\\,\\Omega$ のときを考えます。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["R1","R2"],"move":"vals"},{"text":"合成抵抗は、次のとおりです。","at":{"強調":1.0,"式":1.0,"動き":1.0},"after":["動き","強調"],"emph":["R1","R2","R"],"eq":[{"cont":false,"items":[["R = 4 + 6 = 10\\,\\Omega"]]}],"move":"rval","emphPre":["R1","R2","R"]}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"抵抗が3つ以上でも、直列なら全部足します。","at":{"道筋":1.0,"強調":1.0,"動き":1.0},"after":[],"route":3,"emph":["R1","R2","R3"],"move":"r3in"},{"text":"$R_3 = 5\\,\\Omega$ もつなぐと、合成抵抗 $R$ は次のとおりです。","at":{"強調":1.0,"動き":1.0,"式":1.0,"答え":1.0},"after":["答え","強調"],"emph":["R1","R2","R3","R"],"move":"rext","eq":[{"cont":false,"items":[["R = R_1 + R_2 + R_3"],["R = 4 + 6 + 5 = 15\\,\\Omega"]]}],"ans":true,"emphPre":["R1","R2","R3","R"]}]}],"groups":{"src":["c:L","c:S","pp","pm","e0","e1"],"R1":["r1","r1t0","r1t1"],"R2":["r2","r2t0","r2t1"],"R3":["r3","r3t0","r3t1"],"R":["Rd:e","Rd:f","Rd:a","Rt0","Rt1","Rut"],"wire":["L","Rw","s2w0","s2w1","s2w2","s2w3","s2wx"]},"moves":{"rd":{"to":{"Rd":1},"dur":0.8},"vals":{"to":{"r1v":1,"r2v":1},"dur":0.5},"rval":{"to":{"Rv":1},"dur":0.4},"r3in":{"to":{"r3o":1},"dur":0.6},"rext":{"to":{"Rx":1},"dur":0.6}},"route":["合成抵抗とは","直列の合成抵抗","3つ以上のとき"]}},{"id":"t3s2x","scene":"t3s2x","kind":"s2ser","lab":{"pm":1,"r1":"{R}_1=12 Ω","r2":"{R}_2=8 Ω","r3":"{R}_3=15 Ω","R":["{R}","{R}=35 Ω"]},"viewbox":"464 232 595 400","band":{"want":"合成抵抗 $R$","known":"$R_1 = 12\\,\\Omega,\\;\\; R_2 = 8\\,\\Omega,\\;\\; R_3 = 15\\,\\Omega$","ans":"$R = 35\\,\\Omega$"},"narr":{"start":{"co":1,"Rd":0,"Rv":0},"steps":[{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"求めるのは、3つの抵抗をまとめた合成抵抗 $R$ です。","at":{"強調":1.0,"動き":1.0},"after":[],"emph":["R1","R2","R3","R"],"move":"rd"},{"text":"①直列か見る\n②全部足す\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["R1","R2","R3","R"]}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"$R_1$・$R_2$・$R_3$ は、分かれ道の無い1本の道に並んでいます。なので直列です。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":1,"emph":["R1","R2","R3","wire"]}]},{"cap":null,"eqp":null,"vid":[3],"sents":[{"text":"直列の合成抵抗は、全部の抵抗を足した値です。","at":{"道筋":1.0,"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"route":2,"emph":["R1","R2","R3","R"],"eq":[{"cont":false,"items":[["R = R_1 + R_2 + R_3"],["R = 12 + 8 + 15 = 35\\,\\Omega"]]}],"move":"rval","ans":true,"emphPre":["R1","R2","R3","R"]}]}],"groups":{"src":["c:L","c:S","pp","pm","e0","e1"],"R1":["r1","r1t0","r1t1"],"R2":["r2","r2t0","r2t1"],"R3":["r3","r3t0","r3t1"],"R":["Rd:e","Rd:f","Rd:a","Rt0","Rt1","Rut"],"wire":["L","Rw","s2w0","s2w1","s2w2","s2w3","s2wx"]},"moves":{"rd":{"to":{"Rd":1},"dur":0.8},"rval":{"to":{"Rv":1},"dur":0.4}},"route":["直列か見る","全部足す"]}}],"secs":[{"ex":{"text":"図の回路で、電源の電圧は $V = 60\\,\\mathrm{V}$、$R_1$ の電圧降下は $V_1 = 36\\,\\mathrm{V}$ である。－極の側を基準の $0\\,\\mathrm{V}$ とすると、点 c の電位は何 V か。","fig":{"kind":"psp","L":{"pm":1,"j":1,"src":"{V}=60 V","r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","v1":"{V}_1=36 V","pa":{},"pc":{}},"P":{}},"ch":[{"t":"$36\\,\\mathrm{V}$","v":36,"why":"電圧降下 $V_1$ を、点 c の電位と取り違えた"},{"t":"$24\\,\\mathrm{V}$","v":24,"why":""},{"t":"$60\\,\\mathrm{V}$","v":60,"why":"$R_1$ を通っても電位が下がらないと考えた"},{"t":"$12\\,\\mathrm{V}$","v":12,"why":"点 c の電位が $R_2$ と $R_3$ に分かれると考えた"}],"ans":1}},{"ex":{"text":"図のように、$R_1 = 12\\,\\Omega$、$R_2 = 8\\,\\Omega$、$R_3 = 15\\,\\Omega$ の3つの抵抗を直列につないだ。合成抵抗 $R$ は何 Ω か。","fig":{"kind":"s2ser","L":{"pm":1,"r1":"{R}_1=12 Ω","r2":"{R}_2=8 Ω","r3":"{R}_3=15 Ω","R":"{R}"},"P":{}},"ch":[{"t":"$20\\,\\Omega$","v":20,"why":"$R_3$ を足し忘れた（3つ以上でも全部足す）"},{"t":"$35\\,\\Omega$","v":35,"why":""},{"t":"$1440\\,\\Omega$","v":1440,"why":"足すところを掛けた"},{"t":"$15\\,\\Omega$","v":15,"why":"いちばん大きい抵抗だけを答えた"}],"ans":1}}],"past":[]}};
 });

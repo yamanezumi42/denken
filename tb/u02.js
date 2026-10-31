@@ -23,19 +23,22 @@ function vArrow(d, id, x, y, L, k, p, below){
   var w = vdim(d, id + "d", x - 72.5, x + 72.5, y0, y1, ya, dd, {});
   lab2(d, id + "t", x, below ? ya + 25 : ya - 25, L[k], p, k, w);
 }
-// 電流の矢印（右向き）。above＝線の上・無ければ線の下
+// 電流の矢印は、その電流が流れる導線の上に置く（2026-11-01 本人：2-5 例題の I₃ が R₃ の線から離れて、何もない所にあった）。
+// 矢じりの先＝電流の向き。名前は矢印のすぐ横（線にかけない）。確かめ＝check_iarrow.py
+// 横の線の上の電流（右向き）。x＝矢印の中心・y＝線。above＝名前を線の上・無ければ線の下
 function iArrow(d, id, x, y, L, k, p, above){
   if (L[k] === undefined) return;
-  var o = pv(p, k + "o", 1), ya = above ? y - 34 : y + 34;
-  d.arrow(id + "a", x - 32, ya, x + 32, ya, {o: o});
-  lab2(d, id + "t", x, above ? y - 64 : y + 64, L[k], p, k, o);
+  var o = pv(p, k + "o", 1);
+  d.arrow(id + "a", x - 20, y, x + 20, y, {o: o});
+  lab2(d, id + "t", x, above ? y - 27 : y + 29, L[k], p, k, o);
 }
-// 左の縦の線の電流（上向き）。名前は右へ
-function iLeft(d, yb, L, p){
-  if (L.i === undefined) return;
-  var o = pv(p, "io", 1);
-  d.arrow("ia", 508, yb - 30, 508, yb - 96, {o: o});
-  lab2(d, "it", 526, yb - 63, L.i, p, "i", o, {anchor: "start"});
+// 左の縦の線（x=478）の電流（上向き）。名前は線の右。k＝"i"（全体の電流）か "i1"（直並列の直列の部分）
+function iLeft(d, yb, L, p, k){
+  k = k || "i";
+  if (L[k] === undefined) return;
+  var o = pv(p, k + "o", 1), ym = yb - 80;
+  d.arrow(k + "a", 478, ym + 20, 478, ym - 20, {o: o});
+  lab2(d, k + "t", 494, ym, L[k], p, k, o, {anchor: "start"});
 }
 // 電源（下の線の真ん中）・＋と－・電源の電圧の名前
 function srcPart(d, yb, L, p){
@@ -60,7 +63,9 @@ function tbSer(d, p, L){
   srcPart(d, yb, L, p);
   resL(d, "r1", 640, 360, L, "r1", p); resL(d, "r2", 880, 360, L, "r2", p);
   vArrow(d, "v1", 640, 360, L, "v1", p); vArrow(d, "v2", 880, 360, L, "v2", p);
-  iArrow(d, "i1", 640, 360, L, "i1", p); iArrow(d, "i2", 880, 360, L, "i2", p);
+  // I₂：R₂ のすぐ後の右の縦の線（下向き・名前は線の左）。上の線の右の端は V₂ の補助線と強調の枠が重なるため
+  iArrow(d, "i1", 545, 360, L, "i1", p);
+  if (L.i2 !== undefined) { var o2 = pv(p, "i2o", 1); d.arrow("i2a", 1045, 440, 1045, 480, {o: o2}); lab2(d, "i2t", 1031, 460, L.i2, p, "i2", o2, {anchor: "end"}); }
   iLeft(d, yb, L, p);
   point(d, "a", 520, 360, L, p); point(d, "c", 760, 360, L, p); point(d, "b", 1000, 360, L, p);
 }
@@ -95,7 +100,7 @@ function tbSp(d, p, L){
   resL(d, "r1", 580, 360, L, "r1", p);
   srcPart(d, yb, L, p);
   vArrow(d, "v1", 580, 360, L, "v1", p); vArrow(d, "v2", 790, 280, L, "v2", p); vArrow(d, "v3", 790, 440, L, "v3", p, true);
-  iArrow(d, "i1", 580, 360, L, "i1", p); iArrow(d, "i2", 945, 280, L, "i2", p, true); iArrow(d, "i3", 945, 440, L, "i3", p);
+  iLeft(d, yb, L, p, "i1"); iArrow(d, "i2", 945, 280, L, "i2", p, true); iArrow(d, "i3", 945, 440, L, "i3", p);
 }
 // ---- 過去問 平成25年 問5：端子2つ（左）・R と Rx の並列（縦の抵抗）
 function tbPq25(d, p, L){
@@ -110,15 +115,15 @@ function tbPq25(d, p, L){
   // 電圧 V：下の端子から上の端子へ（上が高い）
   d.arrow("va", 520, yb - 24, 520, yt + 24);
   d.text("vt0", 496, 430, L.v, {anchor: "end"});
-  // 電流 I：上の線の上・右向き
-  d.arrow("ia", 590, yt - 30, 654, yt - 30);
-  d.text("it0", 622, yt - 60, L.i);
-  // R と Rx の電流（下向き・抵抗の左）
+  // 電流 I：上の線（端子と R の間）の上・右向き。名前は線の上
+  d.arrow("ia", 602, yt, 642, yt);
+  d.text("it0", 622, yt - 27, L.i);
+  // R と Rx の電流（縦の線の上・下向き）。名前は線の左
   [["ir", xR, L.ir], ["ix", xX, L.ix]].forEach(function(q){
     if (q[2] === undefined) return;
     var o = pv(p, q[0] + "o", 1);
-    d.arrow(q[0] + "a", q[1] - 26, 322, q[1] - 26, 376, {o: o});
-    d.text(q[0] + "t0", q[1] - 40, 349, q[2], {anchor: "end", o: o});
+    d.arrow(q[0] + "a", q[1], 330, q[1], 370, {o: o});
+    d.text(q[0] + "t0", q[1] - 14, 350, q[2], {anchor: "end", o: o});
   });
 }
 var KINDS = {ser: tbSer, par: tbPar, sp: tbSp, pq25: tbPq25};

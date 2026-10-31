@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>令和4年下期 問5</title>
+<link rel="stylesheet" href="../katex/katex.min.css">
+<script src="../katex/katex.min.js"></script>
+<style>
+  :root{--bg:#f4f4f4;--card:#fff;--line:#ccc;--ink:#111;--hl:#d9480f;--hlbg:#fff4e6;--ok:#1a7f37;--ng:#c62828}
+  body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font-family:"Yu Gothic UI","Hiragino Sans",sans-serif}
+  main{max-width:1150px;margin:0 auto}
+  #bar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  h1{font-size:18px;margin:0;flex:1}
+  section.q{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:12px 16px;margin-bottom:16px}
+  h2{font-size:18px;margin:0 0 8px}
+  section.q > p{font-size:16px;line-height:1.8;margin:4px 0}
+  img.fig{display:block;max-width:min(100%,460px);height:auto;margin:8px auto}
+  img.orig{display:block;width:100%;max-width:900px;height:auto;margin:0 auto}
+  .chs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0}
+  .chs.two{grid-template-columns:repeat(2,1fr)}
+  button.c{display:flex;align-items:center;justify-content:center;gap:4px;min-height:44px;font-size:16px;
+    background:#fff;border:1px solid #999;border-radius:6px;cursor:pointer;color:var(--ink);padding:4px}
+  button.c .n{color:#555}
+  button.c.ok{border-color:var(--ok);background:#e8f5ec}
+  button.c.bad{border-color:var(--ng);background:#fdecec}
+  .mk{display:inline-flex;width:20px;height:20px}
+  .mk svg{width:20px;height:20px}
+  .mk svg .dr{stroke-dasharray:1 1;animation:mkdraw .3s ease-in-out both}
+  .mk svg .d2{animation-delay:.12s}
+  @keyframes mkdraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+  .rep{display:none;max-width:560px;margin:4px auto 8px;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .rep.open{display:block}
+  .rep svg{display:block;width:100%;height:auto}
+  .why{color:var(--ng);font-size:15px;margin:0 0 6px}
+  .why:empty{display:none}
+  details{border-top:1px solid #ddd;padding-top:6px}
+  summary{cursor:pointer;font-weight:bold;font-size:15px;padding:4px 0}
+  .ans{font-weight:bold;font-size:16px;margin:6px 0}
+  .vid{color:#555;font-size:13px}
+  .ng{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:14px}
+  .ng input[type=text]{flex:1;min-width:0;padding:4px 6px;font-size:14px}
+  #copy{font-size:14px;padding:6px 12px}
+  #msg{display:inline-flex;width:20px;height:20px}
+  /* 動く解説 */
+  .ex{display:flex;gap:14px;align-items:flex-start;margin-top:8px}
+  .ex .figbox{flex:1.15;min-width:0;position:sticky;top:8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .ex svg.fig{display:block;width:100%;height:auto}
+  .ex .nav{display:flex;justify-content:center;gap:16px;padding:6px 0 8px}
+  .ex .nav button{width:48px;height:40px;border:1px solid #999;border-radius:6px;background:#fff;cursor:pointer;
+    display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .ex .nav button:disabled{opacity:.3;cursor:default}
+  .ex .nav svg{width:24px;height:24px}
+  .ex .rows{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+  .row{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid var(--line);
+    border-left:5px solid transparent;border-radius:6px;padding:8px 10px;cursor:pointer;
+    transition:background .25s,border-color .25s,color .25s}
+  .row .k{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid #999;display:flex;
+    align-items:center;justify-content:center;font-size:14px;color:#555;margin-top:2px}
+  .row .bd{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+  .row .tx{font-size:15px;line-height:1.7}
+  .row .ln{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:17px}
+  .row .to{color:#888}
+  .row .vd{font-size:12px;color:#777}
+  .row.future{color:#888}
+  .row.on{background:var(--hlbg);border-left-color:var(--hl)}
+  .row.on .ln{color:var(--hl)}
+  .row.on .k{border-color:var(--hl);color:var(--hl)}
+  svg.fig .ink{stroke:#000;fill:none;transition:stroke .3s,fill .3s}
+  svg.fig .ink.on{stroke:var(--hl)}
+  svg.fig text.ink{stroke:none;fill:#000}
+  svg.fig text.ink.on{stroke:none;fill:var(--hl)}
+  svg.fig .box{fill:#fff}
+  svg.fig path.head,svg.fig circle.dot{fill:#000}
+  svg.fig path.head.on,svg.fig circle.dot.on{fill:var(--hl)}
+  svg.fig circle.term{fill:#fff}
+  svg.fig .dash{stroke-dasharray:7 6}
+  svg.fig text{font-family:KaTeX_Main,"Times New Roman",serif;font-size:22px}
+  svg.fig text .v{font-family:KaTeX_Math,"Times New Roman",serif;font-style:italic}
+  @media (max-width:820px){.ex{flex-direction:column}.ex .figbox{position:static;width:100%}}
+
+  .slide{position:fixed;inset:0;z-index:50;background:#fff;display:none;touch-action:none;user-select:none;-webkit-user-select:none}
+  .slide.open{display:block}
+  .slide .sbar{position:absolute;left:0;right:0;top:0;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;z-index:3}
+  .slide .ib{width:48px;height:44px;border:1px solid #bbb;border-radius:8px;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;color:#111}
+  .slide .ib svg{width:24px;height:24px}
+  .slide .spd{width:auto;padding:0 10px;gap:6px;font-size:16px;font-family:"Yu Gothic UI","Hiragino Sans",sans-serif}
+  .slide .spd svg{width:26px;height:20px}
+  .slide .band{flex:1;min-width:0;margin:0 12px;height:38px;display:flex;align-items:center;justify-content:center;gap:18px;background:#f3f3f3;
+    border-radius:8px;font-size:17px;white-space:nowrap;overflow:hidden;font-family:"Hiragino Sans","Yu Gothic UI",sans-serif;font-weight:700;touch-action:none}
+  .slide .band .bw,.slide .band .bk{display:inline-flex;align-items:center;gap:8px}
+  .slide .band .lb{color:#666;font-size:14px}
+  .slide .band .bw.on{color:var(--hl)}
+  .slide .full{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:min(900px,92vw);z-index:6;background:#fff;border:2px solid #999;
+    border-radius:8px;padding:14px 18px;font-size:19px;line-height:1.8;display:none;font-family:"Hiragino Sans","Yu Gothic UI",sans-serif}
+  .slide .full.open{display:block}
+  .slide .stage{position:absolute;overflow:hidden}
+  .slide .cam{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:0 0}
+  .slide .cam svg.fig{position:absolute;left:0;top:0;width:100%;height:100%}
+  .slide .ov{position:absolute;inset:0;pointer-events:none}
+  .slide .cap{position:absolute;left:0;top:0;text-align:center;line-height:1.45;color:#111;background:rgba(255,255,255,.92);border-radius:6px;padding:0 .3em;box-sizing:border-box;
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;font-weight:800;text-wrap:balance}
+  .slide.anim .cam,.slide.anim .cap,.slide.anim .eqb{will-change:transform}
+  .slide .cap .katex{font-weight:normal}
+  .slide .cap .u{opacity:0}
+  .slide .eqb{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:.35em;color:var(--hl);
+    background:rgba(255,255,255,.92);border-radius:6px;padding:.1em .3em}
+  .slide .eqb .ln{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:.2em .5em}
+  .slide .eqb .to{color:#999}
+  .slide .eqb span.f,.slide .eqb span.to{opacity:0;display:inline-block}
+  .slide .dots{position:absolute;left:0;right:0;bottom:10px;display:flex;justify-content:center;gap:12px;z-index:3;pointer-events:none}
+  .slide .dots i{width:10px;height:10px;border-radius:50%;background:#ccc;transition:background .2s,transform .2s}
+  .slide .dots i.on{background:var(--hl);transform:scale(1.3)}
+  .slide .spop{position:absolute;right:10px;top:56px;z-index:4;background:#fff;border:1px solid #bbb;border-radius:8px;padding:10px 12px;display:none;align-items:center;gap:10px}
+  .slide .spop.open{display:flex}
+  .slide .spop input{width:220px}
+  .slide .spop span{font-size:15px;min-width:52px;text-align:right}
+  .reopen{margin:6px 0;width:56px;height:44px;border:1px solid #999;border-radius:6px;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .reopen svg{width:26px;height:26px}
+  svg.fig path.trace{fill:none;stroke-dasharray:1 1}
+  svg.fig circle.fdot{fill:#1971c2}
+</style>
+</head>
+<body>
+<main>
+<div id="bar"><h1>令和4年下期 問5</h1><button id="copy">NG一覧をコピー</button><span id="msg"></span></div>
+<section class="q" data-id="s1" data-ans="4">
+  <h2>段1</h2>
+  <p><span class="mix">図の端子 a，b 間の合成抵抗 [Ω] の値として，正しいものを次の(1)～(5)のうちから一つ選べ。</span></p><img class="fig" src="out/ladder_dc021_s1.svg" alt="段1">
+  <div class="chs"><button class="c" data-no="1" data-why="1＝引き算した"><span class="n">(1)</span><span class="mix">1</span><span class="mk"></span></button><button class="c" data-no="2" data-why="2.2＝和分の積を使った（並列と取り違え）"><span class="n">(2)</span><span class="mix">2.2</span><span class="mk"></span></button><button class="c" data-no="3" data-why="4.5＝平均した"><span class="n">(3)</span><span class="mix">4.5</span><span class="mk"></span></button><button class="c" data-no="4"><span class="n">(4)</span><span class="mix">9</span><span class="mk"></span></button><button class="c" data-no="5" data-why="20＝掛け算した"><span class="n">(5)</span><span class="mix">20</span><span class="mk"></span></button></div>
+  <p class="why"></p>
+  <details><summary>答え</summary>
+    <p class="ans">(4) <span class="mix">9</span></p>
+    <div class="ex">
+      <div class="figbox"><svg class="fig" viewBox="440 292 480 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/>
+        <g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g></svg>
+        <div class="nav"><button class="prev" aria-label="prev"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="next" aria-label="next"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>
+      </div>
+      <div class="rows"></div>
+    </div>
+    <p class="vid">動画 2・3</p>
+  </details>
+  <label class="ng"><input type="checkbox" class="ngc"> NG <input type="text" class="ngt"></label>
+</section><section class="q" data-id="s2" data-ans="2">
+  <h2>段2</h2>
+  <p><span class="mix">図の端子 a，b 間の合成抵抗 [Ω] の値として，正しいものを次の(1)～(5)のうちから一つ選べ。</span></p><img class="fig" src="out/ladder_dc021_s2.svg" alt="段2">
+  <div class="chs"><button class="c" data-no="1" data-why="4.5＝同じ値の並列と思い半分にした"><span class="n">(1)</span><span class="mix">4.5</span><span class="mk"></span></button><button class="c" data-no="2"><span class="n">(2)</span><span class="mix">6</span><span class="mk"></span></button><button class="c" data-no="3" data-why="18＝分母を差にした"><span class="n">(3)</span><span class="mix">18</span><span class="mk"></span></button><button class="c" data-no="4" data-why="27＝足し算した（直列と取り違え）"><span class="n">(4)</span><span class="mix">27</span><span class="mk"></span></button><button class="c" data-no="5" data-why="162＝積だけで和で割り忘れ"><span class="n">(5)</span><span class="mix">162</span><span class="mk"></span></button></div>
+  <p class="why"></p>
+  <details><summary>答え</summary>
+    <p class="ans">(2) <span class="mix">6</span></p>
+    <div class="ex">
+      <div class="figbox"><svg class="fig" viewBox="440 250 490 195" xmlns="http://www.w3.org/2000/svg">
+        <rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/>
+        <g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g></svg>
+        <div class="nav"><button class="prev" aria-label="prev"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="next" aria-label="next"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>
+      </div>
+      <div class="rows"></div>
+    </div>
+    <p class="vid">動画 3</p>
+  </details>
+  <label class="ng"><input type="checkbox" class="ngc"> NG <input type="text" class="ngt"></label>
+</section><section class="q" data-id="s3" data-ans="2">
+  <h2>段3</h2>
+  <p><span class="mix">図の端子 a，b 間に電圧を加えたとき，$12\,\Omega$ の抵抗に電流は流れるか。</span></p><img class="fig" src="out/ladder_dc021_s3.svg" alt="段3">
+  <div class="chs two"><button class="c" data-no="1" data-why="流れる＝向かい合う抵抗の積（4×10 と 5×8）を比べていない"><span class="n">(1)</span><span class="mix">流れる</span><span class="mk"></span></button><button class="c" data-no="2"><span class="n">(2)</span><span class="mix">流れない</span><span class="mk"></span></button></div>
+  <p class="why"></p>
+  <details><summary>答え</summary>
+    <p class="ans">(2) <span class="mix">流れない</span></p>
+    <div class="ex">
+      <div class="figbox"><svg class="fig" viewBox="440 225 490 260" xmlns="http://www.w3.org/2000/svg">
+        <rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/>
+        <g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g></svg>
+        <div class="nav"><button class="prev" aria-label="prev"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="next" aria-label="next"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>
+      </div>
+      <div class="rows"></div>
+    </div>
+    <p class="vid">動画 7</p>
+  </details>
+  <label class="ng"><input type="checkbox" class="ngc"> NG <input type="text" class="ngt"></label>
+</section><section class="q" data-id="s4" data-ans="2">
+  <h2>段4</h2>
+  <p><span class="mix">図の端子 a，b 間の合成抵抗 [Ω] の値として，正しいものを次の(1)～(5)のうちから一つ選べ。</span></p><img class="fig" src="out/ladder_dc021_s4.svg" alt="段4">
+  <div class="chs"><button class="c" data-no="1" data-why="1.5＝4つ全部を並列にした"><span class="n">(1)</span><span class="mix">1.5</span><span class="mk"></span></button><button class="c" data-no="2"><span class="n">(2)</span><span class="mix">6</span><span class="mk"></span></button><button class="c" data-no="3" data-why="18＝外した 12 Ω を足した"><span class="n">(3)</span><span class="mix">18</span><span class="mk"></span></button><button class="c" data-no="4" data-why="27＝全部を直列にした"><span class="n">(4)</span><span class="mix">27</span><span class="mk"></span></button><button class="c" data-no="5" data-why="39＝12 Ω も含めて全部を直列にした"><span class="n">(5)</span><span class="mix">39</span><span class="mk"></span></button></div>
+  <p class="why"></p>
+  <details><summary>答え</summary>
+    <p class="ans">(2) <span class="mix">6</span></p>
+    <div class="ex">
+      <div class="figbox"><svg class="fig" viewBox="440 225 490 260" xmlns="http://www.w3.org/2000/svg">
+        <rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/>
+        <g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g></svg>
+        <div class="nav"><button class="prev" aria-label="prev"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="next" aria-label="next"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>
+      </div>
+      <div class="rows"></div>
+    </div>
+    <p class="vid">動画 3・7</p>
+  </details>
+  <label class="ng"><input type="checkbox" class="ngc"> NG <input type="text" class="ngt"></label>
+</section><section class="q" data-id="s5" data-ans="1">
+  <h2>段5</h2>
+  <p><span class="mix">図の直流回路において，抵抗 $3\,\Omega$ の端子間の電圧 $V$ [V] の値として，正しいものを次の(1)～(5)のうちから一つ選べ。</span></p><img class="fig" src="out/ladder_dc021_s5.svg" alt="段5">
+  <div class="chs"><button class="c" data-no="1"><span class="n">(1)</span><span class="mix">3</span><span class="mk"></span></button><button class="c" data-no="2" data-why="4.5＝電圧を半分ずつに分けた"><span class="n">(2)</span><span class="mix">4.5</span><span class="mk"></span></button><button class="c" data-no="3" data-why="6＝6 Ω の電圧を答えた（分子を反対側の抵抗にした）"><span class="n">(3)</span><span class="mix">6</span><span class="mk"></span></button><button class="c" data-no="4" data-why="9＝電源電圧をそのまま答えた"><span class="n">(4)</span><span class="mix">9</span><span class="mk"></span></button><button class="c" data-no="5" data-why="27＝電源電圧に 3 Ω を掛けた"><span class="n">(5)</span><span class="mix">27</span><span class="mk"></span></button></div>
+  <p class="why"></p><div class="rep"></div>
+  <details><summary>答え</summary>
+    <p class="ans">(1) <span class="mix">3</span></p>
+    <button class="reopen" aria-label="open"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><path d="M10 9l5 3-5 3z" fill="#111"/></svg></button>
+    <p class="vid">動画 5</p>
+  </details>
+  <label class="ng"><input type="checkbox" class="ngc"> NG <input type="text" class="ngt"></label>
+</section><section class="q" data-id="s6" data-ans="4">
+  <h2>段6</h2>
+  <p><span class="mix">図の直流回路において，抵抗 $3\,\Omega$ の端子間の電圧が $1.8\,\mathrm{V}$ であった。このとき，電源電圧 $E$ [V] の値として，正しいものを次の(1)～(5)のうちから一つ選べ。</span></p><img class="fig" src="out/ladder_dc021_s6.svg" alt="段6">
+  <div class="chs"><button class="c" data-no="1" data-why="1.8＝3 Ω の電圧をそのまま E とした"><span class="n">(1)</span><span class="mix">1.8</span><span class="mk"></span></button><button class="c" data-no="2" data-why="2.7＝分子を反対側の抵抗にして解いた"><span class="n">(2)</span><span class="mix">2.7</span><span class="mk"></span></button><button class="c" data-no="3" data-why="3.6＝6 Ω の電圧だけを出した"><span class="n">(3)</span><span class="mix">3.6</span><span class="mk"></span></button><button class="c" data-no="4"><span class="n">(4)</span><span class="mix">5.4</span><span class="mk"></span></button><button class="c" data-no="5" data-why="10.8＝6 Ω を掛けた"><span class="n">(5)</span><span class="mix">10.8</span><span class="mk"></span></button></div>
+  <p class="why"></p>
+  <details><summary>答え</summary>
+    <p class="ans">(4) <span class="mix">5.4</span></p>
+    <div class="ex">
+      <div class="figbox"><svg class="fig" viewBox="440 225 650 410" xmlns="http://www.w3.org/2000/svg">
+        <rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/>
+        <g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g></svg>
+        <div class="nav"><button class="prev" aria-label="prev"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><button class="next" aria-label="next"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div>
+      </div>
+      <div class="rows"></div>
+    </div>
+    <p class="vid">動画 5</p>
+  </details>
+  <label class="ng"><input type="checkbox" class="ngc"> NG <input type="text" class="ngt"></label>
+</section><section class="q" data-id="s7" data-ans="3">
+  <h2>令和4年下期 問5</h2>
+  <p><span class="mix">図のような直流回路において，抵抗 $3\,\Omega$ の端子間の電圧が $1.8\,\mathrm{V}$ であった。このとき，電源電圧 $E$ [V] の値として，最も近いものを次の(1)～(5)のうちから一つ選べ。</span></p><img class="fig" src="out/dc021.svg" alt="令和4年下期 問5"><p class="credit" style="font-size:12px;color:#666;margin:4px 0 0">出典：一般財団法人 電気技術者試験センター 令和4年度下期 第三種 理論 問5（図は描き直し）</p>
+  <div class="chs"><button class="c" data-no="1" data-why="1.8＝3 Ω の電圧をそのまま E とした"><span class="n">(1)</span><span class="mix">1.8</span><span class="mk"></span></button><button class="c" data-no="2" data-why="3.6＝ブリッジ部分（6 Ω）の電圧だけを出した"><span class="n">(2)</span><span class="mix">3.6</span><span class="mk"></span></button><button class="c" data-no="3"><span class="n">(3)</span><span class="mix">5.4</span><span class="mk"></span></button><button class="c" data-no="4" data-why="7.2＝ブリッジを上の道 4＋5＝9 Ω だけで計算した（並列にし忘れ）"><span class="n">(4)</span><span class="mix">7.2</span><span class="mk"></span></button><button class="c" data-no="5"><span class="n">(5)</span><span class="mix">10.4</span><span class="mk"></span></button></div>
+  <p class="why"></p><div class="rep"></div>
+  <details><summary>答え</summary>
+    <p class="ans">(3) <span class="mix">5.4</span></p>
+    <button class="reopen" aria-label="open"><svg viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><path d="M10 9l5 3-5 3z" fill="#111"/></svg></button>
+    <p class="vid">動画 3・5・7</p>
+  </details>
+  <label class="ng"><input type="checkbox" class="ngc"> NG <input type="text" class="ngt"></label>
+</section>
+</main>
+<script>
+var DATA = {"store": "proto_circuit_ladder_dc021_full", "id": "dc021", "secs": [{"id": "s1", "scene": "s1", "expl": [{"key": "A", "params": {"x1": 610, "x2": 750, "o1": 1, "o2": 1, "om": 0}, "vid": [2], "text": "a から b まで一本道。$4\\,\\Omega$ と $5\\,\\Omega$ は直列。", "eq": [["R_1 = 4\\,\\Omega,\\;\\; R_2 = 5\\,\\Omega"]]}, {"key": "B", "params": {"x1": 680, "x2": 680, "o1": 0, "o2": 0, "om": 1}, "dur": 1000, "win": {"x1": [0, 0.6], "x2": [0, 0.6], "o1": [0.55, 1], "o2": [0.55, 1], "om": [0.55, 1]}, "vid": [3], "text": "直列は電流の通り道が1本なので、抵抗は足し算で1つにまとめられる。", "eq": [["R = R_1 + R_2", "R = 4 + 5", "R = 9\\,\\Omega"]]}], "slide": false, "viewbox": "440 292 480 100", "band": null, "rep": null}, {"id": "s2", "scene": "s2", "expl": [{"key": "A", "params": {"y1": 300, "y2": 420, "o1": 1, "o2": 1, "om": 0}, "vid": [2], "text": "a から b への道が2本。$9\\,\\Omega$ と $18\\,\\Omega$ は並列。", "eq": [["R_1 = 9\\,\\Omega,\\;\\; R_2 = 18\\,\\Omega"]]}, {"key": "B", "params": {"y1": 360, "y2": 360, "o1": 0, "o2": 0, "om": 1}, "dur": 1000, "win": {"y1": [0, 0.6], "y2": [0, 0.6], "o1": [0.55, 1], "o2": [0.55, 1], "om": [0.55, 1]}, "vid": [3], "text": "並列の2本は和分の積で1つにまとめる。道が増えて流れやすくなるので、どちらの抵抗よりも小さくなる。", "eq": [["R = \\dfrac{R_1 R_2}{R_1 + R_2}", "R = \\dfrac{9 \\times 18}{9 + 18}", "R = \\dfrac{162}{27}", "R = 6\\,\\Omega"]]}], "slide": false, "viewbox": "440 250 490 195", "band": null, "rep": null}, {"id": "s3", "scene": "s3", "expl": [{"key": "A", "params": {"yT": 275, "yB": 440, "tx1": 622.5, "tx2": 747.5, "to1": 1, "to2": 1, "tom": 0, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 1, "k1": 0, "k2": 0, "kd": 1, "z": 0}, "vid": [7], "text": "抵抗が4つあり、真ん中に $12\\,\\Omega$。ブリッジ回路の形。", "eq": [["R_1 = 4,\\;\\; R_2 = 5,\\;\\; R_3 = 8,\\;\\; R_4 = 10\\;[\\Omega]"], ["R_5 = 12\\;\\Omega"]]}, {"key": "B", "params": {"yT": 275, "yB": 440, "tx1": 622.5, "tx2": 747.5, "to1": 1, "to2": 1, "tom": 0, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 1, "k1": 1, "k2": 0, "kd": 1, "z": 0}, "dur": 700, "vid": [7], "text": "ブリッジは、向かい合う抵抗の積を比べる。まず $R_1$ と $R_4$。", "eq": [["R_1 R_4 = 4 \\times 10", "R_1 R_4 = 40"]]}, {"key": "C", "params": {"yT": 275, "yB": 440, "tx1": 622.5, "tx2": 747.5, "to1": 1, "to2": 1, "tom": 0, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 1, "k1": 1, "k2": 1, "kd": 1, "z": 0}, "dur": 700, "vid": [7], "text": "もう一組の $R_2$ と $R_3$。", "eq": [["R_2 R_3 = 5 \\times 8", "R_2 R_3 = 40"]]}, {"key": "D", "params": {"yT": 275, "yB": 440, "tx1": 622.5, "tx2": 747.5, "to1": 1, "to2": 1, "tom": 0, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 1, "k1": 1, "k2": 1, "kd": 0, "z": 1}, "dur": 800, "win": {"kd": [0, 0.5], "z": [0.3, 1]}, "vid": [7], "text": "向かい合う抵抗の積が等しいので平衡。$R_5$ の両端の電位が同じになり、$12\\,\\Omega$ に電流は流れない。", "eq": [["R_1 R_4 = R_2 R_3", "40 = 40", "I_5 = 0\\,\\mathrm{A}"]]}], "slide": false, "viewbox": "440 225 490 260", "band": null, "rep": null}, {"id": "s4", "scene": "s4", "expl": [{"key": "A", "params": {"yT": 275, "yB": 440, "tx1": 622.5, "tx2": 747.5, "to1": 1, "to2": 1, "tom": 0, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 0, "k1": 0, "k2": 0, "kd": 1}, "vid": [7], "text": "$12\\,\\Omega$ を外したブリッジ。a から b への道は上と下の2本。", "eq": [["R_1 = 4,\\;\\; R_2 = 5,\\;\\; R_3 = 8,\\;\\; R_4 = 10\\;[\\Omega]"]]}, {"key": "B", "params": {"yT": 275, "yB": 440, "tx1": 685, "tx2": 685, "to1": 0, "to2": 0, "tom": 1, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 0, "k1": 0, "k2": 0, "kd": 1}, "dur": 1000, "win": {"tx1": [0, 0.6], "tx2": [0, 0.6], "to1": [0.55, 1], "to2": [0.55, 1], "tom": [0.55, 1]}, "vid": [3], "text": "上の道は $R_1$ と $R_2$ の直列。足し算で1つにまとめる。", "eq": [["R_{12} = R_1 + R_2", "R_{12} = 4 + 5", "R_{12} = 9\\,\\Omega"]]}, {"key": "C", "params": {"yT": 275, "yB": 440, "tx1": 685, "tx2": 685, "to1": 0, "to2": 0, "tom": 1, "bx1": 685, "bx2": 685, "bo1": 0, "bo2": 0, "bom": 1, "pm": 0, "r5": 0, "k1": 0, "k2": 0, "kd": 1}, "dur": 1000, "win": {"bx1": [0, 0.6], "bx2": [0, 0.6], "bo1": [0.55, 1], "bo2": [0.55, 1], "bom": [0.55, 1]}, "vid": [3], "text": "下の道も $R_3$ と $R_4$ の直列。", "eq": [["R_{34} = R_3 + R_4", "R_{34} = 8 + 10", "R_{34} = 18\\,\\Omega"]]}, {"key": "D", "params": {"yT": 360, "yB": 360, "tx1": 685, "tx2": 685, "to1": 0, "to2": 0, "tom": 1, "bx1": 685, "bx2": 685, "bo1": 0, "bo2": 0, "bom": 1, "pm": 1, "r5": 0, "k1": 0, "k2": 0, "kd": 1}, "dur": 1000, "win": {"yT": [0, 0.6], "yB": [0, 0.6], "pm": [0.55, 1]}, "vid": [3], "text": "上の $9\\,\\Omega$ と下の $18\\,\\Omega$ は並列。和分の積で1つにまとめる。", "eq": [["R = \\dfrac{R_{12} R_{34}}{R_{12} + R_{34}}", "R = \\dfrac{9 \\times 18}{9 + 18}", "R = \\dfrac{162}{27}", "R = 6\\,\\Omega"]]}], "slide": false, "viewbox": "440 225 490 260", "band": null, "rep": null}, {"id": "s5", "scene": "s5", "expl": [{"key": "A", "params": {"x6": 660, "x3": 928, "o6": 1, "o3": 1, "o9": 0, "a": 0, "d3": 1, "d6": 0, "lv": 0, "yb": 650, "cp": 0, "co": 0}, "vid": [2], "text": "$6\\,\\Omega$ と $3\\,\\Omega$ が一本道でつながった直列。電源は $9\\,\\mathrm{V}$。", "eq": [["R_1 = 6\\,\\Omega,\\;\\; R_2 = 3\\,\\Omega,\\;\\; E = 9\\,\\mathrm{V}"]], "cap": {"x": 761, "y": 450, "w": 520, "va": "top"}, "eqp": {"x": 761, "y": 540, "w": 540, "va": "top"}}, {"key": "B", "params": {"x6": 794, "x3": 794, "o6": 0, "o3": 0, "o9": 1, "a": 0, "d3": 0, "d6": 0, "lv": 0, "yb": 650, "cp": 0, "co": 0}, "dur": 1000, "win": {"d3": [0, 0.25], "x6": [0.2, 0.7], "x3": [0.2, 0.7], "o6": [0.65, 1], "o3": [0.65, 1], "o9": [0.65, 1]}, "vid": [3], "text": "直列は電流の通り道が1本なので、まず足し算で1つの抵抗にまとめる。", "eq": [["R = R_1 + R_2", "R = 6 + 3", "R = 9\\,\\Omega"]], "zoom": {"x": 794, "y": 360, "s": 1.3}, "hl": [[618, 344, 352, 32]], "cap": {"x": 794, "y": 228, "w": 560, "va": "bottom"}, "eqp": {"x": 761, "y": 470, "w": 540, "va": "top"}}, {"key": "C", "params": {"x6": 794, "x3": 794, "o6": 0, "o3": 0, "o9": 1, "a": 1, "d3": 0, "d6": 0, "lv": 0, "yb": 650, "cp": 1, "co": 1}, "dur": 1400, "win": {"a": [0, 0.5], "cp": [0, 1], "co": [0, 0.1]}, "vid": [1], "text": "1つにまとめた回路で、オームの法則を回路全体に使う。", "eq": [["E = RI", "I = \\dfrac{E}{R}", "I = \\dfrac{9}{9}", "I = 1\\,\\mathrm{A}"]], "cap": {"x": 761, "y": 450, "w": 520, "va": "top"}, "eqp": {"x": 761, "y": 530, "w": 540, "va": "top"}}, {"key": "D", "params": {"x6": 660, "x3": 928, "o6": 1, "o3": 1, "o9": 0, "a": 1, "d3": 0, "d6": 0, "lv": 0, "yb": 650, "cp": 1, "co": 1}, "dur": 1000, "win": {"o9": [0, 0.3], "o6": [0, 0.3], "o3": [0, 0.3], "x6": [0.25, 1], "x3": [0.25, 1]}, "vid": [2], "text": "元の回路に戻す。直列は一本道なので、どちらの抵抗にも同じ $1\\,\\mathrm{A}$ が流れる。", "eq": [["I_1 = I_2 = I", "I_1 = I_2 = 1\\,\\mathrm{A}"]], "cap": {"x": 761, "y": 450, "w": 520, "va": "top"}, "eqp": {"x": 761, "y": 540, "w": 540, "va": "top"}}, {"key": "E", "params": {"x6": 660, "x3": 928, "o6": 1, "o3": 1, "o9": 0, "a": 1, "d3": 1, "d6": 0, "lv": 1, "yb": 650, "cp": 1, "co": 0}, "dur": 800, "win": {"lv": [0, 0.01], "co": [0, 0.4]}, "vid": [1], "text": "$3\\,\\Omega$ 1つにオームの法則を使う。", "eq": [["V = R_2 I", "V = 3 \\times 1", "V = 3\\,\\mathrm{V}"]], "zoom": {"x": 928, "y": 330, "s": 1.3}, "hl": [[890, 344, 76, 32]], "cap": {"x": 928, "y": 228, "w": 400, "va": "bottom"}, "eqp": {"x": 761, "y": 470, "w": 540, "va": "top"}}, {"key": "F", "params": {"x6": 660, "x3": 928, "o6": 1, "o3": 1, "o9": 0, "a": 1, "d3": 1, "d6": 1, "lv": 1, "yb": 650, "cp": 1, "co": 0}, "dur": 800, "vid": [1, 2], "text": "$6\\,\\Omega$ も同じように出す。直列では電圧の和が電源の電圧になるので、足して確かめる。", "eq": [["V_1 = R_1 I", "V_1 = 6 \\times 1", "V_1 = 6\\,\\mathrm{V}"], ["E = V_1 + V", "E = 6 + 3", "E = 9\\,\\mathrm{V}"]], "hl": [[622, 344, 76, 32]], "cap": {"x": 660, "y": 228, "w": 440, "va": "bottom"}, "eqp": {"x": 761, "y": 465, "w": 540, "va": "top"}}], "slide": true, "viewbox": "300 130 925 600", "band": {"want": "V", "known": "R_1 = 6\\,\\Omega,\\;\\; R_2 = 3\\,\\Omega,\\;\\; E = 9\\,\\mathrm{V}", "ans": "V = 3\\,\\mathrm{V}", "at": 4, "full": "図の直流回路において，抵抗 $3\\,\\Omega$ の端子間の電圧 $V$ [V] の値として，正しいものを次の(1)～(5)のうちから一つ選べ。"}, "rep": {"scene": "s5", "viewbox": "440 225 650 410", "params": {"x6": 660, "x3": 928, "o6": 1, "o3": 1, "o9": 0, "a": 1, "d3": 1, "d6": 1, "lv": 1, "yb": 570, "cp": 1, "co": 0}, "items": {"2": {"wrong": {"d3b": "{V}=4.5 V", "d6a": "{V}_1=4.5 V"}, "xs": [[928, 250], [660, 250]]}, "3": {"wrong": {"d3b": "{V}=6 V"}, "xs": [[928, 250]]}, "4": {"wrong": {"d3b": "{V}=9 V"}, "xs": [[928, 250]]}, "5": {"wrong": {"d3b": "{V}=27 V"}, "xs": [[928, 250]]}}}}, {"id": "s6", "scene": "s6", "expl": [{"key": "A", "params": {"a": 0, "c": 0, "d6": 0, "e": 0, "f": 0}, "vid": [2], "text": "分かっているのは $3\\,\\Omega$ の電圧 $1.8\\,\\mathrm{V}$。電源の電圧 $E$ は分からない。", "eq": [["R_1 = 6\\,\\Omega,\\;\\; R_2 = 3\\,\\Omega,\\;\\; V = 1.8\\,\\mathrm{V}"]]}, {"key": "B", "params": {"a": 1, "c": 0, "d6": 0, "e": 0, "f": 0}, "dur": 700, "vid": [1], "text": "電圧と抵抗が分かっている $3\\,\\Omega$ 1つに、オームの法則を使って電流を出す。", "eq": [["V = R_2 I", "I = \\dfrac{V}{R_2}", "I = \\dfrac{1.8}{3}", "I = 0.6\\,\\mathrm{A}"]]}, {"key": "C", "params": {"a": 1, "c": 1, "d6": 0, "e": 0, "f": 0}, "dur": 900, "vid": [2], "text": "直列は一本道なので、$6\\,\\Omega$ にも同じ電流が流れる。", "eq": [["I_1 = I", "I_1 = 0.6\\,\\mathrm{A}"]]}, {"key": "D", "params": {"a": 1, "c": 1, "d6": 1, "e": 0, "f": 0}, "dur": 800, "vid": [1], "text": "$6\\,\\Omega$ にもオームの法則を使う。", "eq": [["V_1 = R_1 I_1", "V_1 = 6 \\times 0.6", "V_1 = 3.6\\,\\mathrm{V}"]]}, {"key": "E", "params": {"a": 1, "c": 1, "d6": 1, "e": 1, "f": 0}, "dur": 700, "vid": [2], "text": "直列では、それぞれの抵抗の電圧の和が電源の電圧になる。", "eq": [["E = V_1 + V", "E = 3.6 + 1.8", "E = 5.4\\,\\mathrm{V}"]]}, {"key": "F", "params": {"a": 1, "c": 1, "d6": 1, "e": 1, "f": 1}, "dur": 700, "vid": [5], "text": "分圧の式を $E$ について解いても同じ答え。分圧の式の分子は自分の抵抗。", "eq": [["V = E\\,\\dfrac{R_2}{R_1 + R_2}", "E = V\\,\\dfrac{R_1 + R_2}{R_2}", "E = 1.8 \\times \\dfrac{6 + 3}{3}", "E = 5.4\\,\\mathrm{V}"]]}], "slide": false, "viewbox": "440 225 650 410", "band": null, "rep": null}, {"id": "s7", "scene": "s7", "expl": [{"key": "A", "params": {"yT": 275, "yB": 440, "tx1": 622.5, "tx2": 747.5, "to1": 1, "to2": 1, "tom": 0, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 1, "k1": 0, "k2": 0, "kd": 1, "e": 0, "t": 0, "yb": 780}, "vid": [7], "text": "ブリッジ（$4,\\,5,\\,8,\\,10,\\,12\\,\\Omega$）と $3\\,\\Omega$ の直列。$3\\,\\Omega$ の電圧が $1.8\\,\\mathrm{V}$。", "eq": [["R_1 = 4,\\;\\; R_2 = 5,\\;\\; R_3 = 8,\\;\\; R_4 = 10\\;[\\Omega]"], ["R_5 = 12,\\;\\; R_6 = 3\\;[\\Omega]"]], "cap": {"x": 761, "y": 498, "w": 540, "va": "top"}, "eqp": {"x": 761, "y": 590, "w": 540, "va": "top"}}, {"key": "B", "params": {"yT": 275, "yB": 440, "tx1": 622.5, "tx2": 747.5, "to1": 1, "to2": 1, "tom": 0, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 1, "k1": 1, "k2": 1, "kd": 1, "e": 0, "t": 0, "yb": 780}, "dur": 800, "vid": [7], "text": "抵抗が4つでブリッジの形。向かい合う抵抗の積を比べる。", "eq": [["R_1 R_4 = 4 \\times 10", "R_1 R_4 = 40"], ["R_2 R_3 = 5 \\times 8", "R_2 R_3 = 40"]], "zoom": {"x": 685, "y": 357, "s": 1.45}, "hl": [[586, 259, 73, 32], [711, 424, 73, 32], [711, 259, 73, 32], [586, 424, 73, 32]], "cap": {"x": 685, "y": 228, "w": 520, "va": "bottom"}, "eqp": {"x": 761, "y": 505, "w": 540, "va": "top"}}, {"key": "C", "params": {"yT": 275, "yB": 440, "tx1": 622.5, "tx2": 747.5, "to1": 1, "to2": 1, "tom": 0, "bx1": 622.5, "bx2": 747.5, "bo1": 1, "bo2": 1, "bom": 0, "pm": 0, "r5": 0, "k1": 1, "k2": 1, "kd": 0, "e": 0, "t": 0, "yb": 780}, "dur": 1000, "win": {"kd": [0, 0.4], "r5": [0.3, 1]}, "vid": [7], "text": "積が等しいので平衡。$12\\,\\Omega$ には電流が流れないので、無いものとして外せる。", "eq": [["R_1 R_4 = R_2 R_3", "40 = 40", "I_5 = 0\\,\\mathrm{A}"]], "zoom": {"x": 685, "y": 357, "s": 1.45}, "hl": [[669, 323, 32, 69]], "cap": {"x": 685, "y": 228, "w": 520, "va": "bottom"}, "eqp": {"x": 761, "y": 510, "w": 540, "va": "top"}}, {"key": "D", "params": {"yT": 275, "yB": 440, "tx1": 685, "tx2": 685, "to1": 0, "to2": 0, "tom": 1, "bx1": 685, "bx2": 685, "bo1": 0, "bo2": 0, "bom": 1, "pm": 0, "r5": 0, "k1": 1, "k2": 1, "kd": 0, "e": 0, "t": 0, "yb": 780}, "dur": 1000, "win": {"tx1": [0, 0.6], "tx2": [0, 0.6], "to1": [0.55, 1], "to2": [0.55, 1], "tom": [0.55, 1], "bx1": [0, 0.6], "bx2": [0, 0.6], "bo1": [0.55, 1], "bo2": [0.55, 1], "bom": [0.55, 1]}, "vid": [3], "text": "外すと、上の道も下の道も直列。それぞれ足し算でまとめる。", "eq": [["R_{12} = R_1 + R_2", "R_{12} = 4 + 5", "R_{12} = 9\\,\\Omega"], ["R_{34} = R_3 + R_4", "R_{34} = 8 + 10", "R_{34} = 18\\,\\Omega"]], "zoom": {"x": 685, "y": 357, "s": 1.3}, "hl": [[586, 259, 198, 32], [586, 424, 198, 32]], "cap": {"x": 685, "y": 228, "w": 520, "va": "bottom"}, "eqp": {"x": 761, "y": 500, "w": 540, "va": "top"}}, {"key": "E", "params": {"yT": 360, "yB": 360, "tx1": 685, "tx2": 685, "to1": 0, "to2": 0, "tom": 1, "bx1": 685, "bx2": 685, "bo1": 0, "bo2": 0, "bom": 1, "pm": 1, "r5": 0, "k1": 1, "k2": 1, "kd": 0, "e": 0, "t": 0, "yb": 780}, "dur": 1000, "win": {"yT": [0, 0.6], "yB": [0, 0.6], "pm": [0.55, 1]}, "vid": [3], "text": "上と下の2本は並列。和分の積で1つにまとめる。", "eq": [["R_{ab} = \\dfrac{R_{12} R_{34}}{R_{12} + R_{34}}", "R_{ab} = \\dfrac{9 \\times 18}{9 + 18}", "R_{ab} = \\dfrac{162}{27}", "R_{ab} = 6\\,\\Omega"]], "zoom": {"x": 685, "y": 357, "s": 1.3}, "hl": [[651, 259, 68, 32], [651, 424, 68, 32]], "cap": {"x": 685, "y": 228, "w": 520, "va": "bottom"}, "eqp": {"x": 761, "y": 500, "w": 540, "va": "top"}}, {"key": "F", "params": {"yT": 360, "yB": 360, "tx1": 685, "tx2": 685, "to1": 0, "to2": 0, "tom": 1, "bx1": 685, "bx2": 685, "bo1": 0, "bo2": 0, "bom": 1, "pm": 1, "r5": 0, "k1": 1, "k2": 1, "kd": 0, "e": 0, "t": 1, "yb": 780}, "dur": 800, "vid": [3], "text": "残りは $R_{ab}$ と $3\\,\\Omega$ の直列。全体の抵抗は足し算。", "eq": [["R = R_{ab} + R_6", "R = 6 + 3", "R = 9\\,\\Omega"]], "hl": [[649, 344, 315, 32]], "cap": {"x": 761, "y": 495, "w": 540, "va": "top"}, "eqp": {"x": 761, "y": 585, "w": 540, "va": "top"}}, {"key": "G", "params": {"yT": 360, "yB": 360, "tx1": 685, "tx2": 685, "to1": 0, "to2": 0, "tom": 1, "bx1": 685, "bx2": 685, "bo1": 0, "bo2": 0, "bom": 1, "pm": 1, "r5": 0, "k1": 1, "k2": 1, "kd": 0, "e": 1, "t": 1, "yb": 780}, "dur": 700, "vid": [5], "text": "直列では電圧が抵抗の比で分かれる（分圧）。$3\\,\\Omega$ の分の式を $E$ について解く。", "eq": [["V = E\\,\\dfrac{R_6}{R_{ab} + R_6}", "E = V\\,\\dfrac{R_{ab} + R_6}{R_6}", "E = 1.8 \\times \\dfrac{6 + 3}{3}", "E = 5.4\\,\\mathrm{V}"]], "hl": [[892, 344, 72, 32]], "cap": {"x": 761, "y": 492, "w": 540, "va": "top"}, "eqp": {"x": 761, "y": 565, "w": 540, "va": "top"}}], "slide": true, "viewbox": "290 150 945 700", "band": {"want": "E", "known": "V = 1.8\\,\\mathrm{V}\\;\\;(R_6 = 3\\,\\Omega)", "ans": "E = 5.4\\,\\mathrm{V}", "at": 6, "full": "図のような直流回路において，抵抗 $3\\,\\Omega$ の端子間の電圧が $1.8\\,\\mathrm{V}$ であった。このとき，電源電圧 $E$ [V] の値として，最も近いものを次の(1)～(5)のうちから一つ選べ。"}, "rep": {"scene": "s7", "viewbox": "440 225 650 430", "params": {"yT": 360, "yB": 360, "tx1": 685, "tx2": 685, "to1": 0, "to2": 0, "tom": 1, "bx1": 685, "bx2": 685, "bo1": 0, "bo2": 0, "bom": 1, "pm": 1, "r5": 0, "k1": 1, "k2": 1, "kd": 0, "e": 1, "t": 0, "yb": 600}, "items": {"1": {"wrong": {"e2": "{E}=1.8 V"}, "xs": [[762, 642]]}, "2": {"wrong": {"e2": "{E}=3.6 V"}, "pw": {"vab": 1}, "xs": [[762, 642]]}, "4": {"wrong": {"tab": "{R}_ab=9 Ω", "e2": "{E}=7.2 V"}, "xs": [[685, 333], [762, 642]]}}}}], "icons": {"close": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M6 6L18 18M18 6L6 18\"/></svg>", "prev": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 5l-7 7 7 7\"/></svg>", "next": "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 5l7 7-7 7\"/></svg>"}};
+
+var NS = "http://www.w3.org/2000/svg";
+function Drawer(svg){
+  this.svg = svg; this.g = svg.querySelector("g.parts"); this.els = {}; this.seen = {}; this.key = "";
+}
+Drawer.prototype.el = function(id, tag, cls){
+  var e = this.els[id];
+  if (!e) { e = document.createElementNS(NS, tag); if (cls) e.setAttribute("class", cls); this.g.appendChild(e); this.els[id] = e; }
+  this.seen[id] = 1; e.style.display = ""; return e;
+};
+Drawer.prototype.begin = function(){ this.seen = {}; };
+Drawer.prototype.end = function(){ for (var id in this.els) if (!this.seen[id]) this.els[id].style.display = "none"; };
+Drawer.prototype.style = function(e, o){
+  o = o || {};
+  e.style.opacity = o.o === undefined ? 1 : Math.max(0, Math.min(1, o.o));
+  var on = !!(o.nw && o.nw.split(",").indexOf(this.key) >= 0);
+  e.classList.toggle("on", on);
+  return e;
+};
+function n(x){ return Math.round(x * 100) / 100; }
+// 導線（折れ線）
+Drawer.prototype.wire = function(id, pts, o){
+  var e = this.el(id, "path", "ink");
+  e.setAttribute("d", pts.map(function(p, i){ return (i ? "L" : "M") + n(p[0]) + " " + n(p[1]); }).join(" "));
+  if (o && o.dash) e.classList.add("dash");
+  return this.style(e, o);
+};
+// 文字。{R} は斜体、_1 は下付き
+Drawer.prototype.text = function(id, x, y, s, o){
+  o = o || {};
+  var ov = this.rep && this.rep[id];
+  if (ov) { if (ov.s !== undefined) s = ov.s; o = Object.assign({}, o, {o: (o.o === undefined ? 1 : o.o) * ov.o}); }
+  var e = this.el(id, "text", "ink");
+  e.setAttribute("x", n(x)); e.setAttribute("y", n(y));
+  e.setAttribute("text-anchor", o.anchor || "middle");
+  e.setAttribute("dominant-baseline", "middle");
+  if (o.size) e.style.fontSize = o.size + "px";
+  e.style.fill = ov && ov.c ? ov.c : "";
+  if (e.dataset.s !== s) {
+    e.dataset.s = s; e.textContent = "";
+    var re = /\{([^}]*)\}|_([A-Za-z0-9]+)|([^{_]+)/g, m;
+    while ((m = re.exec(s))) {
+      var t = document.createElementNS(NS, "tspan");
+      if (m[1] !== undefined) { t.setAttribute("class", "v"); t.textContent = m[1]; }
+      else if (m[2] !== undefined) { t.textContent = m[2]; t.setAttribute("baseline-shift", "-25%"); t.style.fontSize = "70%"; }
+      else t.textContent = m[3];
+      e.appendChild(t);
+      if (m[2] !== undefined) { var z = document.createElementNS(NS, "tspan"); z.textContent = "​"; e.appendChild(z); }
+    }
+  }
+  return this.style(e, o);
+};
+// 抵抗（JIS：長方形）。dir "h" 横 / "v" 縦。中心 (x,y)
+Drawer.prototype.res = function(id, x, y, dir, o){
+  var e = this.el(id, "rect", "ink box"), L = 60, H = 24;
+  var w = dir === "v" ? H : L, h = dir === "v" ? L : H;
+  e.setAttribute("x", n(x - w / 2)); e.setAttribute("y", n(y - h / 2));
+  e.setAttribute("width", w); e.setAttribute("height", h);
+  return this.style(e, o);
+};
+// 電池（横の導線の途中）。x が長い線（＋）、x+20 が短い線
+Drawer.prototype.cell = function(id, x, y, o){
+  this.wire(id + ":L", [[x, y - 22], [x, y + 22]], o);
+  var s = this.wire(id + ":S", [[x + 20, y - 11], [x + 20, y + 11]], o); s.style.strokeWidth = 4;
+};
+Drawer.prototype.dot = function(id, x, y, o){
+  var e = this.el(id, "circle", "dot"); e.setAttribute("cx", n(x)); e.setAttribute("cy", n(y)); e.setAttribute("r", 5);
+  return this.style(e, o);
+};
+Drawer.prototype.term = function(id, x, y, name, side, o){
+  var e = this.el(id, "circle", "ink term"); e.setAttribute("cx", n(x)); e.setAttribute("cy", n(y)); e.setAttribute("r", 6);
+  this.style(e, o);
+  this.text(id + ":t", x + (side === "l" ? -16 : 16), y, name, {anchor: side === "l" ? "end" : "start"});
+};
+// 矢印（片矢印）
+Drawer.prototype.arrow = function(id, x0, y0, x1, y1, o){
+  var dx = x1 - x0, dy = y1 - y0, L = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / L, uy = dy / L, h = 13, w = 7;
+  this.wire(id, [[x0, y0], [x1 - ux * 6, y1 - uy * 6]], o);
+  var e = this.el(id + ":h", "path", "ink head");
+  e.setAttribute("d", "M" + n(x1) + " " + n(y1) + " L" + n(x1 - ux * h - uy * w) + " " + n(y1 - uy * h + ux * w) +
+    " L" + n(x1 - ux * h + uy * w) + " " + n(y1 - uy * h - ux * w) + " Z");
+  this.style(e, o);
+};
+// 寸法線（横）。v=0〜1 で「補助線が伸びる → 両矢印が中から外へ伸びる」
+Drawer.prototype.dim = function(id, x1, x2, yb, yt, ya, v, o){
+  var e1 = Math.min(1, v * 2), w = Math.max(0, v * 2 - 1), yy = yb + (yt - yb) * e1, c = (x1 + x2) / 2;
+  this.wire(id + ":e", [[x1, yb], [x1, yy]], Object.assign({}, o, {o: e1 > 0 ? (o && o.o !== undefined ? o.o : 1) : 0}));
+  this.wire(id + ":f", [[x2, yb], [x2, yy]], Object.assign({}, o, {o: e1 > 0 ? (o && o.o !== undefined ? o.o : 1) : 0}));
+  var L = c - (c - x1) * w, R = c + (x2 - c) * w, h = 9, d = "";
+  if (w > 0.02) d = "M" + n(L) + " " + ya + " H" + n(R) + " M" + n(L + h) + " " + (ya - 5) + " L" + n(L) + " " + ya + " L" + n(L + h) + " " + (ya + 5) +
+      " M" + n(R - h) + " " + (ya - 5) + " L" + n(R) + " " + ya + " L" + n(R - h) + " " + (ya + 5);
+  var a = this.el(id + ":a", "path", "ink"); a.setAttribute("d", d); this.style(a, o);
+  return w;
+};
+function clamp01(x){ return x < 0 ? 0 : x > 1 ? 1 : x; }
+function lerp(a, b, t){ return a + (b - a) * t; }
+// 横に並んだ2つの抵抗（直列）が寄って1つになる部品。x1,x2 が中心。間の線は縮む。
+// 両端 xl・xr までの導線も描く。名前は離れているときだけ出す（重なり防止）
+function seriesPair(d, id, y, xl, xr, x1, x2, p){
+  var HW = 30, sep = clamp01((x2 - x1 - 70) / 30);
+  d.wire(id + ":wl", [[xl, y], [x1 - HW, y]], p.wo);
+  if (x2 - HW > x1 + HW + 0.5) d.wire(id + ":wm", [[x1 + HW, y], [x2 - HW, y]], p.wo);
+  d.wire(id + ":wr", [[x2 + HW, y], [xr, y]], p.wo);
+  d.res(id + ":a", x1, y, "h", {o: p.o1, nw: p.nw1}); d.res(id + ":b", x2, y, "h", {o: p.o2, nw: p.nw2});
+  d.res(id + ":m", (x1 + x2) / 2, y, "h", {o: p.om, nw: p.nwm});
+  var ly = y + (p.ly || -30), lo = p.lo === undefined ? 1 : p.lo;
+  d.text(id + ":ta", x1, ly, p.l1, {o: p.o1 * sep * lo, nw: p.nw1}); d.text(id + ":tb", x2, ly, p.l2, {o: p.o2 * sep * lo, nw: p.nw2});
+  d.text(id + ":tm", (x1 + x2) / 2, ly, p.lm, {o: p.om * lo, nw: p.nwm});
+  return sep;
+}
+// 縦に並んだ2本の道（並列）が寄って1本になる部品。y1,y2 が2本の高さ、xl・xr が両側の縦の線
+// 抵抗の中心は cx。名前は抵抗の上（離れているときだけ）
+function parallelPair(d, id, cx, xl, xr, y1, y2, ym, p){
+  var sep = clamp01((y2 - y1 - 40) / 50);
+  d.wire(id + ":bl", [[xl, y1], [xl, y2]]); d.wire(id + ":br", [[xr, y1], [xr, y2]]);
+  [[y1, "a", p.o1, p.l1, p.nw1], [y2, "b", p.o2, p.l2, p.nw2]].forEach(function(r){
+    d.wire(id + ":w" + r[1] + "l", [[xl, r[0]], [cx - 30, r[0]]]); d.wire(id + ":w" + r[1] + "r", [[cx + 30, r[0]], [xr, r[0]]]);
+    d.res(id + ":" + r[1], cx, r[0], "h", {o: r[2], nw: r[4]});
+    d.text(id + ":t" + r[1], cx, r[0] - 28, r[3], {o: r[2] * sep, nw: r[4]});
+  });
+  d.res(id + ":m", cx, ym, "h", {o: p.om, nw: p.nwm});
+  d.text(id + ":tm", cx, ym - 28, p.lm, {o: p.om, nw: p.nwm});
+}
+
+
+function tex(s, el){
+  try { katex.render(s, el, {throwOnError: true}); }
+  catch (e) { el.textContent = s; console.error("katex", s, e.message); }
+}
+function mixInto(el, s){            // 文の中の $...$ を式にする
+  s.split("$").forEach(function(t, i){
+    var sp = document.createElement("span");
+    if (i % 2) tex(t, sp); else sp.textContent = t;
+    el.appendChild(sp);
+  });
+}
+var EXPLS = {};
+function Expl(root, S, render){
+  var N = S.length, cur = 0, want = 0, running = false;
+  var P = Object.assign({}, S[0].params);
+  var svg = root.querySelector("svg.fig"), dr = new Drawer(svg);
+  var rows = root.querySelector(".rows");
+  S.forEach(function(st, i){
+    var r = document.createElement("div"); r.className = "row";
+    var k = document.createElement("div"); k.className = "k"; k.textContent = st.key; r.appendChild(k);
+    var bd = document.createElement("div"); bd.className = "bd";
+    if (st.text) { var tx = document.createElement("div"); tx.className = "tx"; mixInto(tx, st.text); bd.appendChild(tx); }
+    (st.eq || []).forEach(function(line){
+      var ln = document.createElement("div"); ln.className = "ln";
+      line.forEach(function(s, j){
+        if (j) { var a = document.createElement("span"); a.className = "to"; tex("\\rightarrow", a); ln.appendChild(a); }
+        var e = document.createElement("span"); tex(s, e); ln.appendChild(e);
+      });
+      bd.appendChild(ln);
+    });
+    if (st.vid) { var v = document.createElement("div"); v.className = "vd"; v.textContent = "動画 " + st.vid.join("・"); bd.appendChild(v); }
+    r.appendChild(bd);
+    r.addEventListener("click", function(){ goTo(i); });
+    rows.appendChild(r);
+  });
+  var prevB = root.querySelector(".prev"), nextB = root.querySelector(".next");
+  prevB.addEventListener("click", function(){ goTo(Math.max(0, want - 1)); });
+  nextB.addEventListener("click", function(){ goTo(Math.min(N - 1, want + 1)); });
+  function draw(){ dr.begin(); render(P, dr); dr.end(); }
+  function mark(i){
+    rows.querySelectorAll(".row").forEach(function(r, j){
+      r.classList.toggle("on", j === i); r.classList.toggle("future", j > i);
+    });
+    dr.key = S[i].key; prevB.disabled = i === 0; nextB.disabled = i === N - 1;
+  }
+  function ease(t){ return t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2; }
+  function segment(a, b, scale, done){
+    var fwd = b > a, st = fwd ? S[b] : S[a];
+    var lo = fwd ? S[a].params : S[b].params, hi = fwd ? S[b].params : S[a].params;
+    var dur = (st.dur || 800) * scale, t0 = null;
+    dr.key = S[b].key;
+    function frame(now){
+      if (t0 === null) t0 = now;
+      var t = clamp01((now - t0) / dur), f = fwd ? t : 1 - t;
+      Object.keys(hi).forEach(function(k){
+        var w = (st.win && st.win[k]) || [0, 1];
+        var u = ease(clamp01((f - w[0]) / (w[1] - w[0])));
+        P[k] = lo[k] + (hi[k] - lo[k]) * u;
+      });
+      draw();
+      if (t < 1) requestAnimationFrame(frame);
+      else { P = Object.assign({}, S[b].params); draw(); done(); }
+    }
+    requestAnimationFrame(frame);
+  }
+  function run(){
+    if (cur === want) { running = false; return; }
+    running = true;
+    var nx = cur + (want > cur ? 1 : -1), scale = Math.abs(want - cur) > 1 ? 0.5 : 1;
+    segment(cur, nx, scale, function(){ cur = nx; run(); });
+  }
+  function goTo(i){ want = i; mark(i); if (!running) run(); }
+  mark(0); draw();
+  return {state: function(){ return {cur: cur, want: want, running: running, P: Object.assign({}, P)}; }, goTo: goTo};
+}
+
+var SCENES = {};
+
+function dr_trace(d, id, path, prog, o, nw){ if (d.trace) d.trace(id, path, prog, {o: o, nw: nw}); }
+function loop63(d, lab1, lab2, s, nw1, nw2, yb){      // 6Ω・3Ω の回路の外側と電池（yb＝下の線の高さ）
+  yb = yb || 570;
+  d.wire("L", [[478, 360], [478, yb], [752, yb]]); d.wire("R", [[772, yb], [1045, yb], [1045, 360]]);
+  d.cell("c", 752, yb);
+  d.text("e1", 762, yb + 42, lab1, {o: 1 - s, nw: nw1}); d.text("e2", 762, yb + 42, lab2, {o: s, nw: nw2});
+}
+function bridge(d, p, L){                            // ブリッジ（上 yT・下 yB、左 560・右 810、真ん中 685）
+  var k1 = p.k1 || 0, k2 = p.k2 || 0, kd = p.kd === undefined ? 1 : p.kd;
+  d.wire("g1", [[622.5, 275], [lerp(622.5, 747.5, k1), lerp(275, 440, k1)]], {o: k1 > 0.01 ? kd : 0, dash: 1, nw: L.nwk1});
+  d.wire("g2", [[747.5, 275], [lerp(747.5, 622.5, k2), lerp(275, 440, k2)]], {o: k2 > 0.01 ? kd : 0, dash: 1, nw: L.nwk2});
+  var r5 = p.r5 || 0, m = 357.5, on5 = r5 > 0.01 ? 1 : 0;
+  d.wire("v1", [[685, p.yT], [685, lerp(p.yT, m - 30, r5)]], {o: on5});
+  d.wire("v2", [[685, p.yB], [685, lerp(p.yB, m + 30, r5)]], {o: on5});
+  var pm = p.pm || 0, lo = clamp01((p.yB - p.yT - 60) / 60);
+  seriesPair(d, "t", p.yT, 560, 810, p.tx1, p.tx2, {o1: p.to1, o2: p.to2, om: p.tom * (1 - pm), lo: lo, ly: -27,
+    l1: L.r1, l2: L.r2, lm: L.t12, nw1: L.nw1, nw2: L.nw2, nwm: L.nwt});
+  seriesPair(d, "b", p.yB, 560, 810, p.bx1, p.bx2, {o1: p.bo1, o2: p.bo2, om: p.bom * (1 - pm), lo: lo, ly: 30,
+    l1: L.r3, l2: L.r4, lm: L.t34, nw1: L.nw3, nw2: L.nw4, nwm: L.nwb});
+  d.res("r5", 685, m, "v", {o: r5}); d.dot("d5a", 685, p.yT, {o: r5}); d.dot("d5b", 685, p.yB, {o: r5});
+  d.text("t5", 705, m, L.r5 || "", {anchor: "start", o: r5});
+  d.wire("bl", [[560, p.yT], [560, p.yB]]); d.wire("br", [[810, p.yT], [810, p.yB]]);
+  d.res("ab", 685, 360, "h", {o: pm, nw: L.nwab}); d.text("tab", 685, 333, L.ab || "", {o: pm, nw: L.nwab});
+  d.dot("dl", 560, 360); d.dot("dr", 810, 360);
+}
+var BR_LAB = {r1: "{R}_1=4 Ω", r2: "{R}_2=5 Ω", r3: "{R}_3=8 Ω", r4: "{R}_4=10 Ω", r5: "{R}_5=12 Ω",
+              t12: "{R}_12=9 Ω", t34: "{R}_34=18 Ω"};
+
+// 電流の点の通り道（＋極から出る向き）。I は電流 [A]、点の間隔＝base / I
+var FLOWS = {};
+FLOWS.s5 = function(p){
+  var yb = p.yb;
+  return {o: p.co, base: 110, paths: [{I: 1, pts: [[752, yb], [478, yb], [478, 360], [1045, 360], [1045, yb], [772, yb]]}]};
+};
+FLOWS.s7 = function(p){                                  // 平衡しているので R5 には点を流さない（0 A）
+  var yb = p.yb;
+  return {o: 1, base: 66, paths: [
+    {I: 0.6, pts: [[752, yb], [478, yb], [478, 360], [560, 360]]},
+    {I: 0.4, pts: [[560, 360], [560, p.yT], [810, p.yT], [810, 360]]},
+    {I: 0.2, pts: [[560, 360], [560, p.yB], [810, p.yB], [810, 360]]},
+    {I: 0.6, pts: [[810, 360], [1045, 360], [1045, yb], [772, yb]]}]};
+};
+SCENES.s1 = function(p, d){
+  seriesPair(d, "r", 360, 486, 874, p.x1, p.x2, {o1: p.o1, o2: p.o2, om: p.om,
+    l1: "{R}_1=4 Ω", l2: "{R}_2=5 Ω", lm: "{R}=9 Ω", nwm: "B"});
+  d.term("ta", 480, 360, "a", "l"); d.term("tb", 880, 360, "b", "r");
+};
+SCENES.s2 = function(p, d){
+  d.wire("wl", [[486, 360], [560, 360]]); d.wire("wr", [[810, 360], [884, 360]]);
+  parallelPair(d, "p", 685, 560, 810, p.y1, p.y2, 360, {o1: p.o1, o2: p.o2, om: p.om,
+    l1: "{R}_1=9 Ω", l2: "{R}_2=18 Ω", lm: "{R}=6 Ω", nwm: "B"});
+  d.dot("dl", 560, 360); d.dot("dr", 810, 360);
+  d.term("ta", 480, 360, "a", "l"); d.term("tb", 890, 360, "b", "r");
+};
+SCENES.s3 = function(p, d){
+  d.wire("wl", [[486, 360], [560, 360]]); d.wire("wr", [[810, 360], [884, 360]]);
+  bridge(d, p, Object.assign({nw1: "B", nw4: "B", nw2: "C", nw3: "C", nwk1: "B", nwk2: "C"}, BR_LAB));
+  d.text("i5", 705 + (1 - p.z) * 40, 386, "{I}_5=0 A", {anchor: "start", o: p.z, nw: "D", size: 20});
+  d.term("ta", 480, 360, "a", "l"); d.term("tb", 890, 360, "b", "r");
+};
+SCENES.s4 = function(p, d){
+  d.wire("wl", [[486, 360], [560, 360]]); d.wire("wr", [[810, 360], [884, 360]]);
+  bridge(d, p, Object.assign({nwt: "B", nwb: "C", nwab: "D", ab: "{R}=6 Ω"}, BR_LAB));
+  d.term("ta", 480, 360, "a", "l"); d.term("tb", 890, 360, "b", "r");
+};
+SCENES.s5 = function(p, d){
+  var sep = seriesPair(d, "s", 360, 478, 1045, p.x6, p.x3, {o1: p.o6, o2: p.o3, om: p.o9,
+    l1: "{R}_1=6 Ω", l2: "{R}_2=3 Ω", lm: "{R}=9 Ω", nwm: "B"});
+  loop63(d, "{E}=9 V", "", 0, "F", "", p.yb);
+  function arr(id, x, lo){
+    var dx = -(1 - p.a) * 120;
+    d.arrow(id, x - 32 + dx, 394, x + 32 + dx, 394, {o: p.a, nw: "C,D"});
+    d.text(id + "t", x + dx, 422, "1 A", {o: p.a * lo, nw: "C,D"});
+  }
+  arr("a6", p.x6, 1); arr("a3", p.x3, sep);
+  var yi = p.yb - 14;                                  // 電流の通り道（＋極から左へ出て時計回り）。線の内側をなぞる
+  dr_trace(d, "cur", "M752 " + yi + " H492 V374 H1031 V" + yi + " H772", p.cp, p.co, "C");
+  var w3 = d.dim("d3", p.x3 - 72.5, p.x3 + 72.5, 350, 265, 275, p.d3, {nw: "E"});
+  d.text("d3a", p.x3, 250, "{V} [V]", {o: w3 * (1 - p.lv)});
+  d.text("d3b", p.x3, 250, "{V}=3 V", {o: w3 * p.lv, nw: "E"});
+  var w6 = d.dim("d6", p.x6 - 75, p.x6 + 75, 350, 265, 275, p.d6, {nw: "F"});
+  d.text("d6a", p.x6, 250, "{V}_1=6 V", {o: w6, nw: "F"});
+};
+SCENES.s6 = function(p, d){
+  seriesPair(d, "s", 360, 478, 1045, 660, 928, {o1: 1, o2: 1, om: 0, l1: "{R}_1=6 Ω", l2: "{R}_2=3 Ω", lm: ""});
+  loop63(d, "{E} [V]", "{E}=5.4 V", p.e, "", "E,F");
+  var w3 = d.dim("d3", 855.5, 1000.5, 350, 265, 275, 1, {nw: "F"});
+  d.text("d3a", 928, 250, "{V}=1.8 V", {nw: "F"});
+  var dx = -(1 - p.a) * 120, ax = 1 - p.f;
+  d.arrow("a3", 896 + dx, 394, 960 + dx, 394, {o: p.a * ax, nw: "B"});
+  d.text("a3t", 928 + dx, 422, "0.6 A", {o: p.a * ax, nw: "B"});
+  var x = lerp(928, 660, p.c), oc = Math.min(1, p.c * 5) * ax;
+  d.arrow("a6", x - 32, 394, x + 32, 394, {o: oc, nw: "C"});
+  d.text("a6t", x, 422, "0.6 A", {o: oc, nw: "C"});
+  var w6 = d.dim("d6", 585, 735, 350, 265, 275, p.d6, {nw: "D", o: ax});
+  d.text("d6a", 660, 250, "{V}_1=3.6 V", {o: w6 * ax, nw: "D"});
+};
+SCENES.s7 = function(p, d){
+  d.wire("wl", [[478, 360], [560, 360]]);
+  d.wire("wr1", [[810, 360], [898, 360]]); d.wire("wr2", [[958, 360], [1045, 360]]);
+  bridge(d, p, Object.assign({nwk1: "B", nwk2: "B", nwt: "D", nwb: "D", nwab: "E", ab: "{R}_ab=6 Ω"}, BR_LAB));
+  d.res("r6", 928, 360, "h"); d.text("t6", 928, 333, "{R}_6=3 Ω");
+  d.dim("d3", 855.5, 1000.5, 350, 265, 275, 1, {nw: "G"});
+  d.text("d3a", 928, 250, "{V}=1.8 V", {nw: "G"});
+  d.text("na", 547, 384, "a", {anchor: "end", size: 20}); d.text("nb", 823, 384, "b", {anchor: "start", size: 20});
+  loop63(d, "{E} [V]", "{E}=5.4 V", p.e, "", "G", p.yb);
+  var wab = d.dim("dab", 640, 730, 350, 300, 306, p.vab || 0, {});
+  d.text("dabt", 685, 288, "{V}_ab=3.6 V", {o: wab});
+  var w = d.dim("dt", 655, 958, 378, 420, 412, p.t, {nw: "F"});
+  d.text("dtt", 806, 440, "{R}=9 Ω", {o: w, nw: "F"});
+};
+
+
+// まちがいの再現：まちがえた値を図に出す → ×をなぞる → 正しい値に直す（約2.6秒・速さの倍率が効く）
+var REPLAYS = {};
+function Replay(box, R, render){
+  box.innerHTML = '<svg class="fig" viewBox="' + R.viewbox + '" xmlns="http://www.w3.org/2000/svg"><rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/>' +
+    '<g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g></svg>';
+  var dr = new Drawer(box.querySelector("svg")), it = null, t = 0, last = null, run = false, T = 2.6;
+  function draw(){
+    var P = Object.assign({}, R.params, it.pw || {}), rp = {};
+    Object.keys(it.wrong).forEach(function(id){
+      rp[id] = t < 1.6 ? {s: it.wrong[id], o: easeIOq(t / 0.5), c: "#c62828"} : {o: easeIOq((t - 1.7) / 0.5)};
+    });
+    dr.rep = rp; dr.key = ""; dr.begin(); render(P, dr);
+    var xo = t < 1.6 ? 1 : 1 - easeIOq((t - 1.6) / 0.3);
+    (it.xs || []).forEach(function(q, j){
+      var a = easeIOq((t - 0.7 - j * 0.15) / 0.3), b = easeIOq((t - 0.95 - j * 0.15) / 0.3), h = 18;
+      var w1 = dr.wire("xa" + j, [[q[0] - h, q[1] - h], [q[0] - h + 2 * h * a, q[1] - h + 2 * h * a]], {o: a > 0 ? xo : 0});
+      var w2 = dr.wire("xb" + j, [[q[0] + h, q[1] - h], [q[0] + h - 2 * h * b, q[1] - h + 2 * h * b]], {o: b > 0 ? xo : 0});
+      w1.style.stroke = w2.style.stroke = "#c62828"; w1.style.strokeWidth = w2.style.strokeWidth = 4;
+    });
+    dr.end();
+  }
+  function frame(now){
+    if (!run) return;
+    var sp = typeof loadSpeed === "function" ? loadSpeed() : 1;
+    if (last !== null) t += Math.min(0.1, (now - last) / 1000) * sp;
+    last = now; if (t >= T) { t = T; run = false; }
+    draw(); if (run) requestAnimationFrame(frame);
+  }
+  return {has: function(no){ return !!R.items[no]; },
+          play: function(no){ it = R.items[no]; t = 0; last = null; box.classList.add("open"); draw(); if (!run) { run = true; requestAnimationFrame(frame); } },
+          hide: function(){ run = false; box.classList.remove("open"); },
+          setT: function(no, tt){ it = R.items[no]; run = false; t = tt; box.classList.add("open"); draw(); }};
+}
+function easeIOq(x){ x = x < 0 ? 0 : x > 1 ? 1 : x; return x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2; }
+
+
+(function(){
+  var OK = '<svg viewBox="0 0 24 24" fill="none" stroke="#1a7f37" stroke-width="3"><circle class="dr" pathLength="1" cx="12" cy="12" r="8.5" transform="rotate(-90 12 12)"/></svg>';
+  var NG = '<svg viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="3" stroke-linecap="round"><path class="dr" pathLength="1" d="M5 5L19 19"/><path class="dr d2" pathLength="1" d="M19 5L5 19"/></svg>';
+  var DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="#1a7f37" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>';
+  document.querySelectorAll(".mix").forEach(function(p){ var s = p.textContent; p.textContent = ""; mixInto(p, s); });
+  var secs = document.querySelectorAll("section.q");
+  secs.forEach(function(s){
+    var ans = s.dataset.ans;
+    s.querySelectorAll("button.c").forEach(function(b){
+      b.addEventListener("click", function(){
+        s.querySelectorAll("button.c").forEach(function(o){ o.classList.remove("ok", "bad"); o.querySelector(".mk").innerHTML = ""; });
+        var good = b.dataset.no === ans;
+        b.classList.add(good ? "ok" : "bad");
+        b.querySelector(".mk").innerHTML = good ? OK : NG;
+        s.querySelector(".why").textContent = (!good && b.dataset.why) ? b.dataset.why : "";
+        var rp = window.REPLAYS && REPLAYS[s.dataset.id];
+        if (rp) { if (!good && rp.has(b.dataset.no)) rp.play(b.dataset.no); else rp.hide(); }
+      });
+    });
+  });
+  var KEY = DATA.store, state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  secs.forEach(function(s){
+    var id = s.dataset.id, c = s.querySelector(".ngc"), t = s.querySelector(".ngt"), v = state[id] || {};
+    c.checked = !!v.ng; t.value = v.note || "";
+    function up(){ state[id] = {ng: c.checked, note: t.value}; save(); }
+    c.addEventListener("change", up); t.addEventListener("input", up);
+  });
+  document.getElementById("copy").addEventListener("click", function(){
+    var lines = [];
+    secs.forEach(function(s){ var v = state[s.dataset.id] || {}; if (v.ng) lines.push(DATA.id + " " + s.dataset.id + (v.note ? "：" + v.note : "")); });
+    var text = lines.length ? lines.join("\n") : "NGなし", msg = document.getElementById("msg");
+    function done(){ msg.innerHTML = DONE; setTimeout(function(){ msg.innerHTML = ""; }, 1500); }
+    function fb(){ try { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); } catch (e) {} }
+    try { navigator.clipboard.writeText(text).then(done, function(){ fb(); done(); }); } catch (e) { fb(); done(); }
+  });
+  DATA.secs.forEach(function(sec){
+    if (!sec.rep) return;
+    REPLAYS[sec.id] = Replay(document.querySelector('section.q[data-id="' + sec.id + '"] .rep'), sec.rep, SCENES[sec.rep.scene]);
+  });
+  // 解説の図を作る
+  DATA.secs.forEach(function(sec){
+    if (!sec.expl || sec.slide) return;
+    var root = document.querySelector('section.q[data-id="' + sec.id + '"] .ex');
+    EXPLS[sec.id] = Expl(root, sec.expl, SCENES[sec.scene]);
+  });
+})();
+
+
+// なぞって描く線（stroke-dashoffset）。prog 0〜1
+Drawer.prototype.trace = function(id, d, prog, o){
+  var e = this.el(id, "path", "ink trace");
+  if (e.getAttribute("d") !== d) e.setAttribute("d", d);
+  e.setAttribute("pathLength", "1"); e.style.strokeDashoffset = 1 - clamp01(prog);
+  return this.style(e, o);
+};
+function rrect(x, y, w, h, r){
+  return "M" + (x + r) + " " + y + " H" + (x + w - r) + " Q" + (x + w) + " " + y + " " + (x + w) + " " + (y + r) +
+    " V" + (y + h - r) + " Q" + (x + w) + " " + (y + h) + " " + (x + w - r) + " " + (y + h) + " H" + (x + r) +
+    " Q" + x + " " + (y + h) + " " + x + " " + (y + h - r) + " V" + (y + r) + " Q" + x + " " + y + " " + (x + r) + " " + y;
+}
+var SPEEDS = [1, 1.5, 2, 0.75], SPKEY = "expl_speed", ZT = 0.7;
+function loadSpeed(){ try { var v = parseFloat(localStorage.getItem(SPKEY)); if (v >= 0.5 && v <= 3) return v; } catch (e) {} return 1; }
+function saveSpeed(v){ try { localStorage.setItem(SPKEY, String(v)); } catch (e) {} }
+function speedIcon(v){                // 三角の塗り＝速さの目安（1未満は空・1は1つ塗り・1.5以上は2つ塗り）
+  var a = v >= 1 ? "#111" : "none", b = v >= 1.5 ? "#111" : "none";
+  return '<svg viewBox="0 0 26 20"><path d="M2 3l10 7-10 7z" fill="' + a + '" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<path d="M13 3l10 7-10 7z" fill="' + b + '" stroke="#111" stroke-width="1.6" stroke-linejoin="round"/></svg><span>' +
+    (Math.round(v * 100) / 100) + "×</span>";
+}
+function easeIO(x){ x = clamp01(x); return x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2; }
+var SLIDES = {};
+function Slide(sec, render){
+  var S = sec.expl, N = S.length, vb = sec.viewbox.split(" ").map(Number);
+  var el = document.createElement("div"); el.className = "slide"; el.dataset.id = sec.id;
+  el.innerHTML = '<div class="sbar"><button class="ib close" aria-label="close">' + DATA.icons.close + '</button><div class="band"><span class="bw"></span><span class="bk"></span></div>' +
+    '<button class="ib spd" aria-label="speed"></button></div>' +
+    '<div class="full"></div><div class="spop"><input type="range" min="0.5" max="3" step="0.05"><span></span></div>' +
+    '<div class="stage"><div class="cam"><svg class="fig" viewBox="' + sec.viewbox + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/><g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g><g class="flow"></g></svg></div>' +
+    '<div class="ov"></div></div>' +
+    '<div class="dots">' + S.map(function(){ return "<i></i>"; }).join("") + '</div>';
+  document.body.appendChild(el);
+  var stage = el.querySelector(".stage"), cam = el.querySelector(".cam"), ov = el.querySelector(".ov"), svg = el.querySelector("svg.fig");
+  var dr = new Drawer(svg), spdB = el.querySelector(".spd"), pop = el.querySelector(".spop"), rng = pop.querySelector("input"), rv = pop.querySelector("span");
+  var dots = el.querySelectorAll(".dots i"), band = el.querySelector(".band"), full = el.querySelector(".full");
+  // 上の帯：求める物／分かっている値（答えが出た段から、求める値に答えを入れて色を付ける）
+  var B = sec.band || {}, bw = band.querySelector(".bw"), bk = band.querySelector(".bk"), bwState = null;
+  function lbl(t){ var x = document.createElement("span"); x.className = "lb"; x.textContent = t; return x; }
+  bk.appendChild(lbl("分かっている")); var bkv = document.createElement("span"); tex(B.known || "", bkv); bk.appendChild(bkv);
+  function setBand(done){
+    if (bwState === done) return; bwState = done; bw.textContent = ""; bw.appendChild(lbl("求める"));
+    var v = document.createElement("span"); tex(done ? B.ans : B.want, v); bw.appendChild(v); bw.classList.toggle("on", done);
+  }
+  mixInto(full, B.full || "");
+  var bT = null;
+  band.addEventListener("pointerdown", function(e){ if (e.pointerType === "pen") return; clearTimeout(bT); bT = setTimeout(function(){ full.classList.add("open"); }, 450); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function(n){ band.addEventListener(n, function(){ clearTimeout(bT); full.classList.remove("open"); }); });
+  band.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  var lastKey = "", cur = 0, t = 0, playing = false, last = null, k = 1, SW = 0, SH = 0, speed = loadSpeed();
+  var parts = S.map(function(st, i){
+    // 字幕：1文字ずつ出すため、文字（式は1かたまり）ごとに span にする
+    var cap = document.createElement("div"); cap.className = "cap"; ov.appendChild(cap);
+    var units = [], acc = 0;
+    (st.text || "").split("$").forEach(function(seg, j){
+      if (j % 2) { var m = document.createElement("span"); m.className = "u"; tex(seg, m); cap.appendChild(m); acc += 2; units.push([m, acc]); }
+      else Array.from(seg).forEach(function(ch){ var c = document.createElement("span"); c.className = "u"; c.textContent = ch; cap.appendChild(c); acc += 1; units.push([c, acc]); });
+    });
+    var capT = st.text ? Math.max(1.2, acc / 7.5) : 0;
+    var eb = document.createElement("div"); eb.className = "eqb"; ov.appendChild(eb);
+    var fs = [];
+    (st.eq || []).forEach(function(row){
+      var ln = document.createElement("div"); ln.className = "ln"; eb.appendChild(ln);
+      row.forEach(function(s, j){
+        var a = null;
+        if (j) { a = document.createElement("span"); a.className = "to"; tex("\\rightarrow", a); ln.appendChild(a); }
+        var f = document.createElement("span"); f.className = "f"; tex(s, f); ln.appendChild(f);
+        var popOn = j === row.length - 1 || (row.length >= 3 && j === row.length - 2);   // 数字を入れた式・答え
+        fs.push([f, a, popOn]);
+      });
+    });
+    var z0 = st.zoom ? ZT : 0;                         // 寄せる時間（字幕と同時に始める）
+    var eqS = capT, animS = capT + fs.length * 1.0, animL = i === 0 ? 0 : (st.dur || 800) / 1000;
+    var T = animS + animL + (st.zoom ? ZT : 0);
+    return {cap: cap, units: units, total: acc, capT: capT, eb: eb, fs: fs, eqS: eqS, animS: animS, animL: animL, T: T, cw: 0, ch: 0, ew: 0, eh: 0};
+  });
+  function layout(){
+    var W = window.innerWidth, H = window.innerHeight, top = 52, bot = 28;
+    k = Math.min(W / vb[2], (H - top - bot) / vb[3]);
+    SW = vb[2] * k; SH = vb[3] * k;
+    stage.style.width = SW + "px"; stage.style.height = SH + "px";
+    stage.style.left = (W - SW) / 2 + "px"; stage.style.top = top + (H - top - bot - SH) / 2 + "px";
+    S.forEach(function(st, i){
+      var p = parts[i], c = st.cap, e = st.eqp;
+      p.cap.style.width = c.w * k + "px"; p.cap.style.fontSize = (c.fs || 23) * k + "px";
+      p.eb.style.maxWidth = e.w * k + "px"; p.eb.style.fontSize = (e.fs || 22) * k + "px";
+      p.cap.style.display = ""; p.eb.style.display = "";
+      p.cw = p.cap.offsetWidth; p.ch = p.cap.offsetHeight; p.ew = p.eb.offsetWidth; p.eh = p.eb.offsetHeight;
+    });
+  }
+  // 時刻 t のカメラ（寄せる倍率 s と、図の点 (x,y) を画面の真ん中へ）
+  function camera(st, p){
+    if (!st.zoom) return {s: 1, tx: 0, ty: 0};
+    var u = Math.min(easeIO(t / ZT), easeIO((p.T - t) / ZT));
+    var s = 1 + (st.zoom.s - 1) * u;
+    var px = (st.zoom.x - vb[0]) * k, py = (st.zoom.y - vb[1]) * k;
+    var tx = Math.min(0, Math.max(SW - SW * s, SW / 2 - px * s)), ty = Math.min(0, Math.max(SH - SH * s, SH / 2 - py * s));
+    return {s: s, tx: tx * u, ty: ty * u};
+  }
+  function place(node, x, y, w, h, va, c){              // 図の点に合わせて置く（画面からはみ出さない）
+    var X = (x - vb[0]) * k * c.s + c.tx - w / 2, Y = (y - vb[1]) * k * c.s + c.ty - (va === "bottom" ? h : 0);
+    X = Math.max(4, Math.min(SW - w - 4, X)); Y = Math.max(4, Math.min(SH - h - 4, Y));
+    node.style.transform = "translate(" + X.toFixed(1) + "px," + Y.toFixed(1) + "px)";
+  }
+  function show(){
+    var st = S[cur], p = parts[cur], c = camera(st, p);
+    cam.style.transform = "translate(" + c.tx.toFixed(1) + "px," + c.ty.toFixed(1) + "px) scale(" + c.s.toFixed(4) + ")";
+    parts.forEach(function(q, i){ var on = i === cur; q.cap.style.display = on ? "" : "none"; q.eb.style.display = on ? "" : "none"; });
+    // 字幕：1文字ずつ
+    var shown = t * 7.5 * (p.capT > 0 ? Math.max(1, p.total / 7.5 / p.capT) : 1);
+    p.units.forEach(function(u){ var o = clamp01((shown - (u[1] - 1)) / 1.2); if (u[0].style.opacity !== String(o)) u[0].style.opacity = o; });
+    p.cap.style.visibility = st.text && t > 0 ? "visible" : "hidden";
+    place(p.cap, st.cap.x, st.cap.y, p.cw, p.ch, st.cap.va, c);
+    // 式：1つずつずらして（下から上がる）、数字・答えは一瞬大きく
+    p.fs.forEach(function(fa, j){
+      var u = clamp01((t - (p.eqS + j * 1.0)) / 0.35), e = easeIO(u);
+      var sc = fa[2] ? 1 + 0.28 * Math.sin(Math.PI * clamp01((t - (p.eqS + j * 1.0)) / 0.45)) : 1;
+      fa[0].style.opacity = e; fa[0].style.transform = "translateY(" + ((1 - e) * 0.5).toFixed(3) + "em) scale(" + sc.toFixed(3) + ")";
+      if (fa[1]) { fa[1].style.opacity = e; fa[1].style.transform = "translateY(" + ((1 - e) * 0.5).toFixed(3) + "em)"; }
+    });
+    p.eb.style.visibility = p.fs.length && t > p.eqS ? "visible" : "hidden";
+    place(p.eb, st.eqp.x, st.eqp.y, p.ew, p.eh, "top", c);
+    // 図：部品の数を補間（ease-in-out）
+    var P = {};
+    if (!p.animL) P = Object.assign({}, st.params);
+    else {
+      var lo = S[cur - 1].params, hi = st.params, f = clamp01((t - p.animS) / p.animL);
+      Object.keys(hi).forEach(function(key){
+        var w = (st.win && st.win[key]) || [0, 1];
+        P[key] = lo[key] + (hi[key] - lo[key]) * easeIO((f - w[0]) / (w[1] - w[0]));
+      });
+    }
+    // 強調の枠：字幕の間になぞって描き、図が動き終わる頃に消える
+    var H = (st.hl || []).map(function(r, j){
+      var dp = easeIO((t - 0.2 - j * 0.25) / 1.0);
+      var fo = p.animL ? 1 - easeIO((t - p.animS) / (p.animL * 0.3)) : 1 - easeIO((t - (p.T - 0.4)) / 0.4);   // 部品が動き出したら消す
+      return [Math.round(dp * 1000) / 1000, Math.round(fo * 1000) / 1000];
+    });
+    lastP = P;
+    var key = cur + "|" + JSON.stringify(P) + "|" + JSON.stringify(H);
+    if (key !== lastKey) {                              // 図が変わらない間（字幕・式の間）は描き直さない
+      lastKey = key;
+      dr.key = st.key; dr.begin(); render(P, dr);
+      (st.hl || []).forEach(function(r, j){
+        dr.trace("hl" + j, rrect(r[0], r[1], r[2], r[3], 8), H[j][0], {o: H[j][0] > 0.001 ? H[j][1] : 0, nw: st.key});
+      });
+      dr.end();
+    }
+    setBand(B.at !== undefined && (cur > B.at || (cur === B.at && t >= parts[cur].animS)));
+    dots.forEach(function(d, i){ d.classList.toggle("on", i === cur); });
+  }
+  // 電流の点：線に沿って流れ続ける（点の間隔は電流に反比例＝電流が大きいほど密）。transform と opacity だけ
+  var flowG = el.querySelector("g.flow"), dotsPool = [], phase = 0, FLOW = (window.FLOWS || {})[sec.scene];
+  for (var q = 0; q < 32; q++) { var c0 = document.createElementNS(NS, "circle"); c0.setAttribute("r", 4.5); c0.setAttribute("class", "fdot"); c0.style.display = "none"; flowG.appendChild(c0); dotsPool.push(c0); }
+  function flow(dt){
+    if (!FLOW || !lastP) return;
+    var F = FLOW(lastP), used = 0;
+    phase += dt * speed * 70;
+    if (F.o > 0.01) F.paths.forEach(function(pa){
+      if (!(pa.I > 0)) return;
+      var pts = pa.pts, segs = [], L = 0;
+      for (var a = 1; a < pts.length; a++) { var l = Math.hypot(pts[a][0] - pts[a-1][0], pts[a][1] - pts[a-1][1]); segs.push(l); L += l; }
+      if (L < 1) return;
+      var sp = F.base / pa.I;
+      for (var d0 = phase % sp; d0 < L && used < dotsPool.length; d0 += sp) {
+        var r = d0, a2 = 0; while (a2 < segs.length - 1 && r > segs[a2]) { r -= segs[a2]; a2++; }
+        var u = segs[a2] ? r / segs[a2] : 0, x = pts[a2][0] + (pts[a2 + 1][0] - pts[a2][0]) * u, y = pts[a2][1] + (pts[a2 + 1][1] - pts[a2][1]) * u;
+        var c1 = dotsPool[used++]; c1.style.display = ""; c1.style.opacity = F.o;
+        c1.setAttribute("transform", "translate(" + x.toFixed(1) + " " + y.toFixed(1) + ")");
+      }
+    });
+    for (var z = used; z < dotsPool.length; z++) if (dotsPool[z].style.display !== "none") dotsPool[z].style.display = "none";
+  }
+  var looping = false, lastP = null;
+  function loop(now){                                   // requestAnimationFrame はこの1本だけ（開いている間）
+    if (!el.classList.contains("open")) { looping = false; return; }
+    var dt = last === null ? 0 : Math.min(0.1, (now - last) / 1000); last = now;
+    if (playing) {
+      t += dt * speed;
+      if (t >= parts[cur].T) { t = parts[cur].T; playing = false; el.classList.remove("anim"); }
+      show();
+    }
+    flow(dt);
+    requestAnimationFrame(loop);
+  }
+  function startLoop(){ if (!looping) { looping = true; last = null; requestAnimationFrame(loop); } }
+  function play(){ if (playing || t >= parts[cur].T) return; playing = true; el.classList.add("anim"); startLoop(); }
+  function skip(){ playing = false; el.classList.remove("anim"); t = parts[cur].T; show(); }
+  function go(i){ if (i < 0 || i >= N) return; playing = false; el.classList.remove("anim"); cur = i; t = 0; show(); }
+  function tap(){
+    if (pop.classList.contains("open")) { pop.classList.remove("open"); return; }
+    if (playing) skip(); else if (t >= parts[cur].T) go(cur + 1); else play();
+  }
+  // 指だけで払う・タップする（ペンは受けない＝書いても段が動かない）
+  var tx0 = null, ty0 = null, swiped = 0, lastType = "";
+  stage.addEventListener("pointerdown", function(e){ lastType = e.pointerType; if (e.pointerType === "pen") return; tx0 = e.clientX; ty0 = e.clientY; });
+  stage.addEventListener("pointerup", function(e){
+    if (e.pointerType === "pen" || tx0 === null) return;
+    var dx = e.clientX - tx0, dy = e.clientY - ty0; tx0 = null;
+    if (e.pointerType === "touch" && Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.2) { swiped = Date.now(); go(cur + (dx < 0 ? 1 : -1)); }
+  });
+  stage.addEventListener("pointercancel", function(){ tx0 = null; });
+  stage.addEventListener("click", function(){ if (lastType === "pen" || Date.now() - swiped < 500) return; tap(); });
+  el.querySelector(".close").addEventListener("click", function(){ close(); });
+  function setSpeed(v){ speed = Math.round(v * 100) / 100; spdB.innerHTML = speedIcon(speed); rng.value = speed; rv.textContent = speed.toFixed(2) + "×"; saveSpeed(speed); }
+  var lpT = null, lp = false;
+  spdB.addEventListener("pointerdown", function(){ lp = false; clearTimeout(lpT); lpT = setTimeout(function(){ lp = true; pop.classList.add("open"); }, 500); });
+  spdB.addEventListener("pointerup", function(){ clearTimeout(lpT); });
+  spdB.addEventListener("pointerleave", function(){ clearTimeout(lpT); });
+  spdB.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  spdB.addEventListener("click", function(){
+    if (lp) { lp = false; return; }
+    var i = SPEEDS.indexOf(speed); setSpeed(SPEEDS[(i + 1) % SPEEDS.length]);
+  });
+  rng.addEventListener("input", function(){ setSpeed(parseFloat(rng.value)); });
+  function open(){ el.classList.add("open"); document.body.style.overflow = "hidden"; layout(); go(0); startLoop(); }
+  function close(){ playing = false; el.classList.remove("open", "anim"); pop.classList.remove("open"); document.body.style.overflow = ""; }
+  window.addEventListener("resize", function(){ if (el.classList.contains("open")) { layout(); show(); } });
+  document.addEventListener("keydown", function(e){
+    if (!el.classList.contains("open")) return;
+    if (e.key === "Escape") close(); else if (e.key === "ArrowRight") go(cur + 1); else if (e.key === "ArrowLeft") go(cur - 1);
+    else if (e.key === " ") { e.preventDefault(); tap(); }
+  });
+  setSpeed(speed);
+  return {open: open, close: close, go: go, tap: tap, el: el,
+          setT: function(i, tt){ playing = false; cur = i; t = Math.min(tt, parts[i].T); show(); },
+          times: function(i){ var p = parts[i]; return {capT: p.capT, eqS: p.eqS, animS: p.animS, animL: p.animL, T: p.T, zoom: !!S[i].zoom}; },
+          state: function(){ return {cur: cur, t: t, T: parts[cur].T, playing: playing, speed: speed, phase: phase,
+            dots: dotsPool.filter(function(c){ return c.style.display !== 'none'; }).map(function(c){ return c.getAttribute('transform'); })}; }};
+}
+(function(){
+  DATA.secs.forEach(function(sec){
+    if (!sec.slide) return;
+    var s = Slide(sec, SCENES[sec.scene]); SLIDES[sec.id] = s;
+    var q = document.querySelector('section.q[data-id="' + sec.id + '"]'), d = q.querySelector("details");
+    d.addEventListener("toggle", function(){ if (d.open) s.open(); });
+    q.querySelector(".reopen").addEventListener("click", function(){ s.open(); });
+  });
+})();
+
+</script>
+</body>
+</html>

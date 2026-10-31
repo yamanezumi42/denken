@@ -9,7 +9,7 @@ function tbLoop(d, p, L){
   d.wire("Rw", [[772, yb], [1045, yb], [1045, 360]]);
   d.wire("wl", [[478, 360], [730, 360]]); d.wire("wr", [[790, 360], [1045, 360]]);
   d.cell("c", 752, yb);
-  if (L.pm) { d.text("pp", 722, yb - 26, "+"); d.text("pm", 802, yb - 26, "−"); }   // 電流の名前（y=424）と離す
+  if (L.pm) { d.text("pp", 722, yb - 26, "+"); d.text("pm", 802, yb - 26, "−"); }
   if (L.src) d.text("e1", 762, yb + 42, L.src);
   d.res("r", 760, 360, "h");
   // 抵抗の名前：r0 → r1（rv）→ r2（rb）
@@ -17,21 +17,24 @@ function tbLoop(d, p, L){
   if (L.r0) d.text("rt0", 760, 330, L.r0, {o: L.r1 ? 1 - rv : 1});
   if (L.r1) d.text("rt1", 760, 330, L.r1, {o: rv * (L.r2 ? 1 - rb : 1)});
   if (L.r2) d.text("rt2", 760, 330, L.r2, {o: rb});
-  // 電流の矢印（上の線の下・右向き）
+  // 電流の矢印は、その電流が流れる導線の上に置く（2026-11-01 本人「直して」：矢印が抵抗の下に浮いていた。SPEC_expl.md §4・確かめ＝check_iarrow.py）
+  // 上の線（y=360）の上・右向き（＋極から出て、左の線を上り、上の線を右へ）。名前は線の下（矢印のすぐ横・線にかけない）。
+  // L.iax（点 a の位置）があれば、その点を通る矢印。無ければ抵抗の左の線（x=600。電圧の矢印の補助線 x=687.5 と強調の枠が重ならない所）
   if (L.i0 || L.i1) {
-    var ia = pv(p, "ia"), ax = L.iax || 760;
-    d.arrow("ia", ax - 32, 394, ax + 32, 394, {o: ia});
-    swapText(d, "it", ax, 424, L.i0, L.i1, pv(p, "iv"), ia);
+    var ia = pv(p, "ia"), ax = L.iax || 600;
+    d.arrow("ia", ax - 20, 360, ax + 20, 360, {o: ia});
+    swapText(d, "it", ax, 389, L.i0, L.i1, pv(p, "iv"), ia);
   }
-  // 2本目の電流の矢印：L.ibx があれば上の線の下、無ければ左の線の内側（上向き）
+  // 2本目の電流の矢印：L.ibx（点 b の位置）があれば上の線の上（右向き）、無ければ左の線（x=478）の上（上向き・名前は線の右）
   if (L.ib0 || L.ib1) {
     var ib = pv(p, "ib");
     if (L.ibx) {
-      d.arrow("ib", L.ibx - 32, 394, L.ibx + 32, 394, {o: ib});
-      swapText(d, "ibt", L.ibx, 424, L.ib0, L.ib1, pv(p, "ibv"), ib);
+      d.arrow("ib", L.ibx - 20, 360, L.ibx + 20, 360, {o: ib});
+      swapText(d, "ibt", L.ibx, 389, L.ib0, L.ib1, pv(p, "ibv"), ib);
     } else {
-      d.arrow("ib", 508, yb - 30, 508, yb - 96, {o: ib});
-      swapText(d, "ibt", 526, yb - 63, L.ib0, L.ib1, pv(p, "ibv"), ib, {anchor: "start"});
+      var ym = yb - 65;
+      d.arrow("ib", 478, ym + 20, 478, ym - 20, {o: ib});
+      swapText(d, "ibt", 494, ym, L.ib0, L.ib1, pv(p, "ibv"), ib, {anchor: "start"});
     }
   }
   // 点 a・b（点・名前・電位）

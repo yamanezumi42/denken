@@ -489,24 +489,51 @@ function loop63(d, lab1, lab2, s, nw1, nw2, yb){      // 6Ω・3Ω の回路の�
   d.text("e1", 762, yb + 42, lab1, {o: 1 - s, nw: nw1}); d.text("e2", 762, yb + 42, lab2, {o: s, nw: nw2});
 }
 var LDX = 12;                                         // R1/R2・R3/R4 の名前を外側へずらす量（2026-10-31 名前が近い）
-function bridge(d, p, L){                            // ブリッジ（上 yT・下 yB、左 560・右 810、真ん中 685）
+// ブリッジの左右の縦の線。2026-10-31 560・810 → 530・840：外へずらした R1〜R4 の名前の強調の枠が、縦の線と電流の点の通り道にかかっていた。
+// 右は R5 の名前（ほかの名前と同じ大きさ）とその枠が入るように、もう少し広く
+var BXL = 530, BXR = 840;
+// 線分 a→b から、箱 q（x0,y0,x1,y1）の中を除いた部分（積を比べる点線が R5 の名前と枠を横切らないように）
+function cutBox(a, b, q){
+  var t0 = 0, t1 = 1, dx = b[0] - a[0], dy = b[1] - a[1], P = [[-dx, a[0] - q[0]], [dx, q[2] - a[0]], [-dy, a[1] - q[1]], [dy, q[3] - a[1]]];
+  for (var i = 0; i < 4; i++) { var pp = P[i][0], v = P[i][1];
+    if (Math.abs(pp) < 1e-9) { if (v < 0) return [[a, b]]; continue; }
+    var t = v / pp; if (pp < 0) { if (t > t1) return [[a, b]]; if (t > t0) t0 = t; } else { if (t < t0) return [[a, b]]; if (t < t1) t1 = t; } }
+  if (t1 <= t0) return [[a, b]];
+  var at = function(t){ return [a[0] + dx * t, a[1] + dy * t]; }, out = [];
+  if (t0 > 0.001) out.push([a, at(t0)]); if (t1 < 0.999) out.push([at(t1), b]);
+  return out;
+}
+function diag(d, id, a, b, q, o){                     // 点線（箱の所は描かない）
+  var e = d.wire(id, [a, b], o);
+  if (q) e.setAttribute("d", cutBox(a, b, q).map(function(s){ return "M" + n(s[0][0]) + " " + n(s[0][1]) + " L" + n(s[1][0]) + " " + n(s[1][1]); }).join(" "));
+}
+function bridge(d, p, L){                            // ブリッジ（上 yT・下 yB、左 BXL・右 BXR、真ん中 685）
   var k1 = p.k1 || 0, k2 = p.k2 || 0, kd = p.kd === undefined ? 1 : p.kd;
-  d.wire("g1", [[622.5, 275], [lerp(622.5, 747.5, k1), lerp(275, 440, k1)]], {o: k1 > 0.01 ? kd : 0, dash: 1, nw: L.nwk1});
-  d.wire("g2", [[747.5, 275], [lerp(747.5, 622.5, k2), lerp(275, 440, k2)]], {o: k2 > 0.01 ? kd : 0, dash: 1, nw: L.nwk2});
   var r5 = p.r5 || 0, m = 357.5, on5 = r5 > 0.01 ? 1 : 0;
+  // R5 の名前（2026-10-31 ほかの名前と同じ大きさに。縦の線を 840 へ広げたので入る）。
+  // 積を比べる点線は、この名前を避ける。R5 に強調の枠が付く時は、枠（R5 と名前のまわり）を避ける（2026-10-31 本人：点線が枠を横切る）
+  var t5 = d.text("t5", 700, m, L.r5 || "", {anchor: "start", o: r5}), q = null;
+  if (r5 > 0.01 && L.r5) {
+    var bb = {x: 700, y: m - 14, width: 110, height: 28};
+    try { var b0 = t5.getBBox(); if (b0.width > 0) bb = b0; } catch (e) {}
+    var framed = !!(d.emph && d.emph.has("t5"));
+    q = framed ? [673 - 12, Math.min(327.5, bb.y) - 10, Math.max(697, bb.x + bb.width) + 12, Math.max(387.5, bb.y + bb.height) + 10]
+               : [bb.x - 6, bb.y - 4, bb.x + bb.width + 6, bb.y + bb.height + 4];
+  }
+  diag(d, "g1", [622.5, 275], [lerp(622.5, 747.5, k1), lerp(275, 440, k1)], q, {o: k1 > 0.01 ? kd : 0, dash: 1, nw: L.nwk1});
+  diag(d, "g2", [747.5, 275], [lerp(747.5, 622.5, k2), lerp(275, 440, k2)], q, {o: k2 > 0.01 ? kd : 0, dash: 1, nw: L.nwk2});
   d.wire("v1", [[685, p.yT], [685, lerp(p.yT, m - 30, r5)]], {o: on5});
   d.wire("v2", [[685, p.yB], [685, lerp(p.yB, m + 30, r5)]], {o: on5});
   var pm = p.pm || 0, lo = clamp01((p.yB - p.yT - 60) / 60);
-  seriesPair(d, "t", p.yT, 560, 810, p.tx1, p.tx2, {o1: p.to1, o2: p.to2, om: p.tom * (1 - pm), lo: lo, ly: -27, ldx: LDX,
+  seriesPair(d, "t", p.yT, BXL, BXR, p.tx1, p.tx2, {o1: p.to1, o2: p.to2, om: p.tom * (1 - pm), lo: lo, ly: -27, ldx: LDX,
     l1: L.r1, l2: L.r2, lm: L.t12, nw1: L.nw1, nw2: L.nw2, nwm: L.nwt});
   // 並列をまとめた後（pm）は下の道の線が上の道の線と重なり、濃く二重に見える → 下の道の線を消す（2026-10-31）
-  seriesPair(d, "b", p.yB, 560, 810, p.bx1, p.bx2, {o1: p.bo1, o2: p.bo2, om: p.bom * (1 - pm), lo: lo, ly: 30, ldx: LDX, wo: {o: 1 - pm},
+  seriesPair(d, "b", p.yB, BXL, BXR, p.bx1, p.bx2, {o1: p.bo1, o2: p.bo2, om: p.bom * (1 - pm), lo: lo, ly: 30, ldx: LDX, wo: {o: 1 - pm},
     l1: L.r3, l2: L.r4, lm: L.t34, nw1: L.nw3, nw2: L.nw4, nwm: L.nwb});
   d.res("r5", 685, m, "v", {o: r5}); d.dot("d5a", 685, p.yT, {o: r5}); d.dot("d5b", 685, p.yB, {o: r5});
-  d.text("t5", 700, m, L.r5 || "", {anchor: "start", o: r5, size: 22});     // 縦の線（810）にかからない大きさ
-  d.wire("bl", [[560, p.yT], [560, p.yB]]); d.wire("br", [[810, p.yT], [810, p.yB]]);
+  d.wire("bl", [[BXL, p.yT], [BXL, p.yB]]); d.wire("br", [[BXR, p.yT], [BXR, p.yB]]);
   d.res("ab", 685, 360, "h", {o: pm, nw: L.nwab}); d.text("tab", 685, 333, L.ab || "", {o: pm, nw: L.nwab});
-  d.dot("dl", 560, 360); d.dot("dr", 810, 360);
+  d.dot("dl", BXL, 360); d.dot("dr", BXR, 360);
 }
 var BR_LAB = {r1: "{R}_1=4 Ω", r2: "{R}_2=5 Ω", r3: "{R}_3=8 Ω", r4: "{R}_4=10 Ω", r5: "{R}_5=12 Ω",
               t12: "{R}_12=9 Ω", t34: "{R}_34=18 Ω"};
@@ -520,10 +547,10 @@ FLOWS.s5 = function(p){
 FLOWS.s7 = function(p){                                  // 平衡しているので R5 には点を流さない（0 A）
   var yb = p.yb;
   return {o: 1, base: 66, paths: [
-    {I: 0.6, pts: [[752, yb], [478, yb], [478, 360], [560, 360]]},
-    {I: 0.4, pts: [[560, 360], [560, p.yT], [810, p.yT], [810, 360]]},
-    {I: 0.2, pts: [[560, 360], [560, p.yB], [810, p.yB], [810, 360]]},
-    {I: 0.6, pts: [[810, 360], [1045, 360], [1045, yb], [772, yb]]}]};
+    {I: 0.6, pts: [[752, yb], [478, yb], [478, 360], [BXL, 360]]},
+    {I: 0.4, pts: [[BXL, 360], [BXL, p.yT], [BXR, p.yT], [BXR, 360]]},
+    {I: 0.2, pts: [[BXL, 360], [BXL, p.yB], [BXR, p.yB], [BXR, 360]]},
+    {I: 0.6, pts: [[BXR, 360], [1045, 360], [1045, yb], [772, yb]]}]};
 };
 SCENES.s1 = function(p, d){
   seriesPair(d, "r", 360, 486, 874, p.x1, p.x2, {o1: p.o1, o2: p.o2, om: p.om,
@@ -538,13 +565,13 @@ SCENES.s2 = function(p, d){
   d.term("ta", 480, 360, "a", "l"); d.term("tb", 890, 360, "b", "r");
 };
 SCENES.s3 = function(p, d){
-  d.wire("wl", [[486, 360], [560, 360]]); d.wire("wr", [[810, 360], [884, 360]]);
+  d.wire("wl", [[486, 360], [BXL, 360]]); d.wire("wr", [[BXR, 360], [884, 360]]);
   bridge(d, p, Object.assign({nw1: "B", nw4: "B", nw2: "C", nw3: "C", nwk1: "B", nwk2: "C"}, BR_LAB));
   d.text("i5", 705 + (1 - p.z) * 40, 386, "{I}_5=0 A", {anchor: "start", o: p.z, nw: "D", size: 20});
   d.term("ta", 480, 360, "a", "l"); d.term("tb", 890, 360, "b", "r");
 };
 SCENES.s4 = function(p, d){
-  d.wire("wl", [[486, 360], [560, 360]]); d.wire("wr", [[810, 360], [884, 360]]);
+  d.wire("wl", [[486, 360], [BXL, 360]]); d.wire("wr", [[BXR, 360], [884, 360]]);
   bridge(d, p, Object.assign({nwt: "B", nwb: "C", nwab: "D", ab: "{R}=6 Ω"}, BR_LAB));
   d.term("ta", 480, 360, "a", "l"); d.term("tb", 890, 360, "b", "r");
 };
@@ -584,18 +611,20 @@ SCENES.s6 = function(p, d){
   d.text("d6a", 660, 250, "{V}_1=3.6 V", {o: w6 * ax, nw: "D"});
 };
 SCENES.s7 = function(p, d){
-  d.wire("wl", [[478, 360], [560, 360]]);
-  d.wire("wr1", [[810, 360], [898, 360]]); d.wire("wr2", [[958, 360], [1045, 360]]);
+  d.wire("wl", [[478, 360], [BXL, 360]]);
+  // R6 と、その電圧の補助線（2026-10-31 ブリッジの右の縦の線を 840 へ広げた分、R6 も 928 → 940 へ。補助線が縦の線と二重に見えないように）
+  var X6 = 940;
+  d.wire("wr1", [[BXR, 360], [X6 - 30, 360]]); d.wire("wr2", [[X6 + 30, 360], [1045, 360]]);
   bridge(d, p, Object.assign({nwk1: "B", nwk2: "B", nwt: "D", nwb: "D", nwab: "E", ab: "{R}_ab=6 Ω"}, BR_LAB));
-  d.res("r6", 928, 360, "h"); d.text("t6", 928, 333, "{R}_6=3 Ω");
-  vdim(d, "d3", 855.5, 1000.5, 350, 265, 275, 1, {nw: "G"});
-  d.text("d3a", 928, 250, "{V}=1.8 V", {nw: "G"});
-  d.text("na", 547, 386, "a", {anchor: "end", size: 26}); d.text("nb", 823, 386, "b", {anchor: "start", size: 26});
+  d.res("r6", X6, 360, "h"); d.text("t6", X6, 333, "{R}_6=3 Ω");
+  vdim(d, "d3", X6 - 72.5, X6 + 72.5, 350, 265, 275, 1, {nw: "G"});
+  d.text("d3a", X6, 250, "{V}=1.8 V", {nw: "G"});
+  d.text("na", BXL - 13, 386, "a", {anchor: "end", size: 26}); d.text("nb", BXR + 13, 386, "b", {anchor: "start", size: 26});
   loop63(d, "{E} [V]", "{E}=5.4 V", p.e, "", "G", p.yb);
   var wab = vdim(d, "dab", 640, 730, 350, 300, 306, p.vab || 0, {});
   d.text("dabt", 685, 288, "{V}_ab=3.6 V", {o: wab});
-  var w = d.dim("dt", 655, 958, 378, 420, 412, p.t, {nw: "F"});
-  d.text("dtt", 806, 440, "{R}=9 Ω", {o: w, nw: "F"});
+  var w = d.dim("dt", 655, X6 + 30, 378, 420, 412, p.t, {nw: "F"});
+  d.text("dtt", (655 + X6 + 30) / 2, 440, "{R}=9 Ω", {o: w, nw: "F"});
 };
 
 
@@ -936,7 +965,9 @@ function Slide(sec, render){
     var F = LY.fig;
     k = Math.min(F.w / vb[2], F.h / vb[3]);
     SW = vb[2] * k; SH = vb[3] * k;
-    var sx = F.x + (F.w - SW) / 2, sy = LY.side ? F.y : F.y + (F.h - SH) / 2;   // 横向き：図は上に寄せる（上の帯・道筋のすぐ下）
+    // 図は、上の帯・道筋から下の段の点までの間の真ん中に置く（2026-10-31 17:03 本人：上に寄せたら下に大きな空きができた。
+    // 図の大きさは横幅で決まるので、上下は真ん中へ。字幕と式の囲みも図の高さの真ん中にそろえる＝下の p.box.style.top）
+    var sx = F.x + (F.w - SW) / 2, sy = F.y + (F.h - SH) / 2;
     stage.style.width = SW + "px"; stage.style.height = SH + "px"; stage.style.left = sx + "px"; stage.style.top = sy + "px";
     // 図の文字・線は、図を大きくした分だけ比例して大きく太く（基準＝図の幅 670px のとき 文字32px・線3.6px）
     var g = LY.side ? Math.max(1, Math.min(1.25, F.w / (FIG_REF * LY.s))) : 1; LY.g = g;
@@ -1147,7 +1178,8 @@ function Slide(sec, render){
               route: routeItems.map(function(r){ return r.classList.contains("on") ? 1 : 0; }), routeShown: routeEl.classList.contains("show"),
               eqShown: Array.from(plan[cur].eb.querySelectorAll(".ln")).filter(function(r){ return r.style.display !== "none"; })
                 .map(function(r){ return Array.from(r.querySelectorAll("span.f")).filter(function(f){ return +f.style.opacity > 0.5; }).length; }),
-              dots: dotsPool.filter(function(c){ return c.style.display !== "none"; }).map(function(c){ return c.getAttribute("transform"); })}; }};
+              dots: dotsPool.filter(function(c){ return c.style.display !== "none"; }).map(function(c){ return c.getAttribute("transform"); }),
+              flow: FLOW && lastP ? FLOW(lastP) : null, flowOp: +(flowG.style.opacity || 1)}; }};   // 電流の点の通り道（重なりの確かめ用）
 }
 (function(){
   DATA.secs.forEach(function(sec){

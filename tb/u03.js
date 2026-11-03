@@ -1,6 +1,6 @@
 /* 単元3「合成抵抗」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(3, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元3の図（自作）の、節の間で共通の部品。共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 節の図は u03/sN_scenes.js（u03.py が番号順につなぎ、KINDS・FLOWK を1つにまとめる）。このファイルは書き換えない（足したい部品は自分の節のファイルへ）。
 // 名前 L[k]：文字（そのまま）か [前, 後]（p[k + "v"] で前→後へ入れ替える）。矢印の濃さ＝p[k + "o"]（無ければ 1）、
@@ -103,9 +103,21 @@ function tbPsp(d, p, L){
 // L.Rx があれば、寸法線が伸びるのに合わせて名前を L.R から L.Rx へ入れ替える（R3 をつないだ後の値）。
 // 線の部品の id：s2w0（左の角〜R1）・s2w1（R1〜R2）・s2w2（R2〜R3 または R2〜右の角）・s2w3（R3〜右の角）・s2wx（R3 が無い時の R3 の所の線）、
 // 左と下の線＝L・Rw（電池は下の線の真ん中）。電流は＋極から出て、下の線を左へ → 左の線を上へ → 上の線を右へ。
+// 同じ電位の線の色の帯（2026-11-03 本人の決定）：抵抗ごとに色が変わる＝＋極の側（左）から 赤→紫→（藍）→灰。数字は添えない。
+// R3 を後から出す時（r3o）：R2 の後ろは、R3 が無い間は灰、R3 が出るにつれ R2〜R3 が藍・R3 の後ろが灰に入れ替わる。線より先に呼ぶ
+function s2zones(d, p, xs, three, r3o){
+  var yb = 560, y = 360;
+  var hi = [[[752, yb], [478, yb], [478, y], [xs[0] - 30, y]]], mid = [[[xs[0] + 30, y], [xs[1] - 30, y]]];
+  var tail = function(x){ return [[[x, y], [1045, y], [1045, yb], [772, yb]]]; };
+  if (!three) { zones(d, p, {}, {hi: {lines: hi}, mid: {lines: mid}, lo: {lines: tail(xs[1] + 30)}}, 1); return; }
+  zones(d, p, {}, {hi: {lines: hi}, mid: {lines: mid}}, 1);
+  zones(d, p, {}, {lo: {lines: tail(xs[1] + 30)}}, 1 - r3o, "x");
+  zones(d, p, {}, {mid2: {lines: [[[xs[1] + 30, y], [xs[2] - 30, y]]]}, lo: {lines: tail(xs[2] + 30)}}, r3o);
+}
 function tbS2ser(d, p, L){
   var yb = 560, y = 360, three = L.r3 !== undefined, xs = three ? [600, 760, 920] : [640, 880];
   var r3o = three ? pv(p, "r3o", 1) : 0;
+  s2zones(d, p, xs, three, r3o);
   d.wire("L", [[478, y], [478, yb], [752, yb]]);
   d.wire("Rw", [[772, yb], [1045, yb], [1045, y]]);
   d.wire("s2w0", [[478, y], [xs[0] - 30, y]]);
@@ -131,7 +143,9 @@ function tbS2ser(d, p, L){
 // 線の部品の id：s3bl・s3br（左右の縦の線）・s3w1l・s3w1r（上の道）・s3w2l・s3w2r（下の道）・s3j1・s3j2（分かれる点・戻る点）、
 // 左と下の線＝L・Rw（電池は下の線の真ん中）。電流は＋極から出て、下の線を左へ → 左の線を上へ → 上の線を右へ → 2本に分かれる。
 function tbS3par(d, p, L){
-  var yb = 640, xl = 600, xr = 960, xc = 780;
+  var yb = 640, xl = 600, xr = 960, xc = 780, P = zSides(xl, xr, [280, 440], xc);
+  // 同じ電位の線の色の帯（2026-11-03 本人の決定）：並列の両端は同じ電位＝左の端の側（＋極の側）が赤・右の端の側（－極の側）が灰。数字は添えない
+  zones(d, p, {}, {hi: {lines: [[[752, yb], [478, yb], [478, 360], [xl, 360]]].concat(P[0])}, lo: {lines: [[[xr, 360], [1045, 360], [1045, yb], [772, yb]]].concat(P[1])}}, 1);
   d.wire("L", [[xl, 360], [478, 360], [478, yb], [752, yb]]);
   d.wire("Rw", [[772, yb], [1045, yb], [1045, 360], [xr, 360]]);
   d.wire("s3bl", [[xl, 280], [xl, 440]]); d.wire("s3br", [[xr, 280], [xr, 440]]);
@@ -164,7 +178,9 @@ function s4Lab(d, id, x, y, spec, p, k, o){
   });
 }
 function tbS4par(d, p, L){
-  var ys = s4Ys(L), xl = 600, xr = 960, cx = 780, ym = 380, yt = ys[0], ybt = ys[ys.length - 1], yb = ybt + 165;
+  var ys = s4Ys(L), xl = 600, xr = 960, cx = 780, ym = 380, yt = ys[0], ybt = ys[ys.length - 1], yb = ybt + 165, P = zSides(xl, xr, ys, cx);
+  // 同じ電位の線の色の帯（2026-11-03 本人の決定）：並列の両端は同じ電位＝左の縦の線の側（＋極の側）が赤・右の縦の線の側（－極の側）が灰。数字は添えない
+  zones(d, p, {}, {hi: {lines: [[[752, yb], [478, yb], [478, ym], [xl, ym]]].concat(P[0])}, lo: {lines: [[[xr, ym], [1045, ym], [1045, yb], [772, yb]]].concat(P[1])}}, 1);
   d.wire("L", [[xl, ym], [478, ym], [478, yb], [752, yb]]);
   d.wire("Rw", [[772, yb], [1045, yb], [1045, ym], [xr, ym]]);
   d.wire("s4bl", [[xl, yt], [xl, ybt]]); d.wire("s4br", [[xr, yt], [xr, ybt]]);
@@ -220,6 +236,24 @@ function s5frame(d, q, L, p){
   d.wire(q + "Rw", [[772, S5YB], [1045, S5YB], [1045, S5Y]]);
   srcPart3(d, S5YB, L, p);
 }
+// 同じ電位の線の色の帯（2026-11-03 本人の決定・数字は添えない）。線より先に呼ぶ。O＝その形の濃さ（s5e の入れ替え）。
+// 形 A：＋極の側＝赤・R1 の後ろ（並列の左の端）＝紫・並列の右の端（－極の側）＝灰。まとめる（am）と並列の帯が消え、R23 の左＝紫・右＝灰に入れ替わる
+function s5zonesA(d, p, L, O){
+  var m = pv(p, "am", 0), xl = 680, xr = 1010, cx = 845, P = zSides(xl, xr, [280, 440], cx);
+  zones(d, p, {}, {hi: {lines: [[[752, S5YB], [478, S5YB], [478, S5Y], [550, S5Y]]]}, mid: {lines: [[[610, S5Y], [xl, S5Y]]]},
+                   lo: {lines: [[[xr, S5Y], [1045, S5Y], [1045, S5YB], [772, S5YB]]]}}, O, "a");
+  zones(d, p, {}, {mid: {lines: P[0]}, lo: {lines: P[1]}}, O * (1 - m), "aq");
+  zones(d, p, {}, {mid: {lines: [[[xl, S5Y], [cx - 30, S5Y]]]}, lo: {lines: [[[cx + 30, S5Y], [xr, S5Y]]]}}, L.a23 !== undefined ? O * m : 0, "az");
+}
+// 形 B：並列の両端＝左の端の側（＋極の側）が赤・右の端の側（－極の側）が灰、下の道の R2 と R3 の間＝紫。
+//   まとめる（bm）と紫が消え、R23 の左＝赤・右＝灰に入れ替わる
+function s5zonesB(d, p, L, O){
+  var m = pv(p, "bm", 0), xl = 600, xr = 960;
+  zones(d, p, {}, {hi: {lines: [[[752, S5YB], [478, S5YB], [478, S5Y], [xl, S5Y]], [[750, 280], [xl, 280], [xl, 440], [670, 440]]]},
+                   lo: {lines: [[[810, 280], [xr, 280], [xr, 440], [890, 440]], [[xr, S5Y], [1045, S5Y], [1045, S5YB], [772, S5YB]]]}}, O, "b");
+  zones(d, p, {}, {mid: {lines: [[[730, 440], [830, 440]]]}}, O * (1 - m), "bq");
+  zones(d, p, {}, {hi: {lines: [[[670, 440], [750, 440]]]}, lo: {lines: [[[810, 440], [890, 440]]]}}, L.b23 !== undefined ? O * m : 0, "bz");
+}
 // 形 A：R1 のあとに R2・R3 の並列
 function s5drawA(d, p, L, O){
   var m = pv(p, "am", 0), xl = 680, xr = 1010, cx = 845, on = O * (1 - m), om = L.a23 !== undefined ? O * m : 0;
@@ -253,9 +287,9 @@ function s5drawB(d, p, L, O){
   s5res(d, "b23", 780, 440, L, p, om);
   s5R(d, "bR", xl, 450, xr, 450, L, p, O);
 }
-function tbS5a(d, p, L){ s5frame(d, "s5a", L, p); s5drawA(d, p, L, 1); }
-function tbS5b(d, p, L){ s5frame(d, "s5b", L, p); s5drawB(d, p, L, 1); }
-function tbS5e(d, p, L){ var t = pv(p, "t", 0); s5frame(d, "s5e", L, p); s5drawA(d, p, L, 1 - t); s5drawB(d, p, L, t); }
+function tbS5a(d, p, L){ s5zonesA(d, p, L, 1); s5frame(d, "s5a", L, p); s5drawA(d, p, L, 1); }
+function tbS5b(d, p, L){ s5zonesB(d, p, L, 1); s5frame(d, "s5b", L, p); s5drawB(d, p, L, 1); }
+function tbS5e(d, p, L){ var t = pv(p, "t", 0); s5zonesA(d, p, L, 1 - t); s5zonesB(d, p, L, t); s5frame(d, "s5e", L, p); s5drawA(d, p, L, 1 - t); s5drawB(d, p, L, t); }
 // 電流の点の通り道：形 A（まとめる前＝2本の道・まとめた後＝1本の道）／形 B（上の道と下の道）
 function s5flowA(p, L){
   var yb = S5YB, xl = 680, xr = 1010, f = L.fl || [2, 1, 1], head = [[752, yb], [478, yb], [478, S5Y], [xl, S5Y]], tail = [[xr, S5Y], [1045, S5Y], [1045, yb], [772, yb]];

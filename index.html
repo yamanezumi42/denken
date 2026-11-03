@@ -263,6 +263,7 @@ button{font:inherit;color:inherit}
 <!-- TB:BEGIN（textbook/make_tb.py が作る。手で直さない） -->
 <style>
   :root{--hl:#d9480f;--hlbg:#fff4e6}
+  svg.fig path.fdot{fill:#1971c2;stroke:#fff;stroke-width:1.5;stroke-linejoin:round}
   #tbHome .secth svg,.tbi{width:20px;height:20px;vertical-align:-4px}
   #tbHome .secth.tbf{display:flex;align-items:center;gap:6px;color:#aaa}
   .tbu.go1{cursor:pointer}
@@ -295,6 +296,32 @@ button{font:inherit;color:inherit}
   .tbq .tbcr{font-size:12px;color:#666;margin-top:4px}
   .tbk .no{font-size:13px;white-space:nowrap}
   #sidein .tbx{font-size:20px;line-height:2;padding:6px 4px}
+
+  /* 文字の見切れを防ぐ（2026-11-03 本人「文章の右側が見切れる時がある」。tb_ui.js の fitBar・fitSideLines・qWidth と組。確かめ＝check_textfit.py） */
+  body .slide .band{line-height:1.2}
+  body .slide .band .lb{font-size:.8em;margin-right:.4em}
+  body .slide .band.wrap{display:block;white-space:normal;text-align:left;padding:3px 10px}
+  body .slide .band.wrap .bw,body .slide .band.wrap .bk{display:block}
+  body .slide .route.wrap{flex-wrap:wrap;height:auto;min-height:28px;row-gap:2px;padding:0 10px}
+  #sidein .tbx > div{overflow-wrap:anywhere}
+  .tbq.narrow .tbch{grid-template-columns:1fr}
+  @media (max-width:699px){
+    body .slide .band{position:absolute;left:8px;right:8px;top:52px;height:48px;margin:0}
+    body .slide .route{top:104px}
+    body .slide .route .vd{position:static}
+    #top{height:auto;min-height:50px;flex-wrap:wrap;row-gap:6px;padding:6px 10px}
+    #top .t{min-width:0}
+    #tools{flex-wrap:wrap;gap:4px;padding:4px 8px}
+    #tools .tb,#tools .slot{width:34px;height:32px}
+    #tools .tb.wide{width:auto}
+    #tools .sepv,#tools .sp{display:none}
+    .hh{flex-wrap:wrap}
+    #main{flex-direction:column}
+    #main #scroller{min-height:0}
+    #main #side{width:auto;height:0;border-left:0;border-top:1px solid var(--line)}
+    #main #side.on{width:auto;height:45%}
+    #main #sidebar{width:auto}
+  }
 
   .slide{position:fixed;inset:0;z-index:50;background:#fff;display:none;touch-action:none;user-select:none;-webkit-user-select:none}
   .slide.open{display:block}
@@ -371,6 +398,7 @@ button{font:inherit;color:inherit}
 (function(){
 var DATA = {icons: {"close":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M6 6L18 18M18 6L6 18\"/></svg>","swap":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4\"/></svg>"}};
 var TB_FLOWS = {}, SCENES = {}, TB_KIND = {}, TB_FLOWK = {};
+var BLINK_P = 0.8, BLINK_N = 3, FARROW_D = "M11 0 L-7 -8 L-2 0 L-7 8 Z";
 
 var NS = "http://www.w3.org/2000/svg";
 function Drawer(svg){
@@ -727,7 +755,7 @@ function Slide(sec, render){
   var measuring = false, LY = null;
   var CAP_PX = 30, EQ_PX = 34, FIG_REF = 670, BOXW = 0.34, swapLR = loadSwap();           // 字幕・式の字の大きさ（1180×820 のとき）／図の文字・線の基準にした図の幅
   function geom(){
-    var W = window.innerWidth, H = window.innerHeight, s = Math.min(W / 1180, H / 820), top = 90, bot = 52;
+    var W = window.innerWidth, H = window.innerHeight, s = Math.min(W / 1180, H / 820), top = tbTop(), bot = 52;
     if (W >= H) {
       var bw = Math.round(W * BOXW), fw = W - 16 - bw - 12 - 8;
       if (swapLR) return {s: s, side: true, fig: {x: 8, y: top, w: fw, h: H - top - bot}, box: {x: W - 16 - bw, w: bw}, top: top, bot: H - bot};
@@ -781,7 +809,7 @@ function Slide(sec, render){
     node.style.transform = "translate(" + X.toFixed(1) + "px," + Y.toFixed(1) + "px)";
   }
   function groupIds(names){ var s = new Set(); (names || []).forEach(function(g){ (G[g] || []).forEach(function(id){ s.add(id); }); }); return s; }
-  var frameNames = null, frameAt = 0, curEmph = new Set();
+  var frameNames = null, frameAt = 0, curEmph = new Set(), blinkKey = "", blinkIds = [], blinkT0 = 0, blinkPrev = new Set(), blinkAll = new Set();
   function show(){
     var st = ST[cur], p = plan[cur];
     plan.forEach(function(q, i){ var on = i === cur; if ((q.box.style.display !== "none") !== on) q.box.style.display = on ? "" : "none"; });
@@ -832,28 +860,19 @@ function Slide(sec, render){
       lastKey = key; lastP = P;
       dr.emph = ids; dr.dimSet = groupIds(dim); dr.key = "";
       dr.begin(); render(P, dr);
-      // 強調の枠：強調した部品（抵抗・電池・矢印・文字）のまわりを、なぞるように描く。
-      // 導線・補助線は枠に入れない（色だけ）。近い枠・重なる枠は1つにまとめる（枠の入れ子・重なりを作らない）
-      var u = LY.s * (LY.g || 1) / k, px = 8 * u, py = 6 * u, boxes = [];
+      // 強調：枠は描かない。強調した部品そのものを、落ち着いた速さで3回点滅させ、強調の色で止める（2026-11-03 本人）
+      var nb = [];
       (emph || []).forEach(function(gname){
-        (G[gname] || []).forEach(function(id){ var e = dr.els[id]; if (!e || e.style.display === "none" || +e.style.opacity < 0.05) return;
+        (G[gname] || []).forEach(function(id){ var e = dr.els[id]; if (!e || e.style.display === "none") return;
           var tag = e.tagName.toLowerCase(), cl = e.getAttribute("class") || "";
-          var solid = tag === "rect" || tag === "text" || /head|vdim/.test(cl) || dr.els[id + ":h"] || /:(L|S|a)$/.test(id);
-          if (!solid) return;
-          var b = e.getBBox(); if (!b.width && !b.height) return;
-          boxes.push([b.x - px, b.y - py, b.x + b.width + px, b.y + b.height + py]); });
+          if (tag === "rect" || tag === "text" || tag === "circle" || /head|vdim|zband/.test(cl) || dr.els[id + ":h"] || /:(L|S|a)$/.test(id)) nb.push(id); });
       });
-      for (var mg = true; mg; ) {
-        mg = false;
-        for (var a1 = 0; a1 < boxes.length && !mg; a1++) for (var a2 = a1 + 1; a2 < boxes.length && !mg; a2++) {
-          var A = boxes[a1], Bx = boxes[a2], gp = 4 * u;
-          if (A[0] < Bx[2] + gp && Bx[0] < A[2] + gp && A[1] < Bx[3] + gp && Bx[1] < A[3] + gp) {
-            boxes[a1] = [Math.min(A[0], Bx[0]), Math.min(A[1], Bx[1]), Math.max(A[2], Bx[2]), Math.max(A[3], Bx[3])]; boxes.splice(a2, 1); mg = true; }
-        }
+      var ek = cur + "|" + (emph || []).join(",");
+      if (ek !== blinkKey) {
+        blinkKey = ek; blinkOff();
+        blinkIds = nb.filter(function(id){ return !blinkPrev.has(id); }); blinkT0 = performance.now(); blinkPrev = new Set(nb);
+        blinkIds.forEach(function(id){ blinkAll.add(id); });                 // 確かめ用：点滅させた部品の控え（blinkReset で空に）
       }
-      boxes.forEach(function(bx, gi){                // 枠の余白・角の丸み・線の太さは画面の px でそろえる（寄せても同じ見た目）
-        var fr = dr.trace("emframe" + gi, rrect(bx[0], bx[1], bx[2] - bx[0], bx[3] - bx[1], 9 * u), fp, {keep: 1}); fr.classList.add("on"); fr.style.strokeWidth = (2.8 * (LY.g || 1) * LY.s / k).toFixed(2);
-      });
       dr.end();
     }
     flowG.style.opacity = ids.size ? 0.3 : 1;
@@ -865,7 +884,7 @@ function Slide(sec, render){
   }
   // 電流の点：線に沿って流れ続ける（点の間隔は電流に反比例）。transform と opacity だけ
   var flowG = el.querySelector("g.flow"), dotsPool = [], phase = 0, FLOW = TB_FLOWS[sec.scene], lastP = null;
-  for (var q0 = 0; q0 < 32; q0++) { var c0 = document.createElementNS(NS, "circle"); c0.setAttribute("r", 5.5); c0.setAttribute("class", "fdot"); c0.style.display = "none"; flowG.appendChild(c0); dotsPool.push(c0); }
+  for (var q0 = 0; q0 < 32; q0++) { var c0 = document.createElementNS(NS, "path"); c0.setAttribute("d", FARROW_D); c0.setAttribute("class", "fdot farr"); c0.style.display = "none"; flowG.appendChild(c0); dotsPool.push(c0); }
   function flow(dt){
     if (!FLOW || !lastP) return;
     var F = FLOW(lastP), used = 0;
@@ -880,7 +899,7 @@ function Slide(sec, render){
         var r = d0, a2 = 0; while (a2 < segs.length - 1 && r > segs[a2]) { r -= segs[a2]; a2++; }
         var u = segs[a2] ? r / segs[a2] : 0, x = pts[a2][0] + (pts[a2 + 1][0] - pts[a2][0]) * u, y = pts[a2][1] + (pts[a2 + 1][1] - pts[a2][1]) * u;
         var c1 = dotsPool[used++]; c1.style.display = ""; c1.style.opacity = F.o;
-        c1.setAttribute("transform", "translate(" + x.toFixed(1) + " " + y.toFixed(1) + ")");
+        c1.setAttribute("transform", "translate(" + x.toFixed(1) + " " + y.toFixed(1) + ") rotate(" + Math.round(Math.atan2(pts[a2 + 1][1] - pts[a2][1], pts[a2 + 1][0] - pts[a2][0]) * 180 / Math.PI) + ")");
       }
     });
     for (var z = used; z < dotsPool.length; z++) if (dotsPool[z].style.display !== "none") dotsPool[z].style.display = "none";
@@ -894,7 +913,7 @@ function Slide(sec, render){
       if (t >= tEnd) { t = tEnd; playing = false; el.classList.remove("anim"); }
       show();
     }
-    flow(dt);
+    flow(dt); blinkStep(now);
     requestAnimationFrame(loop);
   }
   function startLoop(){ if (!looping) { looping = true; last = null; requestAnimationFrame(loop); } }
@@ -906,6 +925,16 @@ function Slide(sec, render){
     t = Math.max(x.s, 0.0001); tEnd = x.e; playing = true; el.classList.add("anim"); show(); startLoop();
   }
   function skip(){ playing = false; el.classList.remove("anim"); t = tEnd; show(); }
+  // 点滅：周期 BLINK_P 秒で BLINK_N 回、濃さ（線と塗りの不透明度）を 1→0.12→1。終わると強調の色のまま止まる
+  function blinkOff(){ blinkIds.forEach(function(id){ var e = dr.els[id]; if (e) { e.style.strokeOpacity = ""; e.style.fillOpacity = ""; } }); blinkIds = []; }
+  function blinkStep(now){
+    if (!blinkIds.length) return;
+    var tau = (now - blinkT0) / 1000;
+    if (tau >= BLINK_N * BLINK_P) { blinkOff(); return; }
+    var f = (0.12 + 0.88 * (0.5 + 0.5 * Math.cos(2 * Math.PI * Math.max(0, tau) / BLINK_P))).toFixed(3);
+    blinkIds.forEach(function(id){ var e = dr.els[id]; if (!e) return; e.style.strokeOpacity = f;
+      if (!/\bbox\b/.test(e.getAttribute("class") || "")) e.style.fillOpacity = f; });   // 抵抗の四角の中の白は残す
+  }
   function go(i){ if (i < 0 || i >= N) return; playing = false; el.classList.remove("anim"); cur = i; t = 0; tEnd = 0; playBeat(0); }
   function tap(){
     if (pop.classList.contains("open")) { pop.classList.remove("open"); return; }
@@ -977,7 +1006,7 @@ function Slide(sec, render){
               eqShown: Array.from(plan[cur].eb.querySelectorAll(".ln")).filter(function(r){ return r.style.display !== "none"; })
                 .map(function(r){ return Array.from(r.querySelectorAll("span.f")).filter(function(f){ return +f.style.opacity > 0.5; }).length; }),
               dots: dotsPool.filter(function(c){ return c.style.display !== "none"; }).map(function(c){ return c.getAttribute("transform"); }),
-              flow: FLOW && lastP ? FLOW(lastP) : null, flowOp: +(flowG.style.opacity || 1)}; }};   // 電流の点の通り道（重なりの確かめ用）
+              flow: FLOW && lastP ? FLOW(lastP) : null, flowOp: +(flowG.style.opacity || 1), blink: {ids: blinkIds.slice(), all: Array.from(blinkAll), t0: blinkT0, P: BLINK_P, N: BLINK_N, frames: el.querySelectorAll('[class~=trace]').length}}; }, blinkReset: function(){ blinkAll = new Set(); }};   // 電流の点の通り道（重なりの確かめ用）
 }
 
 // 教科書の図（自作）。座標は試作の段5と同じ（上の線 y=360・下の線 yb・左 x=478・右 x=1045）。
@@ -999,6 +1028,38 @@ function swapText(d, id, x, y, a, b, t, o0, opt){
   opt = opt || {};
   if (a) d.text(id + "0", x, y, a, Object.assign({}, opt, {o: o0 * (b ? 1 - t : 1)}));
   if (b) d.text(id + "1", x, y, b, Object.assign({}, opt, {o: o0 * t}));
+}
+// 同じ電位の線を色で分ける（2026-11-03 本人「電圧降下を表すのに、前と後を色で分けると、どこの電圧がいくつか分かりやすい」）。
+// 電位の高い順に hi（赤）・mid（紫）・lo（灰）。帯＝線の下に敷く太い線（強調で薄くしない＝keep）。数字（点の電位）と点も同じ色の濃い方で書く。
+var ZC = {hi: ["#ffa8a8", "#c92a2a"], mid: ["#b197fc", "#5f3dc4"], lo: ["#ced4da", "#495057"]};
+// lines＝その電位の線（折れ線の点の並びの配列）。o＝濃さ（0 で消える）
+function zband(d, id, lines, z, o){
+  var e = d.el(id, "path", "zband");
+  e.setAttribute("d", lines.map(function(pts){ return pts.map(function(q, i){ return (i ? "L" : "M") + n(q[0]) + " " + n(q[1]); }).join(" "); }).join(" "));
+  e.style.fill = "none"; e.style.stroke = ZC[z][0]; e.style.strokeWidth = 16; e.style.strokeLinecap = "butt";
+  return d.style(e, {o: o, keep: 1});
+}
+// 点と、その点の電位の文字を、その電位の色（濃い方）で書く
+function ztint(d, ids, z){
+  ids.forEach(function(id){ var e = d.els[id]; if (e && e.style.display !== "none") e.style.fill = ZC[z][1]; });
+}
+// 点 k（"a" など）の点と電位の文字の id
+function zpt(k){ return ["d" + k, "p" + k + "t0", "p" + k + "t1"]; }
+// 図の電位のまとまり Z＝{hi: {lines: [...], pts: ["a", "d"]}, mid: …, lo: …}。点（L["p" + k]）が図にあるまとまりだけ帯を敷く。
+// 帯の濃さ＝そのまとまりの点の濃さ（p["p" + k + "o"]）の大きい方＝点が出た時に帯も出る。線より先に呼ぶ（帯が線の下になる）
+function zones(d, p, L, Z){
+  ["hi", "mid", "lo"].forEach(function(z){
+    if (!Z[z]) return;
+    var ks = Z[z].pts.filter(function(k){ return L["p" + k]; });
+    if (!ks.length) return;
+    zband(d, "zb" + z, Z[z].lines, z, Math.max.apply(null, ks.map(function(k){ return pv(p, "p" + k + "o", 1); })));
+  });
+}
+// 点を描いたあとに呼ぶ：点と電位の文字をそのまとまりの色に
+function zoneTint(d, L, Z){
+  ["hi", "mid", "lo"].forEach(function(z){
+    if (Z[z]) Z[z].pts.forEach(function(k){ if (L["p" + k]) ztint(d, zpt(k), z); });
+  });
 }
 
 // 練習問題を作る（数字と形を変えて何問でも）。答えはここで計算し、照合は check_practice.py が別の計算で行う。
@@ -1039,8 +1100,8 @@ function genQ(G, sec, r){
   return q;
 }
 
-var H = {NS: NS, Drawer: Drawer, n: n, clamp01: clamp01, lerp: lerp, seriesPair: seriesPair, parallelPair: parallelPair, vdim: vdim, pv: pv, swapText: swapText, rngOf: rngOf, pick: pick, shuffled: shuffled, nice: nice, fmt: fmt, UNIT: UNIT, qv: qv, qf: qf, choices: choices, num: num, distinct: distinct, UNIT_CH: UNIT_CH, unitQ: unitQ, genQ: genQ};
-var TBD = {"ver":"2026-11-01 09:02 版　新：単元3「合成抵抗」（3-1〜3-6）と過去問 平成21年 問6","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"df1d1660"},{"name":"直列回路と並列回路","secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"5a6b5c4c"},{"name":"合成抵抗","secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"bba9e8d4"},{"name":"分圧と分流"},{"name":"キルヒホッフの法則"},{"name":"抵抗率と温度"},{"name":"ブリッジ回路"},{"name":"Δ-Y変換"},{"name":"重ね合わせの理"},{"name":"テブナンの定理"},{"name":"ミルマンの定理"},{"name":"電力と電力量"},{"name":"電池の内部抵抗と最大電力"}]};
+var H = {NS: NS, Drawer: Drawer, n: n, clamp01: clamp01, lerp: lerp, seriesPair: seriesPair, parallelPair: parallelPair, vdim: vdim, pv: pv, swapText: swapText, ZC: ZC, zband: zband, ztint: ztint, zpt: zpt, zones: zones, zoneTint: zoneTint, rngOf: rngOf, pick: pick, shuffled: shuffled, nice: nice, fmt: fmt, UNIT: UNIT, qv: qv, qf: qf, choices: choices, num: num, distinct: distinct, UNIT_CH: UNIT_CH, unitQ: unitQ, genQ: genQ};
+var TBD = {"ver":"2026-11-03 19:23 版　新：単元3「合成抵抗」（3-1〜3-6）と過去問 平成21年 問6・令和6年下期 問7","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"e51df585"},{"name":"直列回路と並列回路","secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"604ae84c"},{"name":"合成抵抗","secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"55e85a69"},{"name":"分圧と分流"},{"name":"キルヒホッフの法則"},{"name":"抵抗率と温度"},{"name":"ブリッジ回路"},{"name":"Δ-Y変換"},{"name":"重ね合わせの理"},{"name":"テブナンの定理"},{"name":"ミルマンの定理"},{"name":"電力と電力量"},{"name":"電池の内部抵抗と最大電力"}]};
 // 教科書の画面：ホームの単元の並び・単元の節・説明（スライド）・例題と練習（問題の画面＝手書きつき）・記録
 // 記録の id：例題＝"t:単元:節:x"、練習＝"t:単元:節:p"、済み＝"t:単元:節:done"（過去問 "dc001"・ドリル "d:単元:番号" と混ざらない）
 var IC = {
@@ -1089,9 +1150,59 @@ function loadUnit(u){
 }
 function unitDone(u){ var U = TBD.units[u - 1]; return !!U.secs && U.secs.every(function(_, i){ return secDone(u, i + 1); }); }
 function unitOpen(u){ return u === 1 || unitDone(u - 1); }
+// ---- 文字の見切れを防ぐ（2026-11-03 本人「文章の右側が見切れる時がある」）。字が枠に入るまで少しずつ小さくし、入らなければ折り返す。
+// スマホ縦（幅 NARROW 未満）は、スライドの上の帯を2段目に置き、問題の面を画面の幅に合わせて組む。確かめ＝check_textfit.py
+var NARROW = 700;
+function overflows(e){ return e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1; }
+function fitFont(e, max, min){
+  var f = max; e.style.fontSize = f + "px";
+  while (f > min && overflows(e)) { f -= 0.5; e.style.fontSize = f + "px"; }
+  return !overflows(e);
+}
+// スライドの上の帯（求める・分かっている）と道筋：1行で入るまで小さくし、入らなければ折り返して入れる
+function fitBar(e, max, min){
+  if (!e || !e.offsetParent) return;
+  var narrow = window.innerWidth < NARROW;
+  e.classList.toggle("wrap", narrow);
+  if (fitFont(e, narrow ? max - 2 : max, narrow ? min - 2 : min) || narrow) return;
+  e.classList.add("wrap"); fitFont(e, max, min - 2);
+}
+function fitBand(el){ fitBar(el.querySelector(".band"), 17, 13); }
+// スライドの図の上の端（試作は 90 で固定）：道筋が折り返して下へ伸びた分だけ下げる。スライドの置き方（geom）から呼ぶ
+function tbTop(){
+  var el = document.querySelector(".slide.open"); if (!el) return 90;
+  fitBand(el); var r = el.querySelector(".route"); fitBar(r, 15, 12);
+  return Math.max(90, Math.round(r.offsetTop + r.offsetHeight + 6));
+}
 // ---- スライド（使う時に作る）
 var SECS = {};
-function slide(id){ if (!SLIDES[id]) SLIDES[id] = Slide(SECS[id], SCENES[SECS[id].scene]); return SLIDES[id]; }
+function slide(id){
+  if (!SLIDES[id]) {
+    SLIDES[id] = Slide(SECS[id], SCENES[SECS[id].scene]);
+    var el = SLIDES[id].el;          // 上の帯の中身（求める→答え）が変わったら入れ直す
+    new MutationObserver(function(){ fitBand(el); }).observe(el.querySelector(".band"), {childList: true, subtree: true});
+  }
+  return SLIDES[id];
+}
+// 解説の欄（練習の短い解説）：1行が欄の幅に入るまで、その行の字を小さくする（字の大きさの 0.6 倍まで）
+function fitSideLines(){
+  $("#sidein").querySelectorAll(".tbx > div").forEach(function(d){
+    var f = 1; d.style.fontSize = "";
+    while (f > 0.6 && d.scrollWidth > d.clientWidth + 1) { f -= 0.05; d.style.fontSize = f.toFixed(2) + "em"; }
+  });
+}
+// 問題の面の幅：iPad は 820px で組んで拡大する。スマホ縦は画面の幅に合わせて狭く組む（字が小さくなりすぎないように）
+function qWidth(){
+  var sw = scroller.clientWidth;
+  return sw >= NARROW ? 820 : Math.max(400, Math.min(820, Math.round((sw - 2 * MARGIN) / 0.82)));
+}
+// 問題を開いた時の倍率：全体が見える倍率（fitProblem）。スマホ縦は幅に合わせ、下は送って読む
+function fitQ(){
+  fitProblem();
+  if (scroller.clientWidth >= NARROW) return;
+  var qb = blocks[0], z = (scroller.clientWidth - 2 * MARGIN) / qb.w;
+  if (z > Z) { Z = z; place(); scroller.scrollLeft = (qb.x - MARGIN) * Z; scroller.scrollTop = (qb.y - MARGIN) * Z; }
+}
 // ---- 図（問題の画面）：スライドと同じ部品で、動きの終わりの形を1回だけ描く。範囲は描いた物に合わせる
 function figSVG(host, f){
   var svg = document.createElementNS(NS, "svg");
@@ -1174,13 +1285,13 @@ function showQ(q){
   history = []; future = []; strokes = [];
   // 問題の面：図・問題文・選択肢・まちがいの理由（倍率100%の大きさで組み、place() が拡大して置く）
   sheet.querySelectorAll("img,.hd,.cb,.tbq").forEach(function(e){ e.remove(); });
-  var el = document.createElement("div"); el.className = "tbq";
+  var W = qWidth(), el = document.createElement("div"); el.className = "tbq" + (W < 600 ? " narrow" : ""); el.style.width = W + "px";
   el.innerHTML = '<div class="tbfig"></div><div class="tbtx">' + texHTML(q.text) + '</div><div class="tbch">' +
     q.ch.map(function(c, i){ return '<div class="tbc" data-n="' + i + '"><span class="no">(' + (i + 1) + ')</span><span class="tx">' + texHTML(c.t) + '</span><span class="mk"></span></div>'; }).join("") +
     '</div><div class="tbwhy"></div>' + (q.credit ? '<div class="tbcr">' + texHTML(q.credit) + '</div>' : '');
   sheet.insertBefore(el, ink);
   figSVG(el.querySelector(".tbfig"), q.fig);
-  var W = 820, H = el.offsetHeight;
+  var H = el.offsetHeight;
   var qb = {kind: "html", el: el, x: PADX() + MARGIN, y: PADY() + MARGIN, w: W, h: H};
   blocks = [qb];
   el.querySelectorAll(".tbc").forEach(function(c){
@@ -1188,7 +1299,7 @@ function showQ(q){
     blocks.push({kind: "cb", set: 0, n: +c.dataset.n, el: cb, x: qb.x + c.offsetLeft, y: qb.y + c.offsetTop, w: c.offsetWidth, h: c.offsetHeight});
   });
   sheetH = qb.y + H + PAD_BELOW;
-  place(); fitProblem();
+  place(); fitQ();
   startAt = Date.now(); clearInterval(tick); tick = setInterval(showTime, 1000); showTime();
 }
 function paint(){
@@ -1226,7 +1337,8 @@ function showAnswer(){
   if (q.slide) { SECS[q.slide].onEnd = function(){ slide(q.slide).close(); }; slide(q.slide).open(); return; }
   var on = !$("#side").classList.contains("on");
   if (on) { $("#sidein").innerHTML = '<div class="tbx">' + q.ex.map(function(l){ return "<div>" + texHTML(l) + "</div>"; }).join("") + "</div>"; EZ = 1; placeSide(); }
-  $("#side").classList.toggle("on", on); place(); fitProblem();   // 解説の欄の分だけ狭くなるので、問題を入れ直す
+  $("#side").classList.toggle("on", on); place(); fitQ();   // 解説の欄の分だけ狭くなるので、問題を入れ直す
+  if (on) fitSideLines();
 }
 function next(){
   if (!TBQ) return;

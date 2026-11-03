@@ -1,6 +1,6 @@
 /* 単元2「直列回路と並列回路」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(2, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, zoneTint = H.zoneTint, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元2の図（自作）：直列（ser）・並列（par）・直並列（sp）・過去問 平成25年 問5（pq25）。
 // 共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 名前 L[k]：文字（そのまま）か [前, 後]（p[k + "v"] で前→後へ入れ替える）。矢印の濃さ＝p[k + "o"]（無ければ 1）、
@@ -55,8 +55,11 @@ function point(d, k, x, y, L, p){
   if (P.v !== undefined) lab2(d, "p" + k + "t", x, y - 32, P.v, p, "p" + k, pv(p, "p" + k + "vo", 1));
 }
 // ---- 直列：上の線に R1（x=640）・R2（x=880）
+// 点 a・c・b の電位を出す図（2-2）は、同じ電位の線を色で分ける（帯・点・電位の数字。tb_scenes.js の zones。点が無い図は帯も無い）
 function tbSer(d, p, L){
-  var yb = 560;
+  var yb = 560, Z = {hi: {lines: [[[752, yb], [478, yb], [478, 360], [610, 360]]], pts: ["a"]}, mid: {lines: [[[670, 360], [850, 360]]], pts: ["c"]},
+                     lo: {lines: [[[910, 360], [1045, 360], [1045, yb], [772, yb]]], pts: ["b"]}};
+  zones(d, p, L, Z);
   d.wire("L", [[478, 360], [478, yb], [752, yb]]);
   d.wire("Rw", [[772, yb], [1045, yb], [1045, 360]]);
   d.wire("w1", [[478, 360], [610, 360]]); d.wire("wm", [[670, 360], [850, 360]]); d.wire("w2", [[910, 360], [1045, 360]]);
@@ -68,6 +71,7 @@ function tbSer(d, p, L){
   if (L.i2 !== undefined) { var o2 = pv(p, "i2o", 1); d.arrow("i2a", 1045, 440, 1045, 480, {o: o2}); lab2(d, "i2t", 1031, 460, L.i2, p, "i2", o2, {anchor: "end"}); }
   iLeft(d, yb, L, p);
   point(d, "a", 520, 360, L, p); point(d, "c", 760, 360, L, p); point(d, "b", 1000, 360, L, p);
+  zoneTint(d, L, Z);
 }
 // ---- 並列：左右の縦の線 x=600・960、上の道 y=280（R1）・下の道 y=440（R2）
 function tbPar(d, p, L){

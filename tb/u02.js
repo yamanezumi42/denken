@@ -1,6 +1,6 @@
 /* 単元2「直列回路と並列回路」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(2, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, zoneTint = H.zoneTint, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元2の図（自作）：直列（ser）・並列（par）・直並列（sp）・過去問 平成25年 問5（pq25）。
 // 共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 名前 L[k]：文字（そのまま）か [前, 後]（p[k + "v"] で前→後へ入れ替える）。矢印の濃さ＝p[k + "o"]（無ければ 1）、
@@ -55,11 +55,12 @@ function point(d, k, x, y, L, p){
   if (P.v !== undefined) lab2(d, "p" + k + "t", x, y - 32, P.v, p, "p" + k, pv(p, "p" + k + "vo", 1));
 }
 // ---- 直列：上の線に R1（x=640）・R2（x=880）
-// 点 a・c・b の電位を出す図（2-2）は、同じ電位の線を色で分ける（帯・点・電位の数字。tb_scenes.js の zones。点が無い図は帯も無い）
+// 電圧が出ている図（電源の電圧・抵抗の電圧の矢印）は、同じ電位の線を色で分ける（tb_scenes.js の zones）。点 a・c・b の電位を出す図（2-2）は、点と電位の数字も同じ色。
+// 電圧が出ていない図（2-1 の電流だけの図）は帯なし
 function tbSer(d, p, L){
   var yb = 560, Z = {hi: {lines: [[[752, yb], [478, yb], [478, 360], [610, 360]]], pts: ["a"]}, mid: {lines: [[[670, 360], [850, 360]]], pts: ["c"]},
                      lo: {lines: [[[910, 360], [1045, 360], [1045, yb], [772, yb]]], pts: ["b"]}};
-  zones(d, p, L, Z);
+  zones(d, p, L, Z, vOn(L, ["src", "v1", "v2"]));
   d.wire("L", [[478, 360], [478, yb], [752, yb]]);
   d.wire("Rw", [[772, yb], [1045, yb], [1045, 360]]);
   d.wire("w1", [[478, 360], [610, 360]]); d.wire("wm", [[670, 360], [850, 360]]); d.wire("w2", [[910, 360], [1045, 360]]);
@@ -74,8 +75,16 @@ function tbSer(d, p, L){
   zoneTint(d, L, Z);
 }
 // ---- 並列：左右の縦の線 x=600・960、上の道 y=280（R1）・下の道 y=440（R2）
+// 電圧が出ている図（2-4）は色で分ける：並列の左の端（分かれる所）＝＋極の側＝赤・右の端（合流する所）＝－極の側＝灰（並列の両端は同じ電位＝同じ色）
+function zPar(yb, xl, xr, xm, ys){
+  var y0 = ys[0], y1 = ys[ys.length - 1];     // 外側の道は角が欠けないよう1本の折れ線で
+  var hi = [[[752, yb], [478, yb], [478, 360], [xl, 360]], [[xm - 30, y0], [xl, y0], [xl, y1], [xm - 30, y1]]], lo = [[[xr, 360], [1045, 360], [1045, yb], [772, yb]], [[xm + 30, y0], [xr, y0], [xr, y1], [xm + 30, y1]]];
+  ys.slice(1, -1).forEach(function(y){ hi.push([[xl, y], [xm - 30, y]]); lo.push([[xm + 30, y], [xr, y]]); });
+  return {hi: {lines: hi}, lo: {lines: lo}};
+}
 function tbPar(d, p, L){
   var yb = 640, xl = 600, xr = 960;
+  zones(d, p, L, zPar(yb, xl, xr, 740, [280, 440]), vOn(L, ["src", "v1", "v2"]));
   d.wire("L", [[xl, 360], [478, 360], [478, yb], [752, yb]]);
   d.wire("Rw", [[772, yb], [1045, yb], [1045, 360], [xr, 360]]);
   d.wire("bl", [[xl, 280], [xl, 440]]); d.wire("br", [[xr, 280], [xr, 440]]);
@@ -90,8 +99,15 @@ function tbPar(d, p, L){
   iLeft(d, yb, L, p);
 }
 // ---- 直並列：上の線に R1（x=580）、その先に並列（縦の線 x=680・1000、R2 y=280・R3 y=440）
+// 電圧が出ている図（2-5）は色で分ける：＋極の側＝赤・R1 の後ろ（並列の左の端）＝紫・－極の側（並列の右の端）＝灰
+function zSp(yb, xl, xr, xm){
+  return {hi: {lines: [[[752, yb], [478, yb], [478, 360], [550, 360]]]},
+          mid: {lines: [[[610, 360], [xl, 360]], [[xm - 30, 280], [xl, 280], [xl, 440], [xm - 30, 440]]]},
+          lo: {lines: [[[xm + 30, 280], [xr, 280], [xr, 440], [xm + 30, 440]], [[xr, 360], [1045, 360], [1045, yb], [772, yb]]]}};
+}
 function tbSp(d, p, L){
   var yb = 640, xl = 680, xr = 1010;
+  zones(d, p, L, zSp(yb, xl, xr, 790), vOn(L, ["src", "v1", "v2", "v3"]));
   d.wire("L", [[550, 360], [478, 360], [478, yb], [752, yb]]);
   d.wire("w1", [[610, 360], [xl, 360]]);
   d.wire("Rw", [[772, yb], [1045, yb], [1045, 360], [xr, 360]]);
@@ -107,8 +123,10 @@ function tbSp(d, p, L){
   iLeft(d, yb, L, p, "i1"); iArrow(d, "i2", 945, 280, L, "i2", p, true); iArrow(d, "i3", 945, 440, L, "i3", p);
 }
 // ---- 過去問 平成25年 問5：端子2つ（左）・R と Rx の並列（縦の抵抗）
+// 電圧 V を加えた並列なので色で分ける：上の線（端子の高い側）＝赤・下の線＝灰（R と Rx の両端は同じ電位＝同じ色）
 function tbPq25(d, p, L){
   var yt = 300, yb = 560, xR = 760, xX = 960;
+  zones(d, p, L, {hi: {lines: [[[526, yt], [xX, yt], [xX, 400]], [[xR, yt], [xR, 400]]]}, lo: {lines: [[[526, yb], [xX, yb], [xX, 460]], [[xR, 460], [xR, yb]]]}}, vOn(L, ["v"]));
   d.term("ta", 520, yt, "", "l"); d.term("tb", 520, yb, "", "l");
   d.wire("wt", [[526, yt], [xX, yt], [xX, 400]]); d.wire("wb", [[526, yb], [xX, yb], [xX, 460]]);
   d.wire("wR", [[xR, yt], [xR, 400]]); d.wire("wR2", [[xR, 460], [xR, yb]]);

@@ -1,13 +1,16 @@
 /* 単元1「オームの法則」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(1, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, zoneTint = H.zoneTint, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元1の図（自作）。共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 1つの抵抗と電源の回路
 function tbLoop(d, p, L){
   var yb = pv(p, "yb", 490);
-  // 点 a・b の電位を出す図（1-2）は、同じ電位の線を色で分ける（帯は電位の数字が出た時に出る。tb_scenes.js の zband・ztint）
-  if (L.va) zband(d, "zbhi", [[[752, yb], [478, yb], [478, 360], [730, 360]]], "hi", pv(p, "pva", 1));
-  if (L.vb) zband(d, "zblo", [[[790, 360], [1045, 360], [1045, yb], [772, yb]]], "lo", pv(p, "pvb", 1));
+  // 電圧が出ている図（電源の電圧・抵抗の電圧の矢印・点の電位）は、抵抗の前と後の線を色で分ける（tb_scenes.js の zband・ztint）。
+  // 点 a・b の電位を出す図（1-2）は、帯はその電位の数字が出た時に出る。電圧が出ていない図（1-1 電流・1-3 抵抗）は帯なし
+  if (vOn(L, ["src", "v0", "v1", "va", "vb"])) {
+    zband(d, "zbhi", [[[752, yb], [478, yb], [478, 360], [730, 360]]], "hi", L.va ? pv(p, "pva", 1) : 1);
+    zband(d, "zblo", [[[790, 360], [1045, 360], [1045, yb], [772, yb]]], "lo", L.vb ? pv(p, "pvb", 1) : 1);
+  }
   d.wire("L", [[478, 360], [478, yb], [752, yb]]);
   d.wire("Rw", [[772, yb], [1045, yb], [1045, 360]]);
   d.wire("wl", [[478, 360], [730, 360]]); d.wire("wr", [[790, 360], [1045, 360]]);
@@ -63,10 +66,12 @@ function tbLoop(d, p, L){
 }
 // 抵抗1つと両端の点 a・b（電位と電位差）
 function tbSeg(d, p, L){
-  // 点 a・b の電位を出す図は、両側の線を色で分ける（電位の高い側＝赤・低い側＝灰）
+  // 両側の線を色で分ける（電位の高い側＝赤・低い側＝灰）。電位か電圧の矢印が出ている時
   var hiL = L.hiLeft !== false, za = hiL ? "hi" : "lo", zb = hiL ? "lo" : "hi";
-  if (L.va) zband(d, "zba", [[[560, 360], [730, 360]]], za, 1);
-  if (L.vb) zband(d, "zbb", [[[790, 360], [960, 360]]], zb, 1);
+  if (vOn(L, ["va", "vb", "v0", "v1"])) {
+    zband(d, "zba", [[[560, 360], [730, 360]]], za, 1);
+    zband(d, "zbb", [[[790, 360], [960, 360]]], zb, 1);
+  }
   d.wire("wl", [[560, 360], [730, 360]]); d.wire("wr", [[790, 360], [960, 360]]);
   d.res("r", 760, 360, "h");
   d.dot("da", 560, 360); d.dot("db", 960, 360);

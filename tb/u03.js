@@ -1,6 +1,6 @@
 /* 単元3「合成抵抗」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(3, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, zoneTint = H.zoneTint, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元3の図（自作）の、節の間で共通の部品。共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 節の図は u03/sN_scenes.js（u03.py が番号順につなぎ、KINDS・FLOWK を1つにまとめる）。このファイルは書き換えない（足したい部品は自分の節のファイルへ）。
 // 名前 L[k]：文字（そのまま）か [前, 後]（p[k + "v"] で前→後へ入れ替える）。矢印の濃さ＝p[k + "o"]（無ければ 1）、
@@ -275,6 +275,21 @@ function s5flowB(p, L){
 // 全体の電流 I は左の縦の線（x=478）の上・上向き（電源から出る電流。まとめる前も後も同じ線）。名前は線の右。
 // 左と下の線の id は形ごとに変える（s6L＋形・s6R＋形＝電流の矢印の確かめで形を見分ける）。電池は下の線の真ん中。
 // 電流は＋極（x=752）から出て、下の線を左へ → 左の線を上へ → 上の線を右へ → 右の線を下へ。
+// 同じ電位の線の色の帯（tb_scenes.js の zones。2026-11-03 本人「電位が関係する問題は色分けすべき」）：電源の電圧が出ている図だけ。
+// もとの回路の帯（id zbhi・zbmid・zblo）は 1−mg、まとめた後（電源と R だけ）の帯（id zbmhi・zbmlo＝R の左が赤・右が灰）は mg の濃さ。線より先に呼ぶ
+function s6zones(d, p, L, yb, Z){
+  if (!vOn(L, ["src"])) return;
+  var mg = pv(p, "mg", 0);
+  zones(d, p, L, Z, 1 - mg);
+  zones(d, p, L, {hi: {lines: [[[752, yb], [478, yb], [478, 360], [730, 360]]]}, lo: {lines: [[[790, 360], [1045, 360], [1045, yb], [772, yb]]]}}, mg, "m");
+}
+// 並列の部分の帯：左の端（xl）の側の線と、右の端（xr）の側の線
+function s6zpar(xl, xr, ys, xm){
+  var y0 = ys[0], y1 = ys[ys.length - 1];     // 外側の道は角が欠けないよう1本の折れ線で
+  var a = [[[xm - 30, y0], [xl, y0], [xl, y1], [xm - 30, y1]]], b = [[[xm + 30, y0], [xr, y0], [xr, y1], [xm + 30, y1]]];
+  ys.slice(1, -1).forEach(function(y){ a.push([[xl, y], [xm - 30, y]]); b.push([[xm + 30, y], [xr, y]]); });
+  return [a, b];
+}
 function s6frame(d, p, L, sh, yb){
   var mg = pv(p, "mg", 0);
   d.wire("s6L" + sh, [[478, 360], [478, yb], [752, yb]]);
@@ -305,6 +320,8 @@ function s6pars(d, p, L, xl, xr, ys, xm, ks, o){
 }
 // ---- 直列：上の線に R1（x=640）・R2（x=880）
 function tbS6ser(d, p, L){
+  s6zones(d, p, L, 560, {hi: {lines: [[[752, 560], [478, 560], [478, 360], [610, 360]]]}, mid: {lines: [[[670, 360], [850, 360]]]},
+                         lo: {lines: [[[910, 360], [1045, 360], [1045, 560], [772, 560]]]}});
   var o = s6frame(d, p, L, "ser", 560);
   if (o <= 0) return;
   d.wire("s6a0", [[478, 360], [610, 360]], {o: o}); d.wire("s6a1", [[670, 360], [850, 360]], {o: o}); d.wire("s6a2", [[910, 360], [1045, 360]], {o: o});
@@ -312,6 +329,8 @@ function tbS6ser(d, p, L){
 }
 // ---- 並列（2つ）：縦の線 x=600・960、上の道 y=280（R1）・下の道 y=440（R2）、抵抗 x=780
 function tbS6par(d, p, L){
+  var P = s6zpar(600, 960, [280, 440], 780);
+  s6zones(d, p, L, 640, {hi: {lines: [[[752, 640], [478, 640], [478, 360], [600, 360]]].concat(P[0])}, lo: {lines: [[[960, 360], [1045, 360], [1045, 640], [772, 640]]].concat(P[1])}});
   var o = s6frame(d, p, L, "par", 640);
   if (o <= 0) return;
   d.wire("s6a0", [[478, 360], [600, 360]], {o: o}); d.wire("s6a2", [[960, 360], [1045, 360]], {o: o});
@@ -319,6 +338,8 @@ function tbS6par(d, p, L){
 }
 // ---- 並列（3つ）：縦の線 x=600・960、道 y=260（R1）・360（R2）・460（R3）、抵抗 x=780
 function tbS6par3(d, p, L){
+  var P = s6zpar(600, 960, [260, 360, 460], 780);
+  s6zones(d, p, L, 640, {hi: {lines: [[[752, 640], [478, 640], [478, 360], [600, 360]]].concat(P[0])}, lo: {lines: [[[960, 360], [1045, 360], [1045, 640], [772, 640]]].concat(P[1])}});
   var o = s6frame(d, p, L, "par3", 640);
   if (o <= 0) return;
   d.wire("s6a0", [[478, 360], [600, 360]], {o: o}); d.wire("s6a2", [[960, 360], [1045, 360]], {o: o});
@@ -326,6 +347,9 @@ function tbS6par3(d, p, L){
 }
 // ---- 直並列：上の線に R1（x=580）、その先に R2（y=280）・R3（y=440）の並列（縦の線 x=680・1010、抵抗 x=845）
 function tbS6sp(d, p, L){
+  var P = s6zpar(680, 1010, [280, 440], 845);
+  s6zones(d, p, L, 640, {hi: {lines: [[[752, 640], [478, 640], [478, 360], [550, 360]]]}, mid: {lines: [[[610, 360], [680, 360]]].concat(P[0])},
+                         lo: {lines: [[[1010, 360], [1045, 360], [1045, 640], [772, 640]]].concat(P[1])}});
   var o = s6frame(d, p, L, "sp", 640);
   if (o <= 0) return;
   d.wire("s6a0", [[478, 360], [550, 360]], {o: o}); d.wire("s6a1", [[610, 360], [680, 360]], {o: o}); d.wire("s6a2", [[1010, 360], [1045, 360]], {o: o});
@@ -353,6 +377,12 @@ function k1Cell(d, id, yb, L, p){
 }
 function tbK1h21(d, p, L){
   var t1 = 220, b1 = 340, jm = 520, b2 = 650;
+  // 同じ電位の線の色の帯（30 V を加えた回路＝電位が関わる。tb_scenes.js の zones）。図1＝＋極の側 赤・R1 と R2 の間 紫・－極の側 灰／図2＝並列の左の端 赤・右の端 灰
+  var on = vOn(L, ["src"]);
+  zones(d, p, L, {hi: {lines: [[[752, b1], [478, b1], [478, t1], [610, t1]]]}, mid: {lines: [[[670, t1], [850, t1]]]},
+                  lo: {lines: [[[910, t1], [1045, t1], [1045, b1], [772, b1]]]}}, on, "k1");
+  zones(d, p, L, {hi: {lines: [[[752, b2], [478, b2], [478, jm], [600, jm]], [[750, 470], [600, 470], [600, 570], [750, 570]]]},
+                  lo: {lines: [[[960, jm], [1045, jm], [1045, b2], [772, b2]], [[810, 470], [960, 470], [960, 570], [810, 570]]]}}, on, "k2");
   // 図1：直列
   d.text("k1n", 478, 185, "図1", {anchor: "start"});
   d.wire("k1L", [[752, b1], [478, b1], [478, t1], [610, t1]]);

@@ -393,12 +393,22 @@ button{font:inherit;color:inherit}
   svg.fig circle.term{fill:#fff}
   svg.fig .dash{stroke-dasharray:7 6}
   svg.fig text{font-family:KaTeX_Main,"Times New Roman",serif;font-size:22px}
-  svg.fig text .v{font-family:KaTeX_Math,"Times New Roman",serif;font-style:italic}</style>
+  svg.fig text .v{font-family:KaTeX_Math,"Times New Roman",serif;font-style:italic}
+  /* 案C（2026-11-04 本人）：字幕の〖…〗＝水色のマーカー・強調した部品は黒＋背面の水色・帯は【帯】の文だけ */
+  .slide .cap .hlm{background:linear-gradient(transparent 50%, rgba(102,217,232,.6) 50%);-webkit-box-decoration-break:clone;box-decoration-break:clone}
+  .slide svg.fig path.zband{transition:opacity .35s}
+  .slide svg.fig path.zband.zoff{opacity:0 !important}
+  .slide svg.fig .ink.on:not(text){stroke:#000}
+  .slide svg.fig text.ink.on{fill:#000}
+  .slide svg.fig path.head.on,.slide svg.fig circle.dot.on{fill:#000}
+  svg.fig .mkl .mkw{fill:none;stroke:#66d9e8;stroke-opacity:.6;stroke-linecap:round;stroke-linejoin:round}
+  svg.fig .mkl .mkb{fill:#66d9e8;fill-opacity:.6}
+</style>
 <script>
 (function(){
 var DATA = {icons: {"close":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#111\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M6 6L18 18M18 6L6 18\"/></svg>","swap":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4\"/></svg>"}};
 var TB_FLOWS = {}, SCENES = {}, TB_KIND = {}, TB_FLOWK = {};
-var BLINK_P = 0.8, BLINK_N = 3, FARROW_D = "M11 0 L-7 -8 L-2 0 L-7 8 Z";
+var FARROW_D = "M11 0 L-7 -8 L-2 0 L-7 8 Z";
 
 var NS = "http://www.w3.org/2000/svg";
 function Drawer(svg){
@@ -594,6 +604,7 @@ function wbrInto(el, t, prev0, next0){                    // prev0／next0＝こ
   function flush(){ if (buf) { el.appendChild(document.createTextNode(buf)); buf = ""; } }
   var prev = prev0 || "";                                  // 空白を飛ばした、すぐ前の文字
   a.forEach(function(c, i){
+    if (c === "〖" || c === "〗") { buf += c; return; }
     if (c === " ") {                                        // 空白：後ろの文字と切れ目になる所だけ普通の空白（切ってよい）
       var nx = a.slice(i + 1).find(function(x){ return x !== " "; }) || next0 || "";
       buf += brk(prev, nx) ? " " : "\u00a0"; return;
@@ -606,7 +617,9 @@ function wbrInto(el, t, prev0, next0){                    // prev0／next0＝こ
 // 式の前の言葉のうち、式と一緒にする部分＝式の直前の名詞のまとまり（「下の」「電流」「電源の電圧」）。
 // 直前が「の」か漢字・カタカナ・英数字のときだけ（「を」「と」「は」などの後ろ＝文節の切れ目なので式の前で切ってよい）
 function glueTail(t){
-  var a = Array.from(t.replace(/\s+$/, "")), n = a.length;
+  var t0 = t.replace(/\s+$/, "");
+  if (/〖$/.test(t0)) return glueTail(t0.slice(0, -1)) + "〖";
+  var a = Array.from(t0), n = a.length;
   if (!n || !(a[n - 1] === "の" || WORDH.test(a[n - 1]))) return "";
   var k = n - 1, j = a.join(""), keep = {};
   NOBR.forEach(function(w){ var at = j.indexOf(w); while (at >= 0) { for (var q = at + 1; q < at + w.length; q++) keep[q] = 1; at = j.indexOf(w, at + 1); } });   // 「真ん中」などは中で切らない
@@ -626,7 +639,7 @@ function capInto(el, s){
         g = host; cont = null; pre = ""; lastCh = ""; return;
       }
       if (g) {                                     // 式のすぐ後ろの助詞（ひらがなの続き＋、。）を式と一緒に
-        var lead = /^\s/.test(t) ? "\u2009" : "", rest = t.replace(/^\s+/, ""), m = rest.match(/^[\u3041-\u309f]*[、。]?/), head = m ? m[0] : "";
+        var lead = /^\s/.test(t) ? "\u2009" : "", rest = t.replace(/^\s+/, ""), m = rest.match(/^〗?[\u3041-\u309f]*[、。]?/), head = m ? m[0] : "";
         g.appendChild(document.createTextNode(lead + head)); t = rest.slice(head.length); lastCh = head ? Array.from(head).pop() : "";
         if (/の$/.test(head) && !t.trim() && i + 1 < parts.length) { cont = g; pre = t ? "\u2009" : ""; g = null; return; }   // 「9Ω の R」＝続けて1つ
         g = null;
@@ -642,6 +655,23 @@ function capInto(el, s){
     });
   });
 }
+function markInto(el){
+  var on = false;
+  (function walk(node){
+    Array.prototype.slice.call(node.childNodes).forEach(function(c){
+      if (c.nodeType === 1) { if (c.classList.contains("katex")) { if (on) c.classList.add("hlm"); return; } walk(c); return; }
+      if (c.nodeType !== 3) return;
+      var s = c.nodeValue; if (!on && !/[〖〗]/.test(s)) return;
+      var frag = document.createDocumentFragment();
+      s.split(/([〖〗])/).forEach(function(part){
+        if (part === "〖") { on = true; return; } if (part === "〗") { on = false; return; } if (!part) return;
+        if (on) { var sp = document.createElement("span"); sp.className = "hlm"; sp.textContent = part; frag.appendChild(sp); }
+        else frag.appendChild(document.createTextNode(part));
+      });
+      c.parentNode.replaceChild(frag, c);
+    });
+  })(el);
+}
 function Slide(sec, render){
   var NR = sec.narr, ST = NR.steps, N = ST.length, MV = NR.moves, G = NR.groups, vb = sec.viewbox.split(" ").map(Number);
   var el = document.createElement("div"); el.className = "slide"; el.dataset.id = sec.id;
@@ -649,7 +679,7 @@ function Slide(sec, render){
     '<div class="band"><span class="bw"></span><span class="bk"></span></div><div class="rb"><button class="ib swp" aria-label="swap">' + DATA.icons.swap + '</button><button class="ib spd" aria-label="speed"></button></div></div>' +
     '<div class="route"></div><div class="full"></div><div class="spop"><input type="range" min="0.5" max="3" step="0.05"><span></span></div>' +
     '<div class="stage"><svg class="fig" viewBox="' + sec.viewbox + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
-    '<rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/><g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g><g class="flow"></g></svg>' +
+    '<rect x="-5000" y="-5000" width="10000" height="10000" fill="#fff"/><g class="mkl"></g><g class="parts" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></g><g class="flow"></g></svg>' +
     '<div class="ov"></div></div><div class="dots">' + ST.map(function(_, i){ return '<button aria-label="' + (i + 1) + '"><i></i></button>'; }).join("") + '</div>';
   document.body.appendChild(el);
   var stage = el.querySelector(".stage"), ov = el.querySelector(".ov"), svg = el.querySelector("svg.fig");
@@ -688,7 +718,7 @@ function Slide(sec, render){
     st.sents.forEach(function(s, si){
       var typeT = 0.2;                                   // 文は一度に出る（0.2秒でふわっと）
       var at = s.at || {}, aft = s.after || [];
-      var o = {s: tt, text: s.text, emph: s.emph, emphPre: s.emphPre, dim: s.dim, route: s.route, ans: s.ans, items: [], clear: s.clear};
+      var o = {s: tt, zb: s.zb, text: s.text, emph: s.emph, emphPre: s.emphPre, dim: s.dim, route: s.route, ans: s.ans, items: [], clear: s.clear};
       var pos = function(k){ return 0.2; };
       var hasEq = !!(s.eq && s.eq.length), isAft = function(k){ return hasEq && aft.indexOf(k) >= 0; };
       // 字幕と、式より前に書いた印（強調の枠・動き）が終わる時刻
@@ -735,7 +765,7 @@ function Slide(sec, render){
       } else beats.push({s: tt, e: o.e, j: si});
       tt = o.e + 0.35; sents.push(o);
     });
-    sents.forEach(function(o){ var d = document.createElement("div"); capInto(d, o.text); d.style.display = "none"; cap.appendChild(d); o.capEl = d;
+    sents.forEach(function(o){ var d = document.createElement("div"); capInto(d, o.text); markInto(d); d.style.display = "none"; cap.appendChild(d); o.capEl = d;
     });
     var sp = document.createElement("div"); sp.className = "sp"; box.appendChild(sp);
     var pips = beats.map(function(){ var i = document.createElement("i"); sp.appendChild(i); return i; });
@@ -809,7 +839,27 @@ function Slide(sec, render){
     node.style.transform = "translate(" + X.toFixed(1) + "px," + Y.toFixed(1) + "px)";
   }
   function groupIds(names){ var s = new Set(); (names || []).forEach(function(g){ (G[g] || []).forEach(function(id){ s.add(id); }); }); return s; }
-  var frameNames = null, frameAt = 0, curEmph = new Set(), blinkKey = "", blinkIds = [], blinkT0 = 0, blinkPrev = new Set(), blinkAll = new Set();
+  var frameNames = null, frameAt = 0, curEmph = new Set();
+  // 帯の出し入れ（【帯】の文だけ）と、強調した部品の背面の水色（g.mkl＝部品の g.parts より下）
+  var mkl = svg.querySelector("g.mkl");
+  function mkPost(ids, zbOn){
+    Array.prototype.forEach.call(svg.querySelectorAll("path.zband"), function(e){ e.classList.toggle("zoff", !zbOn); });
+    mkl.textContent = "";
+    var F = parseFloat(svg.style.fontSize) || 30, pad = F * 0.18;
+    ids.forEach(function(id){
+      var e = dr.els[id]; if (!e || e.style.display === "none" || +(e.style.opacity || 1) < 0.05) return;
+      var tag = e.tagName.toLowerCase(), cl = e.getAttribute("class") || "";
+      if (/zband/.test(cl)) return;
+      if (tag === "path" && !/head/.test(cl)) {
+        var d = e.getAttribute("d"); if (!d) return;
+        var m = document.createElementNS(NS, "path"); m.setAttribute("d", d); m.setAttribute("class", "mkw"); m._id = id; m.style.strokeWidth = (F * 0.62).toFixed(1); mkl.appendChild(m); return;
+      }
+      var b; try { b = e.getBBox(); } catch (x) { return; } if (!b.width && !b.height) return;
+      var r = document.createElementNS(NS, "rect"); r.setAttribute("class", "mkb"); r._id = id;
+      r.setAttribute("x", n(b.x - pad)); r.setAttribute("y", n(b.y - pad * 0.6)); r.setAttribute("width", n(b.width + 2 * pad)); r.setAttribute("height", n(b.height + 1.2 * pad));
+      r.setAttribute("rx", n(pad * 0.7)); mkl.appendChild(r);
+    });
+  }
   function show(){
     var st = ST[cur], p = plan[cur];
     plan.forEach(function(q, i){ var on = i === cur; if ((q.box.style.display !== "none") !== on) q.box.style.display = on ? "" : "none"; });
@@ -823,11 +873,11 @@ function Slide(sec, render){
       p.cap.style.opacity = easeIO((t - o.s) / 0.2).toFixed(3);
     } else p.box.style.opacity = 0;
     // 印の状態（その時刻までに出た文の印）
-    var emph = null, emAt = 0, dim = null, route = routeAt[cur], ans = ansAt[cur], P = Object.assign({}, stepStart[cur]);
+    var emJ = -1, emph = null, emAt = 0, dim = null, route = routeAt[cur], ans = ansAt[cur], P = Object.assign({}, stepStart[cur]);
     p.sents.forEach(function(o, j){
       if (t < o.s || si < 0) return;
-      if (o.emphPre && t >= o.s + o.dEp) { emph = o.emphPre; emAt = o.s + o.dEp; }
-      if (o.emph && t >= o.s + o.dE) { emph = o.emph; emAt = o.s + o.dE; }
+      if (o.emphPre && t >= o.s + o.dEp) { emph = o.emphPre; emAt = o.s + o.dEp; emJ = j; }
+      if (o.emph && t >= o.s + o.dE) { emph = o.emph; emAt = o.s + o.dE; emJ = j; }
       if (o.dim && t >= o.s + o.dD) dim = o.dim;
       if (o.route !== undefined && t >= o.s + o.dR) route = o.route;
       if (o.ans && t >= o.s + o.dA) ans = true;
@@ -839,6 +889,8 @@ function Slide(sec, render){
         });
       }
     });
+    if (emJ !== si) emph = null;
+    var zbOn = si >= 0 && !!p.sents[si].zb;
     // 式：字幕の真下。今出たまとまりに色、前の行は黒。【消す】で消える
     var newest = -1;
     p.rows.forEach(function(r, j){ var vis = t >= r.born && t < r.hide && si >= 0; if ((r.el.style.display !== "none") !== vis) r.el.style.display = vis ? "" : "none";
@@ -855,30 +907,14 @@ function Slide(sec, render){
     fit(cur);
     // 図
     var ids = groupIds(emph), fp = Math.round(easeIO((t - emAt) / 0.45) * 100) / 100;
-    var key = cur + "|" + JSON.stringify(P) + "|" + (emph || []).join(",") + "|" + (dim || []).join(",") + "|" + fp;
+    var key = cur + "|" + zbOn + "|" + JSON.stringify(P) + "|" + (emph || []).join(",") + "|" + (dim || []).join(",") + "|" + fp;
     if (key !== lastKey) {
       lastKey = key; lastP = P;
       dr.emph = ids; dr.dimSet = groupIds(dim); dr.key = "";
       dr.begin(); render(P, dr);
-      // 強調：枠は描かない。強調した部品そのものを、落ち着いた速さで3回点滅させ、強調の色で止める（2026-11-03 本人）
-      var nb = [];
-      (emph || []).forEach(function(gname){
-        (G[gname] || []).forEach(function(id){ var e = dr.els[id]; if (!e || e.style.display === "none") return;
-          var tag = e.tagName.toLowerCase(), cl = e.getAttribute("class") || "";
-          if (tag === "rect" || tag === "text" || tag === "circle" || /head|vdim|zband/.test(cl) || dr.els[id + ":h"] || /:(L|S|a)$/.test(id)) nb.push(id); });
-      });
-      var ek = cur + "|" + (emph || []).join(",");
-      if (ek !== blinkKey) {
-        blinkKey = ek; blinkOff();
-        blinkIds = nb.filter(function(id){ return !blinkPrev.has(id); }); blinkT0 = performance.now(); blinkPrev = new Set(nb);
-        blinkIds.forEach(function(id){ blinkAll.add(id); });                 // 確かめ用：点滅させた部品の控え（blinkReset で空に）
-      } else {
-        // 強調が始まった瞬間にまだ出ていなかった部品（【動き】で出てくる合成抵抗など）も、見えた時に点滅させる
-        // （2026-11-03 強調と動きが同じ時刻に始まる文で、その時刻ちょうどの描画だと点滅しなかった）
-        var late = nb.filter(function(id){ return !blinkPrev.has(id); });
-        if (late.length) { late.forEach(function(id){ blinkPrev.add(id); blinkAll.add(id); }); blinkIds = blinkIds.concat(late); blinkT0 = performance.now(); }
-      }
       dr.end();
+      // 強調：枠は描かない。強調した部品の背面を水色で塗る（案C）。帯は【帯】の文の間だけ
+      mkPost(ids, zbOn);
     }
     flowG.style.opacity = ids.size ? 0.3 : 1;
     routeEl.classList.toggle("show", route >= 0);
@@ -918,7 +954,7 @@ function Slide(sec, render){
       if (t >= tEnd) { t = tEnd; playing = false; el.classList.remove("anim"); }
       show();
     }
-    flow(dt); blinkStep(now);
+    flow(dt);
     requestAnimationFrame(loop);
   }
   function startLoop(){ if (!looping) { looping = true; last = null; requestAnimationFrame(loop); } }
@@ -930,16 +966,6 @@ function Slide(sec, render){
     t = Math.max(x.s, 0.0001); tEnd = x.e; playing = true; el.classList.add("anim"); show(); startLoop();
   }
   function skip(){ playing = false; el.classList.remove("anim"); t = tEnd; show(); }
-  // 点滅：周期 BLINK_P 秒で BLINK_N 回、濃さ（線と塗りの不透明度）を 1→0.12→1。終わると強調の色のまま止まる
-  function blinkOff(){ blinkIds.forEach(function(id){ var e = dr.els[id]; if (e) { e.style.strokeOpacity = ""; e.style.fillOpacity = ""; } }); blinkIds = []; }
-  function blinkStep(now){
-    if (!blinkIds.length) return;
-    var tau = (now - blinkT0) / 1000;
-    if (tau >= BLINK_N * BLINK_P) { blinkOff(); return; }
-    var f = (0.12 + 0.88 * (0.5 + 0.5 * Math.cos(2 * Math.PI * Math.max(0, tau) / BLINK_P))).toFixed(3);
-    blinkIds.forEach(function(id){ var e = dr.els[id]; if (!e) return; e.style.strokeOpacity = f;
-      if (!/\bbox\b/.test(e.getAttribute("class") || "")) e.style.fillOpacity = f; });   // 抵抗の四角の中の白は残す
-  }
   function go(i){ if (i < 0 || i >= N) return; playing = false; el.classList.remove("anim"); cur = i; t = 0; tEnd = 0; playBeat(0); }
   function tap(){
     if (pop.classList.contains("open")) { pop.classList.remove("open"); return; }
@@ -1014,7 +1040,7 @@ function Slide(sec, render){
               eqShown: Array.from(plan[cur].eb.querySelectorAll(".ln")).filter(function(r){ return r.style.display !== "none"; })
                 .map(function(r){ return Array.from(r.querySelectorAll("span.f")).filter(function(f){ return +f.style.opacity > 0.5; }).length; }),
               dots: dotsPool.filter(function(c){ return c.style.display !== "none"; }).map(function(c){ return c.getAttribute("transform"); }),
-              flow: FLOW && lastP ? FLOW(lastP) : null, flowOp: +(flowG.style.opacity || 1), blink: {ids: blinkIds.slice(), all: Array.from(blinkAll), t0: blinkT0, P: BLINK_P, N: BLINK_N, frames: el.querySelectorAll('[class~=trace]').length}}; }, blinkReset: function(){ blinkAll = new Set(); }};   // 電流の点の通り道（重なりの確かめ用）
+              flow: FLOW && lastP ? FLOW(lastP) : null, flowOp: +(flowG.style.opacity || 1), mark: {ids: Array.prototype.map.call(mkl.childNodes, function(m){ return m._id; }), frames: el.querySelectorAll('[class~=trace]').length, zbOn: (function(){ var q = plan[cur].sents.filter(function(o){ return o.capEl.style.display !== 'none'; })[0]; return !!(q && q.zb); })(), zbands: svg.querySelectorAll('path.zband').length, zbVisible: svg.querySelectorAll('path.zband:not(.zoff)').length}}; }};   // 電流の点の通り道（重なりの確かめ用）
 }
 
 // 教科書の図（自作）。座標は試作の段5と同じ（上の線 y=360・下の線 yb・左 x=478・右 x=1045）。
@@ -1128,7 +1154,7 @@ function genQ(G, sec, r){
 }
 
 var H = {NS: NS, Drawer: Drawer, n: n, clamp01: clamp01, lerp: lerp, seriesPair: seriesPair, parallelPair: parallelPair, vdim: vdim, pv: pv, swapText: swapText, ZC: ZC, zband: zband, ztint: ztint, zpt: zpt, zones: zones, vOn: vOn, zoneTint: zoneTint, zSides: zSides, rngOf: rngOf, pick: pick, shuffled: shuffled, nice: nice, fmt: fmt, UNIT: UNIT, qv: qv, qf: qf, choices: choices, num: num, distinct: distinct, UNIT_CH: UNIT_CH, unitQ: unitQ, genQ: genQ};
-var TBD = {"ver":"2026-11-04 20:18 版　新：単元10「テブナンの定理」（10-1〜10-5）・過去問1問・単元8と単元9の終わりに過去問3問ずつ","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"4d12892e"},{"name":"直列回路と並列回路","secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"8a92db88"},{"name":"合成抵抗","secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"c29979be"},{"name":"分圧と分流","secs":["分圧（2つの抵抗）","分圧（3つ以上）","分流（2つの抵抗）","分流（3つ以上）","短絡","分かれた電流から全体の電流"],"file":"tb/u04.js","hash":"b1688baf"},{"name":"キルヒホッフの法則","secs":["キルヒホッフの第1法則","キルヒホッフの第2法則","閉回路の向きと符号","直列の電源をまとめる","ループ電流法で式を立てる","連立方程式を解く","電位の基準を決める"],"file":"tb/u05.js","hash":"68913169"},{"name":"抵抗率と温度","secs":["抵抗率","単位を式から出す","長さと断面積","抵抗を長さで分ける","コンダクタンス","導電率","温度と抵抗","抵抗温度係数","温度が変わった後の抵抗"],"file":"tb/u06.js","hash":"0b656f66"},{"name":"ブリッジ回路","secs":["ブリッジ回路の形","ブリッジの平衡","平衡条件","平衡なら真ん中を消す","平衡していないブリッジ"],"file":"tb/u07.js","hash":"14192a11"},{"name":"Δ-Y変換","secs":["Δ結線とY結線","Δ から Y への変換","Y から Δ への変換","等しい抵抗の Δ-Y変換","ブリッジの中の Δ","Δ の中の Y"],"file":"tb/u08.js","hash":"0ad8a3ce"},{"name":"重ね合わせの理","secs":["重ね合わせの理","向きが逆の成分","電流源と開放","電圧源と電流源が混ざる回路","書かずに足す"],"file":"tb/u09.js","hash":"ed418af9"},{"name":"テブナンの定理","secs":["テブナンの定理","a・b 間の電圧","a・b 間の合成抵抗","平衡しないブリッジ","電流源の回路"],"file":"tb/u10.js","hash":"62dfe37e"},{"name":"ミルマンの定理"},{"name":"電力と電力量"},{"name":"電池の内部抵抗と最大電力"}]};
+var TBD = {"ver":"2026-11-04 23:27 版　新：解説の強調を水色に・字幕の大事な所にマーカー・色の帯は電位の話の時だけ（単元1〜10）","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"75fca07c"},{"name":"直列回路と並列回路","secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"ccd23e1f"},{"name":"合成抵抗","secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"5be82756"},{"name":"分圧と分流","secs":["分圧（2つの抵抗）","分圧（3つ以上）","分流（2つの抵抗）","分流（3つ以上）","短絡","分かれた電流から全体の電流"],"file":"tb/u04.js","hash":"8317ce02"},{"name":"キルヒホッフの法則","secs":["キルヒホッフの第1法則","キルヒホッフの第2法則","閉回路の向きと符号","直列の電源をまとめる","ループ電流法で式を立てる","連立方程式を解く","電位の基準を決める"],"file":"tb/u05.js","hash":"ca8de754"},{"name":"抵抗率と温度","secs":["抵抗率","単位を式から出す","長さと断面積","抵抗を長さで分ける","コンダクタンス","導電率","温度と抵抗","抵抗温度係数","温度が変わった後の抵抗"],"file":"tb/u06.js","hash":"5e541ed3"},{"name":"ブリッジ回路","secs":["ブリッジ回路の形","ブリッジの平衡","平衡条件","平衡なら真ん中を消す","平衡していないブリッジ"],"file":"tb/u07.js","hash":"cc457ee7"},{"name":"Δ-Y変換","secs":["Δ結線とY結線","Δ から Y への変換","Y から Δ への変換","等しい抵抗の Δ-Y変換","ブリッジの中の Δ","Δ の中の Y"],"file":"tb/u08.js","hash":"ef16aa6a"},{"name":"重ね合わせの理","secs":["重ね合わせの理","向きが逆の成分","電流源と開放","電圧源と電流源が混ざる回路","書かずに足す"],"file":"tb/u09.js","hash":"9d93ee7b"},{"name":"テブナンの定理","secs":["テブナンの定理","a・b 間の電圧","a・b 間の合成抵抗","平衡しないブリッジ","電流源の回路"],"file":"tb/u10.js","hash":"e8600d83"},{"name":"ミルマンの定理"},{"name":"電力と電力量"},{"name":"電池の内部抵抗と最大電力"}]};
 // 教科書の画面：ホームの単元の並び・単元の節・説明（スライド）・例題と練習（問題の画面＝手書きつき）・記録
 // 記録の id：例題＝"t:単元:節:x"、練習＝"t:単元:節:p"、済み＝"t:単元:節:done"（過去問 "dc001"・ドリル "d:単元:番号" と混ざらない）
 var IC = {

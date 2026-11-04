@@ -673,6 +673,7 @@ function u4s1fig(L){ return {kind: "u4s1ser", L: Object.assign({pm: 1, r1: "{R}_
 function u4s1three(ok, cands){
   var out = [];
   cands.forEach(function(z){
+    if (!nice(z.x)) return;                     // 丸める前の値で割り切れるかを見る（丸めた後は必ず割り切れて素通りするため。2026-11-04）
     z = {x: r34(z.x), why: z.why};
     if (out.length < 3 && nice(z.x) && z.x > 0 && distinct([ok].concat(out.map(function(w){ return w.x; }), [z.x]))) out.push(z);
   });
@@ -695,6 +696,7 @@ function u4s2fig(L){ return {kind: "u4s2ser", L: Object.assign({pm: 1, r1: "{R}_
 function u4s2three(ok, cands){
   var out = [];
   cands.forEach(function(z){
+    if (!nice(z.x)) return;                     // 丸める前の値で割り切れるかを見る（丸めた後は必ず割り切れて素通りするため。2026-11-04）
     z = {x: r34(z.x), why: z.why};
     if (out.length < 3 && nice(z.x) && z.x > 0 && distinct([ok].concat(out.map(function(w){ return w.x; }), [z.x]))) out.push(z);
   });
@@ -728,6 +730,7 @@ function u4s3fig(L){ return {kind: "u4s3par", L: Object.assign({pm: 1, r1: "{R}_
 function u4s3three(ok, cands){
   var out = [];
   cands.forEach(function(z){
+    if (!nice(z.x)) return;                     // 丸める前の値で割り切れるかを見る（丸めた後は必ず割り切れて素通りするため。2026-11-04）
     z = {x: r34(z.x), why: z.why};
     if (out.length < 3 && nice(z.x) && z.x > 0 && distinct([ok].concat(out.map(function(w){ return w.x; }), [z.x]))) out.push(z);
   });
@@ -782,6 +785,7 @@ function u4s4recs(rr){ return rr.map(function(x){ return "\\dfrac{1}{" + fmt(x) 
 function u4s4three(ok, cands){
   var out = [];
   cands.forEach(function(z){
+    if (!nice(z.x)) return;                     // 丸める前の値で割り切れるかを見る（丸めた後は必ず割り切れて素通りするため。2026-11-04）
     z = {x: r34(z.x), why: z.why};
     if (out.length < 3 && nice(z.x) && z.x > 0 && distinct([ok].concat(out.map(function(w){ return w.x; }), [z.x]))) out.push(z);
   });
@@ -799,6 +803,7 @@ function u4s5sfig(L){ return {kind: "u4s5ser", L: Object.assign({pm: 1, r2: "{R}
 function u4s5three(ok, cands){
   var out = [];
   cands.forEach(function(z){
+    if (!nice(z.x)) return;                     // 丸める前の値で割り切れるかを見る（丸めた後は必ず割り切れて素通りするため。2026-11-04）
     z = {x: r34(z.x), why: z.why};
     if (out.length < 3 && nice(z.x) && z.x > 0 && distinct([ok].concat(out.map(function(w){ return w.x; }), [z.x]))) out.push(z);
   });
@@ -815,6 +820,7 @@ function u4s6fig(L){ return {kind: "u4s6par", L: Object.assign({pm: 1, r1: "{R}_
 function u4s6three(ok, cands){
   var out = [];
   cands.forEach(function(z){
+    if (!nice(z.x)) return;                     // 丸める前の値で割り切れるかを見る（丸めた後は必ず割り切れて素通りするため。2026-11-04）
     z = {x: r34(z.x), why: z.why};
     if (out.length < 3 && nice(z.x) && z.x > 0 && distinct([ok].concat(out.map(function(w){ return w.x; }), [z.x]))) out.push(z);
   });

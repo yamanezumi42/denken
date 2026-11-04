@@ -1039,8 +1039,9 @@ function swapText(d, id, x, y, a, b, t, o0, opt){
 }
 // 同じ電位の線を色で分ける（2026-11-03 本人「電圧降下を表すのに、前と後を色で分けると、どこの電圧がいくつか分かりやすい」）。
 // 電位の高い順に hi（赤）・mid（紫）・lo（灰）。帯＝線の下に敷く太い線（強調で薄くしない＝keep）。数字（点の電位）と点も同じ色の濃い方で書く。
-// 3つで足りない時（3-2 の直列3つ）は mid と lo の間に mid2（藍）。
-var ZC = {hi: ["#ffa8a8", "#c92a2a"], mid: ["#b197fc", "#5f3dc4"], mid2: ["#91a7ff", "#364fc7"], lo: ["#ced4da", "#495057"]};
+// 3つで足りない時（3-2 の直列3つ）は mid と lo の間に mid2（藍）。5つ要る時は mid2 と lo の間に mid3（青。2026-11-04）。
+// 青は明るい水色にして、上を流れる電流の矢じり（#1971c2）と藍（#91a7ff）の両方から見分けられるようにした。
+var ZC = {hi: ["#ffa8a8", "#c92a2a"], mid: ["#b197fc", "#5f3dc4"], mid2: ["#91a7ff", "#364fc7"], mid3: ["#a5d8ff", "#1864ab"], lo: ["#ced4da", "#495057"]};
 // lines＝その電位の線（折れ線の点の並びの配列）。o＝濃さ（0 で消える）
 function zband(d, id, lines, z, o){
   var e = d.el(id, "path", "zband");
@@ -1060,7 +1061,7 @@ function zpt(k){ return ["d" + k, "p" + k + "t0", "p" + k + "t1"]; }
 //   on＝その図に電圧が出ているか（電源の電圧・電圧の矢印）。true＝全部のまとまりに帯（濃さ 1）・数＝その濃さ（0 でも作る＝重なりの順を保つ）・無し＝帯なし。
 // pre＝帯の id の頭（1つの図に回路が2つある時など。id＝"zb" + pre + まとまり）
 function zones(d, p, L, Z, on, pre){
-  var ZS = ["hi", "mid", "mid2", "lo"], any = ZS.some(function(z){ return Z[z] && (Z[z].pts || []).some(function(k){ return L["p" + k]; }); });
+  var ZS = ["hi", "mid", "mid2", "mid3", "lo"], any = ZS.some(function(z){ return Z[z] && (Z[z].pts || []).some(function(k){ return L["p" + k]; }); });
   ZS.forEach(function(z){
     if (!Z[z]) return;
     var o, ks = (Z[z].pts || []).filter(function(k){ return L["p" + k]; });
@@ -1075,7 +1076,7 @@ function zones(d, p, L, Z, on, pre){
 function vOn(L, ks){ return ks.some(function(k){ return L[k] !== undefined && L[k] !== null && L[k] !== ""; }); }
 // 点を描いたあとに呼ぶ：点と電位の文字をそのまとまりの色に
 function zoneTint(d, L, Z){
-  ["hi", "mid", "mid2", "lo"].forEach(function(z){
+  ["hi", "mid", "mid2", "mid3", "lo"].forEach(function(z){
     if (Z[z] && Z[z].pts) Z[z].pts.forEach(function(k){ if (L["p" + k]) ztint(d, zpt(k), z); });
   });
 }
@@ -1127,7 +1128,7 @@ function genQ(G, sec, r){
 }
 
 var H = {NS: NS, Drawer: Drawer, n: n, clamp01: clamp01, lerp: lerp, seriesPair: seriesPair, parallelPair: parallelPair, vdim: vdim, pv: pv, swapText: swapText, ZC: ZC, zband: zband, ztint: ztint, zpt: zpt, zones: zones, vOn: vOn, zoneTint: zoneTint, zSides: zSides, rngOf: rngOf, pick: pick, shuffled: shuffled, nice: nice, fmt: fmt, UNIT: UNIT, qv: qv, qf: qf, choices: choices, num: num, distinct: distinct, UNIT_CH: UNIT_CH, unitQ: unitQ, genQ: genQ};
-var TBD = {"ver":"2026-11-04 07:21 版　新：単元4「分圧と分流」（4-1〜4-6）・過去問5問","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"4d12892e"},{"name":"直列回路と並列回路","secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"8a92db88"},{"name":"合成抵抗","secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"c29979be"},{"name":"分圧と分流","secs":["分圧（2つの抵抗）","分圧（3つ以上）","分流（2つの抵抗）","分流（3つ以上）","短絡","分かれた電流から全体の電流"],"file":"tb/u04.js","hash":"d78941ca"},{"name":"キルヒホッフの法則"},{"name":"抵抗率と温度"},{"name":"ブリッジ回路"},{"name":"Δ-Y変換"},{"name":"重ね合わせの理"},{"name":"テブナンの定理"},{"name":"ミルマンの定理"},{"name":"電力と電力量"},{"name":"電池の内部抵抗と最大電力"}]};
+var TBD = {"ver":"2026-11-04 12:14 版　新：単元5「キルヒホッフの法則」（5-1〜5-7）・過去問4問","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"4d12892e"},{"name":"直列回路と並列回路","secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"8a92db88"},{"name":"合成抵抗","secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"c29979be"},{"name":"分圧と分流","secs":["分圧（2つの抵抗）","分圧（3つ以上）","分流（2つの抵抗）","分流（3つ以上）","短絡","分かれた電流から全体の電流"],"file":"tb/u04.js","hash":"b1688baf"},{"name":"キルヒホッフの法則","secs":["キルヒホッフの第1法則","キルヒホッフの第2法則","閉回路の向きと符号","直列の電源をまとめる","ループ電流法で式を立てる","連立方程式を解く","電位の基準を決める"],"file":"tb/u05.js","hash":"68913169"},{"name":"抵抗率と温度"},{"name":"ブリッジ回路"},{"name":"Δ-Y変換"},{"name":"重ね合わせの理"},{"name":"テブナンの定理"},{"name":"ミルマンの定理"},{"name":"電力と電力量"},{"name":"電池の内部抵抗と最大電力"}]};
 // 教科書の画面：ホームの単元の並び・単元の節・説明（スライド）・例題と練習（問題の画面＝手書きつき）・記録
 // 記録の id：例題＝"t:単元:節:x"、練習＝"t:単元:節:p"、済み＝"t:単元:節:done"（過去問 "dc001"・ドリル "d:単元:番号" と混ざらない）
 var IC = {

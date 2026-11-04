@@ -1,0 +1,673 @@
+/* 単元8「Δ-Y変換」（textbook/make_tb.py が作る。手で直さない） */
+TB_REG(8, function(H){
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+// ---- 生成器の図の道具（textbook/gen/runtime.js の写し。名前の頭 tbGen_ だけ節ごと。手で直さない）
+// K＝図の表（make_section.py が回路の形から作る）：vars＝動く数・items＝描く物・flows＝電流の通り道・von＝電圧の名前の鍵・bands＝帯の出し方
+function tbGen_V(p, L, vars){
+  return vars.map(function(v){
+    if (v[0] === "m") return L[v[2]] !== undefined ? pv(p, v[1], 0) : 0;
+    if (v[0] === "w") return Math.max(0, 1 - Math.abs(pv(p, v[1], 0) * (v[3] - 1) - v[2]));
+    if (v[0] === "s") return pv(p, v[1], v[2]);
+    if (v[0] === "a") return Math.max(0, 1 - Math.abs(pv(p, v[1], 0) - v[2]));
+    return 1;
+  });
+}
+function tbGen_O(V, vis){ var o = 1; (vis || []).forEach(function(a){ o *= a > 0 ? V[a - 1] : 1 - V[-a - 1]; }); return o; }
+function tbGen_Lab(d, id, x, y, spec, p, k, o, anchor){
+  if (spec === undefined || spec === null) return;
+  var opt = anchor ? {anchor: anchor} : {};
+  if (Array.isArray(spec)) swapText(d, id, x, y, spec[0], spec[1], pv(p, k + "v"), o, opt);
+  else swapText(d, id, x, y, spec, null, 0, o, opt);
+}
+function tbGen_Cell(d, it, L, p, o){
+  var N = it.n || it.k, s = N.indexOf("src") === 0 ? N.slice(3) : N, id = "c" + s, sw;
+  if (it.dir === "h") {
+    d.wire(id + ":L", [[it.xp, it.yp - 22], [it.xp, it.yp + 22]], {o: o});
+    sw = d.wire(id + ":S", [[it.xm, it.ym - 11], [it.xm, it.ym + 11]], {o: o}); sw.style.strokeWidth = 4;
+    var sg = it.xp < it.xm ? -1 : 1;
+    if (L.pm) { d.text("pp" + s, it.sp ? it.sp[0] : it.xp + sg * 30, it.sp ? it.sp[1] : it.yp - 26, "+", {o: o}); d.text("pm" + s, it.sm ? it.sm[0] : it.xm - sg * 30, it.sm ? it.sm[1] : it.ym - 26, "−", {o: o}); }
+    if (it.lab) tbGen_Lab(d, "e" + s, it.lab[0], it.lab[1], L[it.k], p, it.k, o, it.lab[2]);
+    else tbGen_Lab(d, "e" + s, (it.xp + it.xm) / 2, it.yp + 42, L[it.k], p, it.k, o);
+  } else {
+    var sd = it.side || 1;
+    d.wire(id + ":L", [[it.xp - 22, it.yp], [it.xp + 22, it.yp]], {o: o});
+    sw = d.wire(id + ":S", [[it.xm - 11, it.ym], [it.xm + 11, it.ym]], {o: o}); sw.style.strokeWidth = 4;
+    var sv = it.yp < it.ym ? -1 : 1;
+    if (L.pm) { d.text("pp" + s, it.sp ? it.sp[0] : it.xp - sd * 36, it.sp ? it.sp[1] : it.yp + sv * 12, "+", {o: o}); d.text("pm" + s, it.sm ? it.sm[0] : it.xm - sd * 36, it.sm ? it.sm[1] : it.ym - sv * 12, "−", {o: o}); }
+    if (it.lab) tbGen_Lab(d, "e" + s, it.lab[0], it.lab[1], L[it.k], p, it.k, o, it.lab[2]);
+    else tbGen_Lab(d, "e" + s, it.xp + sd * 34, (it.yp + it.ym) / 2, L[it.k], p, it.k, o, sd > 0 ? "start" : "end");
+  }
+}
+function tbGen_Res(d, it, L, p, o, V){
+  var e;
+  if (it.rot !== undefined) {
+    e = d.el(it.n || it.k, "rect", "ink box");
+    e.setAttribute("x", n(it.x - 30)); e.setAttribute("y", n(it.y - 12)); e.setAttribute("width", 60); e.setAttribute("height", 24);
+    e.setAttribute("transform", "rotate(" + it.rot + " " + n(it.x) + " " + n(it.y) + ")"); d.style(e, {o: o});
+  } else e = d.res(it.n || it.k, it.x, it.y, it.dir, {o: o});
+  if (it.off) e.classList.toggle("dash", V[it.off - 1] >= 0.5);     // 外す動き：途中で点線に
+  else if (it.dash) e.classList.add("dash");
+  tbGen_Lab(d, (it.n || it.k) + "t", it.lab[0], it.lab[1], L[it.k], p, it.k, o, it.lab[2]);
+}
+// 電圧の矢印（低い方から高い方へ。矢じりは高い方）。横の抵抗＝上か下、縦の抵抗＝左か右
+function tbGen_Vd(d, it, L, p, o){
+  if (L[it.k] === undefined) return;
+  var dd = pv(p, it.k + "d", 1), sd = it.side, w, N = it.n || it.k;
+  if (it.dir === "h") {
+    var ya = it.y + sd * 75;
+    w = vdim(d, N + "d", it.x + it.hi * 72.5, it.x - it.hi * 72.5, it.y + sd * 10, it.y + sd * 85, ya, dd, {o: o});
+    if (it.lab) tbGen_Lab(d, N + "t", it.lab[0], it.lab[1], L[it.k], p, it.k, o * w, it.lab[2]);
+    else tbGen_Lab(d, N + "t", it.x, ya + sd * 25, L[it.k], p, it.k, o * w);
+    return;
+  }
+  var yhi = it.y + it.hi * 72.5, ylo = it.y - it.hi * 72.5, x0 = it.x + sd * 10, x1 = it.x + sd * 85, xa = it.x + sd * 75;
+  var e1 = Math.min(1, dd * 2), w2 = Math.max(0, dd * 2 - 1), xx = x0 + (x1 - x0) * e1;
+  d.wire(N + "d:e", [[x0, yhi], [xx, yhi]], {o: e1 > 0 ? o : 0});
+  d.wire(N + "d:f", [[x0, ylo], [xx, ylo]], {o: e1 > 0 ? o : 0});
+  var Y = ylo + (yhi - ylo) * w2, sg = yhi > ylo ? 1 : -1, h = 11, s = "";
+  if (w2 > 0.02) s = "M" + n(xa) + " " + n(ylo) + " V" + n(Y) + " M" + n(xa - 6) + " " + n(Y - sg * h) + " L" + n(xa) + " " + n(Y) + " L" + n(xa + 6) + " " + n(Y - sg * h);
+  var a = d.el(N + "d:a", "path", "ink vdim"); a.setAttribute("d", s); d.style(a, {o: o});
+  if (it.lab) tbGen_Lab(d, N + "t", it.lab[0], it.lab[1], L[it.k], p, it.k, o * w2, it.lab[2]);
+  else tbGen_Lab(d, N + "t", xa + sd * 14, it.y, L[it.k], p, it.k, o * w2, sd > 0 ? "start" : "end");
+}
+function tbGen_I(d, it, L, p, o){
+  if (L[it.k] === undefined) return;
+  var oo = o * pv(p, it.k + "o", 1);
+  d.arrow((it.n || it.k) + "a", it.x0, it.y0, it.x1, it.y1, {o: oo});
+  tbGen_Lab(d, (it.n || it.k) + "t", it.lab[0], it.lab[1], L[it.k], p, it.k, oo, it.lab[2]);
+}
+// 寸法線（合成抵抗など）。両端の補助線が伸びてから、両矢印が中から外へ
+function tbGen_Dim(d, it, L, p, o, V){
+  if (L[it.k] === undefined) return;
+  var v = pv(p, it.k + "d", 1), e1 = Math.min(1, v * 2), w = Math.max(0, v * 2 - 1), x1 = it.x1, x2 = it.x2, c = (x1 + x2) / 2;
+  var y1 = it.y1m ? it.y1 + (it.y1m[0] - it.y1) * V[it.y1m[1] - 1] : it.y1, y2 = it.y2m ? it.y2 + (it.y2m[0] - it.y2) * V[it.y2m[1] - 1] : it.y2;
+  var oo = e1 > 0 ? o : 0, N = it.n || it.k;
+  d.wire(N + "d:e", [[x1, y1], [x1, y1 + (it.yt - y1) * e1]], {o: oo});
+  d.wire(N + "d:f", [[x2, y2], [x2, y2 + (it.yt - y2) * e1]], {o: oo});
+  var Lx = c - (c - x1) * w, Rx = c + (x2 - c) * w, h = 9, ya = it.ya, s = "";
+  if (w > 0.02) s = "M" + n(Lx) + " " + ya + " H" + n(Rx) + " M" + n(Lx + h) + " " + (ya - 5) + " L" + n(Lx) + " " + ya + " L" + n(Lx + h) + " " + (ya + 5) +
+      " M" + n(Rx - h) + " " + (ya - 5) + " L" + n(Rx) + " " + ya + " L" + n(Rx - h) + " " + (ya + 5);
+  var a = d.el(N + "d:a", "path", "ink"); a.setAttribute("d", s); d.style(a, {o: o});
+  tbGen_Lab(d, N + "t", c, it.ly, L[it.k], p, it.k, o * w);
+}
+// 縦の寸法線（外した抵抗の外側に、a・b から見た合成抵抗 R_ab など）。両端の補助線が伸びてから、両矢印が中から外へ
+function tbGen_DimV(d, it, L, p, o){
+  if (L[it.k] === undefined) return;
+  var v = pv(p, it.k + "d", 1), e1 = Math.min(1, v * 2), w = Math.max(0, v * 2 - 1), y1 = it.y1, y2 = it.y2, c = (y1 + y2) / 2;
+  var oo = e1 > 0 ? o : 0, N = it.n || it.k, xx = it.x1 + (it.xt - it.x1) * e1;
+  d.wire(N + "d:e", [[it.x1, y1], [xx, y1]], {o: oo});
+  d.wire(N + "d:f", [[it.x1, y2], [xx, y2]], {o: oo});
+  var T = c - (c - y1) * w, B = c + (y2 - c) * w, h = 9, xa = it.xa, s = "";
+  if (w > 0.02) s = "M" + n(xa) + " " + n(T) + " V" + n(B) + " M" + n(xa - 5) + " " + n(T + h) + " L" + n(xa) + " " + n(T) + " L" + n(xa + 5) + " " + n(T + h) +
+      " M" + n(xa - 5) + " " + n(B - h) + " L" + n(xa) + " " + n(B) + " L" + n(xa + 5) + " " + n(B - h);
+  var a = d.el(N + "d:a", "path", "ink"); a.setAttribute("d", s); d.style(a, {o: o});
+  var lb = it.lab || [xa + it.sd * 10, c, it.sd > 0 ? "start" : "end"];
+  tbGen_Lab(d, N + "t", lb[0], lb[1], L[it.k], p, it.k, o * w, lb[2]);
+}
+// 端子（白丸と名前）。名前も図の濃さに合わせる（前は d.term で名前の濃さが 1 のままで、入れ替えの図の名前が重なって出ていた）
+function tbGen_Term(d, it, o){
+  var N = "tm" + (it.n || it.k), sd = it.side < 0 ? -1 : 1;
+  tbGen_Circ(d, N, it.x, it.y, 6, o);
+  var lb = it.lab || [it.x + sd * 16, it.y, sd < 0 ? "end" : "start"];
+  d.text(N + ":t", lb[0], lb[1], it.k, {o: o, anchor: lb[2] || "middle"});
+}
+// 電位を見る点（名前 L["p" + 鍵] = {v: 電位}）
+function tbGen_Pt(d, it, L, p, o, Z){
+  var P = L["p" + it.k], N = it.n || it.k; if (!P) return;
+  var oo = o * pv(p, "p" + it.k + "o", 1), vo = oo * pv(p, "p" + it.k + "vo", 1);
+  d.dot("d" + N, it.x, it.y, {o: oo});
+  if (it.nl) {
+    d.text("n" + N, it.nl[0], it.nl[1], it.k, {o: oo, anchor: it.nl[2] || "middle"});
+    if (P.v !== undefined && it.vl) tbGen_Lab(d, "p" + N + "t", it.vl[0], it.vl[1], P.v, p, "p" + it.k, vo, it.vl[2]);
+  } else if (it.dir === "v") {
+    d.text("n" + N, it.x - 18, it.y, it.k, {o: oo, anchor: "end"});
+    if (P.v !== undefined) tbGen_Lab(d, "p" + N + "t", it.x + 18, it.y, P.v, p, "p" + it.k, vo, "start");
+  } else {
+    d.text("n" + N, it.x, it.y + 30, it.k, {o: oo});
+    if (P.v !== undefined) tbGen_Lab(d, "p" + N + "t", it.x, it.y - 32, P.v, p, "p" + it.k, vo);
+  }
+  var z = Z && Z[it.node] ? Z[it.node] : it.z;
+  if (z) ztint(d, zpt(N), z);
+}
+function tbGen_Circ(d, id, x, y, r, o){
+  var e = d.el(id, "circle", "ink term"); e.setAttribute("cx", n(x)); e.setAttribute("cy", n(y)); e.setAttribute("r", r); return d.style(e, {o: o});
+}
+// 電流源（丸の中の矢印）・検流計（丸に G）
+function tbGen_JG(d, it, L, p, o){
+  var N = it.n || it.k;
+  tbGen_Circ(d, N, it.x, it.y, 22, o);
+  if (it.t === "j") {
+    var sg = it.fwd ? 1 : -1;
+    if (it.dir === "h") d.arrow(N + ":a", it.x - sg * 13, it.y, it.x + sg * 13, it.y, {o: o});
+    else d.arrow(N + ":a", it.x, it.y - sg * 13, it.x, it.y + sg * 13, {o: o});
+  } else d.text(N + ":t", it.x, it.y, "G", {o: o, size: 24});   // 丸の中の G は丸に入る大きさ（図の字のままだと丸からはみ出して帯にかかった）
+  var sd = it.side || 1;
+  if (it.lab) tbGen_Lab(d, N + "t", it.lab[0], it.lab[1], L[it.k], p, it.k, o, it.lab[2]);
+  else if (it.dir === "h") tbGen_Lab(d, N + "t", it.x, it.y - 40, L[it.k], p, it.k, o);
+  else tbGen_Lab(d, N + "t", it.x + sd * 32, it.y, L[it.k], p, it.k, o, sd > 0 ? "start" : "end");
+}
+// スイッチ（動く数 0＝開・1＝閉。開くと刃が 30 度上がる）
+function tbGen_Sw(d, it, L, p, o, V){
+  var s = V[it.v - 1], ang = -(1 - s) * Math.PI / 6, dx = it.x1 - it.x0, dy = it.y1 - it.y0, Ln = Math.sqrt(dx * dx + dy * dy), ux = dx / Ln, uy = dy / Ln;
+  var ex = it.x0 + (ux * Math.cos(ang) - uy * Math.sin(ang)) * Ln, ey = it.y0 + (ux * Math.sin(ang) + uy * Math.cos(ang)) * Ln;
+  var N = it.n || it.k;
+  d.wire(N, [[it.x0, it.y0], [ex, ey]], {o: o});
+  tbGen_Circ(d, N + ":p0", it.x0, it.y0, 5, o); tbGen_Circ(d, N + ":p1", it.x1, it.y1, 5, o);
+  if (it.lab) tbGen_Lab(d, N + "t", it.lab[0], it.lab[1], L[it.k], p, it.k, o, it.lab[2]);
+  else if (it.dir === "h") tbGen_Lab(d, N + "t", (it.x0 + it.x1) / 2, it.y0 - 50, L[it.k], p, it.k, o);
+  else tbGen_Lab(d, N + "t", it.x0 + 44, (it.y0 + it.y1) / 2, L[it.k], p, it.k, o, "start");
+}
+// 閉回路の向き（網の中の一周の矢印）。名前があれば真ん中に
+function tbGen_Loop(d, it, L, p, o){
+  var r = it.r, cw = it.cw, a0 = cw ? 200 : -20, a1 = cw ? a0 + 280 : a0 - 280, R = Math.PI / 180;
+  var P0 = [it.cx + r * Math.cos(a0 * R), it.cy + r * Math.sin(a0 * R)], P1 = [it.cx + r * Math.cos(a1 * R), it.cy + r * Math.sin(a1 * R)];
+  var N = it.n || it.k, e = d.el(N, "path", "ink"); e.setAttribute("d", "M" + n(P0[0]) + " " + n(P0[1]) + " A" + r + " " + r + " 0 1 " + (cw ? 1 : 0) + " " + n(P1[0]) + " " + n(P1[1]));
+  e.style.fill = "none"; d.style(e, {o: o});
+  var tx = cw ? -Math.sin(a1 * R) : Math.sin(a1 * R), ty = cw ? Math.cos(a1 * R) : -Math.cos(a1 * R), h = d.el(N + ":h", "path", "ink head");
+  h.setAttribute("d", "M" + n(P1[0] + tx * 5) + " " + n(P1[1] + ty * 5) + " L" + n(P1[0] - tx * 9 - ty * 7) + " " + n(P1[1] - ty * 9 + tx * 7) +
+    " L" + n(P1[0] - tx * 9 + ty * 7) + " " + n(P1[1] - ty * 9 - tx * 7) + " Z"); d.style(h, {o: o});
+  tbGen_Lab(d, N + "t", it.cx, it.cy, L[it.k], p, it.k, o);
+}
+// 練習で値が変わる図（L._v＝{部品の鍵: 値}）：回路を解き直して、帯の色（電位の高い順）を決め直す
+function tbGen_Zones(L, K, V){
+  var vv = L._v; if (!vv || !K.net) return null;
+  var act = K.net.filter(function(e){ return tbGen_O(V, e[5]) >= 0.5; }), nodes = {}, nn = 0, i, j, k;
+  act.forEach(function(e){ [e[2], e[3]].forEach(function(x){ if (!(x in nodes)) nodes[x] = nn++; }); });
+  var srcs = act.filter(function(e){ return e[0] === "E"; }), N = nn + srcs.length, A = [], b = [];
+  for (i = 0; i < N; i++) { A.push([]); for (j = 0; j < N; j++) A[i].push(i === j && i < nn ? 1e-9 : 0); b.push(0); }
+  var val = function(e){ return vv[e[1]] !== undefined ? +vv[e[1]] : e[4]; };
+  act.forEach(function(e){
+    var a = nodes[e[2]], c = nodes[e[3]];
+    if (e[0] === "R" || e[0] === "G" || e[0] === "C") { var g = e[0] === "C" ? 1e6 : 1 / val(e); A[a][a] += g; A[c][c] += g; A[a][c] -= g; A[c][a] -= g; }
+    else if (e[0] === "J") { b[a] -= val(e); b[c] += val(e); }
+  });
+  srcs.forEach(function(e, q){ var a = nodes[e[2]], c = nodes[e[3]], r = nn + q; A[a][r] -= 1; A[r][a] += 1; A[c][r] += 1; A[r][c] -= 1; b[r] = val(e); });
+  for (k = 0; k < N; k++) {
+    var m = k; for (i = k + 1; i < N; i++) if (Math.abs(A[i][k]) > Math.abs(A[m][k])) m = i;
+    var t = A[k]; A[k] = A[m]; A[m] = t; t = b[k]; b[k] = b[m]; b[m] = t;
+    if (Math.abs(A[k][k]) < 1e-15) return null;
+    for (i = 0; i < N; i++) if (i !== k) { var f = A[i][k] / A[k][k]; if (f) { for (j = k; j < N; j++) A[i][j] -= f * A[k][j]; b[i] -= f * b[k]; } }
+  }
+  var pot = {}, used = {}, Z = {};
+  Object.keys(nodes).forEach(function(x){ pot[x] = Math.round(b[nodes[x]] / A[nodes[x]][nodes[x]] * 1e6) / 1e6; });
+  K.items.forEach(function(it){ if (it.t === "z" && it.node in pot && tbGen_O(V, it.vis) > 0) used[pot[it.node]] = 1; });
+  var vals = Object.keys(used).map(Number).sort(function(x, y){ return y - x; }), n2 = vals.length;
+  var names = n2 <= 1 ? ["lo"] : n2 === 2 ? ["hi", "lo"] : ["hi"].concat(vals.slice(1, -1).map(function(_, q){ return ["mid", "mid2", "mid3"][q % 3]; }), ["lo"]);
+  Object.keys(pot).forEach(function(x){ var q = vals.indexOf(pot[x]); if (q >= 0) Z[x] = names[q]; });
+  return Z;
+}
+function tbGen_Draw(d, p, L, K){
+  var V = tbGen_V(p, L, K.vars), on = K.bands === "always" ? 1 : K.bands === "volt" ? (vOn(L, K.von) ? 1 : 0) : 0;
+  var hasV = function(k){ return L["p" + k] && L["p" + k].v !== undefined; };   // 名前だけの点（{}）は帯の決まりに数えない（2026-11-04）
+  var anyPt = K.bands !== "never" && (K.pts || []).some(hasV), Z = tbGen_Zones(L, K, V);
+  K.items.forEach(function(it){
+    var o = tbGen_O(V, it.vis), oz;
+    if (it.t === "z") {
+      if (anyPt) {
+        var ks = it.pts.filter(hasV); if (!ks.length) return;
+        oz = Math.max.apply(null, ks.map(function(k){ return pv(p, "p" + k + "o", 1); }));
+      } else { if (!on) return; oz = 1; }
+      zband(d, it.id, it.lines, Z && Z[it.node] ? Z[it.node] : it.z, o * oz);
+    } else if (it.t === "w") { var e = d.wire(it.id, it.pts, {o: o}); if (it.dash) e.classList.add("dash"); }
+    else if (it.t === "d") d.dot(it.id, it.x, it.y, {o: o});
+    else if (it.t === "r") tbGen_Res(d, it, L, p, o, V);
+    else if (it.t === "e") tbGen_Cell(d, it, L, p, o);
+    else if (it.t === "v") tbGen_Vd(d, it, L, p, o);
+    else if (it.t === "i") tbGen_I(d, it, L, p, o);
+    else if (it.t === "dim") tbGen_Dim(d, it, L, p, o, V);
+    else if (it.t === "p") tbGen_Pt(d, it, L, p, o, Z);
+    else if (it.t === "j" || it.t === "g") tbGen_JG(d, it, L, p, o);
+    else if (it.t === "s") tbGen_Sw(d, it, L, p, o, V);
+    else if (it.t === "T") tbGen_Term(d, it, o);
+    else if (it.t === "dimv") tbGen_DimV(d, it, L, p, o);
+    else if (it.t === "l") tbGen_Loop(d, it, L, p, o);
+  });
+}
+// 電流の通り道：動く数の組（0.5 以上か）ごとに作った物から、今の組の物
+function tbGen_Flow(p, L, K){
+  var V = tbGen_V(p, L, K.vars);
+  for (var i = 0; i < K.flows.length; i++) {
+    var f = K.flows[i];
+    if (f.c.every(function(a){ return (a > 0 ? V[a - 1] : 1 - V[-a - 1]) >= 0.5; })) return {o: pv(p, "co"), base: K.base, paths: f.paths};
+  }
+  return {o: 0, base: K.base, paths: []};
+}
+// ---- 8-1 Δ結線とY結線 の図（※ textbook/gen/make_section.py が textbook/gen/data/u08_s1.py から作った。手で直さない（データを直して作り直す）。。図の道具＝gen/runtime.js の tbGen_…）
+var U8S1K = {
+  both: {"vars":[],"items":[{"t":"w","id":"u8s1bothL","pts":[[531,600],[731,600]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothw2","pts":[[791,600],[991,600]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothw3","pts":[[991,600],[892.48,450.07]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothw4","pts":[[859.52,399.93],[761,250]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothw5","pts":[[761,250],[662.48,399.93]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothw6","pts":[[629.52,450.07],[531,600]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothx1L","pts":[[761,1007],[761,932]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothx1w2","pts":[[761,872],[761,797]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothx1w3","pts":[[761,1007],[671.63,1061.4]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothx1w4","pts":[[620.37,1092.6],[531,1147]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothx1w5","pts":[[761,1007],[850.37,1061.4]],"vis":[],"dash":0},{"t":"w","id":"u8s1bothx1w6","pts":[[901.63,1092.6],[991,1147]],"vis":[],"dash":0},{"t":"r","k":"r2","x":761,"y":600,"dir":"h","rot":0,"vis":[],"lab":[761,646.8,null],"nrm":[0,1]},{"t":"r","k":"r1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[],"lab":[916.11,402.59,"start"],"nrm":[0.84,-0.55]},{"t":"r","k":"r3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55]},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[],"side":1,"vx":1,"lab":[797,242,"start"]},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[515,600,"end"]},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[],"side":1,"vx":1,"lab":[1007,600,"start"]},{"t":"r","k":"ra","x":761,"y":902,"dir":"h","rot":-90,"vis":[],"lab":[809,902,"start"],"nrm":[1,0],"n":"rax1"},{"t":"r","k":"rc","x":646,"y":1077,"dir":"h","rot":148.67,"vis":[],"lab":[684.62,1103.53,"start"],"nrm":[0.52,0.85],"n":"rcx1"},{"t":"r","k":"rb","x":876,"y":1077,"dir":"h","rot":31.33,"vis":[],"lab":[837.38,1103.53,"end"],"nrm":[-0.52,0.85],"n":"rbx1"},{"t":"d","id":"u8s1bothx1o","x":761,"y":1007,"vis":[]},{"t":"T","k":"a","x":761,"y":797,"dir":"h","vis":[],"side":1,"vx":1,"lab":[777,797,"start"],"n":"ax1"},{"t":"T","k":"c","x":531,"y":1147,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[515,1147,"end"],"n":"cx1"},{"t":"T","k":"b","x":991,"y":1147,"dir":"h","vis":[],"side":1,"vx":1,"lab":[1007,1147,"start"],"n":"bx1"}],"flows":[{"c":[],"paths":[]},{"c":[],"paths":[]}],"base":110,"von":[],"bands":"never","pts":[],"net":[]}
+};
+function tbU8s1both(d, p, L){ tbGen_Draw(d, p, L, U8S1K.both); }
+// ---- 8-2 Δ から Y への変換 の図（※ textbook/gen/make_section.py が textbook/gen/data/u08_s2.py から作った。手で直さない（データを直して作り直す）。。図の道具＝gen/runtime.js の tbGen_…）
+var U8S2K = {
+  both: {"vars":[],"items":[{"t":"w","id":"u8s2bothL","pts":[[531,600],[731,600]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothw2","pts":[[791,600],[991,600]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothw3","pts":[[991,600],[892.48,450.07]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothw4","pts":[[859.52,399.93],[761,250]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothw5","pts":[[761,250],[662.48,399.93]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothw6","pts":[[629.52,450.07],[531,600]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothx1L","pts":[[661,1008],[661,933]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothx1w2","pts":[[661,873],[661,798]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothx1w3","pts":[[661,1008],[571.63,1062.4]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothx1w4","pts":[[520.37,1093.6],[431,1148]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothx1w5","pts":[[661,1008],[750.37,1062.4]],"vis":[],"dash":0},{"t":"w","id":"u8s2bothx1w6","pts":[[801.63,1093.6],[891,1148]],"vis":[],"dash":0},{"t":"r","k":"r2","x":761,"y":600,"dir":"h","rot":0,"vis":[],"lab":[761,646.8,null],"nrm":[0,1]},{"t":"r","k":"r1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[],"lab":[866.64,494.21,"end"],"nrm":[0.84,-0.55]},{"t":"r","k":"r3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55]},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[],"side":1,"vx":1,"lab":[797,242,"start"]},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[515,600,"end"]},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[],"side":1,"vx":1,"lab":[1007,600,"start"]},{"t":"r","k":"ra","x":661,"y":903,"dir":"h","rot":-90,"vis":[],"lab":[709,903,"start"],"nrm":[1,0],"n":"rax1"},{"t":"r","k":"rc","x":546,"y":1078,"dir":"h","rot":148.67,"vis":[],"lab":[567.69,1138.25,"start"],"nrm":[0.52,0.85],"n":"rcx1"},{"t":"r","k":"rb","x":776,"y":1078,"dir":"h","rot":31.33,"vis":[],"lab":[753.12,1014.03,"start"],"nrm":[-0.52,0.85],"n":"rbx1"},{"t":"d","id":"u8s2bothx1o","x":661,"y":1008,"vis":[]},{"t":"T","k":"a","x":661,"y":798,"dir":"h","vis":[],"side":1,"vx":1,"lab":[677,798,"start"],"n":"ax1"},{"t":"T","k":"c","x":431,"y":1148,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[415,1148,"end"],"n":"cx1"},{"t":"T","k":"b","x":891,"y":1148,"dir":"h","vis":[],"side":1,"vx":1,"lab":[907,1148,"start"],"n":"bx1"}],"flows":[{"c":[],"paths":[]},{"c":[],"paths":[]}],"base":110,"von":[],"bands":"never","pts":[],"net":[]}
+};
+function tbU8s2both(d, p, L){ tbGen_Draw(d, p, L, U8S2K.both); }
+// ---- 8-3 Y から Δ への変換 の図（※ textbook/gen/make_section.py が textbook/gen/data/u08_s3.py から作った。手で直さない（データを直して作り直す）。。図の道具＝gen/runtime.js の tbGen_…）
+var U8S3K = {
+  both: {"vars":[],"items":[{"t":"w","id":"u8s3bothL","pts":[[531,600],[731,600]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothw2","pts":[[791,600],[991,600]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothw3","pts":[[991,600],[892.48,450.07]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothw4","pts":[[859.52,399.93],[761,250]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothw5","pts":[[761,250],[662.48,399.93]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothw6","pts":[[629.52,450.07],[531,600]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothx1L","pts":[[685.5,1007],[685.5,932]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothx1w2","pts":[[685.5,872],[685.5,797]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothx1w3","pts":[[685.5,1007],[596.13,1061.4]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothx1w4","pts":[[544.87,1092.6],[455.5,1147]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothx1w5","pts":[[685.5,1007],[774.87,1061.4]],"vis":[],"dash":0},{"t":"w","id":"u8s3bothx1w6","pts":[[826.13,1092.6],[915.5,1147]],"vis":[],"dash":0},{"t":"r","k":"r2","x":761,"y":600,"dir":"h","rot":0,"vis":[],"lab":[761,646.8,null],"nrm":[0,1]},{"t":"r","k":"r1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[],"lab":[866.64,494.21,"end"],"nrm":[0.84,-0.55]},{"t":"r","k":"r3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55]},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[],"side":1,"vx":1,"lab":[797,242,"start"]},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[515,600,"end"]},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[],"side":1,"vx":1,"lab":[1007,600,"start"]},{"t":"r","k":"ra","x":685.5,"y":902,"dir":"h","rot":-90,"vis":[],"lab":[733.5,902,"start"],"nrm":[1,0],"n":"rax1"},{"t":"r","k":"rc","x":570.5,"y":1077,"dir":"h","rot":148.67,"vis":[],"lab":[564.41,1137.77,"start"],"nrm":[0.52,0.85],"n":"rcx1"},{"t":"r","k":"rb","x":800.5,"y":1077,"dir":"h","rot":31.33,"vis":[],"lab":[777.62,1013.03,"start"],"nrm":[-0.52,0.85],"n":"rbx1"},{"t":"d","id":"u8s3bothx1o","x":685.5,"y":1007,"vis":[]},{"t":"T","k":"a","x":685.5,"y":797,"dir":"h","vis":[],"side":1,"vx":1,"lab":[701.5,797,"start"],"n":"ax1"},{"t":"T","k":"c","x":455.5,"y":1147,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[439.5,1147,"end"],"n":"cx1"},{"t":"T","k":"b","x":915.5,"y":1147,"dir":"h","vis":[],"side":1,"vx":1,"lab":[931.5,1147,"start"],"n":"bx1"}],"flows":[{"c":[],"paths":[]},{"c":[],"paths":[]}],"base":110,"von":[],"bands":"never","pts":[],"net":[]}
+};
+function tbU8s3both(d, p, L){ tbGen_Draw(d, p, L, U8S3K.both); }
+// ---- 8-4 等しい抵抗の Δ-Y変換 の図（※ textbook/gen/make_section.py が textbook/gen/data/u08_s4.py から作った。手で直さない（データを直して作り直す）。。図の道具＝gen/runtime.js の tbGen_…）
+var U8S4K = {
+  both: {"vars":[],"items":[{"t":"w","id":"u8s4bothL","pts":[[531,600],[731,600]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothw2","pts":[[791,600],[991,600]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothw3","pts":[[991,600],[892.48,450.07]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothw4","pts":[[859.52,399.93],[761,250]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothw5","pts":[[761,250],[662.48,399.93]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothw6","pts":[[629.52,450.07],[531,600]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothx1L","pts":[[703,1007],[703,932]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothx1w2","pts":[[703,872],[703,797]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothx1w3","pts":[[703,1007],[613.63,1061.4]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothx1w4","pts":[[562.37,1092.6],[473,1147]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothx1w5","pts":[[703,1007],[792.37,1061.4]],"vis":[],"dash":0},{"t":"w","id":"u8s4bothx1w6","pts":[[843.63,1092.6],[933,1147]],"vis":[],"dash":0},{"t":"r","k":"r2","x":761,"y":600,"dir":"h","rot":0,"vis":[],"lab":[761,646.8,null],"nrm":[0,1]},{"t":"r","k":"r1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[],"lab":[866.64,494.21,"end"],"nrm":[0.84,-0.55]},{"t":"r","k":"r3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55]},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[],"side":1,"vx":1,"lab":[797,242,"start"]},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[515,600,"end"]},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[],"side":1,"vx":1,"lab":[1007,600,"start"]},{"t":"r","k":"ra","x":703,"y":902,"dir":"h","rot":-90,"vis":[],"lab":[751,902,"start"],"nrm":[1,0],"n":"rax1"},{"t":"r","k":"rc","x":588,"y":1077,"dir":"h","rot":148.67,"vis":[],"lab":[628.55,1137.48,"start"],"nrm":[0.52,0.85],"n":"rcx1"},{"t":"r","k":"rb","x":818,"y":1077,"dir":"h","rot":31.33,"vis":[],"lab":[795.12,1013.03,"start"],"nrm":[-0.52,0.85],"n":"rbx1"},{"t":"d","id":"u8s4bothx1o","x":703,"y":1007,"vis":[]},{"t":"T","k":"a","x":703,"y":797,"dir":"h","vis":[],"side":1,"vx":1,"lab":[719,797,"start"],"n":"ax1"},{"t":"T","k":"c","x":473,"y":1147,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[457,1147,"end"],"n":"cx1"},{"t":"T","k":"b","x":933,"y":1147,"dir":"h","vis":[],"side":1,"vx":1,"lab":[949,1147,"start"],"n":"bx1"}],"flows":[{"c":[],"paths":[]},{"c":[],"paths":[]}],"base":110,"von":[],"bands":"never","pts":[],"net":[]}
+};
+function tbU8s4both(d, p, L){ tbGen_Draw(d, p, L, U8S4K.both); }
+// ---- 8-5 ブリッジの中の Δ の図（※ textbook/gen/make_section.py が textbook/gen/data/u08_s5.py から作った。手で直さない（データを直して作り直す）。。図の道具＝gen/runtime.js の tbGen_…）
+var U8S5K = {
+  brY: {"vars":[["a","t",0],["a","t",1]],"items":[{"t":"z","id":"zbu8s5brY0hi","z":"hi","lines":[[[761.5,360],[478,360],[478,553]],[[761.5,360],[1055.85,360],[1055.85,432.5]],[[761.5,360],[761.5,432.5]]],"vis":[1],"pts":["c"],"node":"L0:n1"},{"t":"z","id":"zbu8s5brY1lo","z":"lo","lines":[[[761.5,770],[478,770],[478,577]],[[761.5,770],[1055.85,770],[1055.85,697.5]],[[761.5,697.5],[761.5,770]]],"vis":[1],"pts":[],"node":"L0:n4"},{"t":"z","id":"zbu8s5brY2mid","z":"mid","lines":[[[761.5,492.5],[761.5,565]],[[761.5,565],[761.5,637.5]],[[878.67,565],[761.5,565]]],"vis":[1],"pts":["a"],"node":"L0:n7"},{"t":"z","id":"zbu8s5brY3mid2","z":"mid2","lines":[[[1055.85,492.5],[1055.85,565]],[[1055.85,565],[1055.85,637.5]],[[938.67,565],[1055.85,565]]],"vis":[1],"pts":["b"],"node":"L0:n8"},{"t":"z","id":"zbu8s5brYx10hi","z":"hi","lines":[[[752,560],[478,560],[478,360],[535.33,360]]],"vis":[2],"pts":[],"node":"L1:P"},{"t":"z","id":"zbu8s5brYx11lo","z":"lo","lines":[[[772,560],[1045,560],[1045,360],[1022.67,360]],[[951,280],[1022.67,280],[1022.67,440],[951,440]]],"vis":[2],"pts":[],"node":"L1:N"},{"t":"z","id":"zbu8s5brYx12mid","z":"mid","lines":[[[724.33,280],[652.67,280],[652.67,440],[724.33,440]],[[595.33,360],[652.67,360]]],"vis":[2],"pts":[],"node":"L1:n1"},{"t":"z","id":"zbu8s5brYx13mid2","z":"mid2","lines":[[[784.33,280],[891,280]]],"vis":[2],"pts":[],"node":"L1:n2"},{"t":"z","id":"zbu8s5brYx14mid3","z":"mid3","lines":[[[784.33,440],[891,440]]],"vis":[2],"pts":[],"node":"L1:n3"},{"t":"w","id":"u8s5brYL","pts":[[478,360],[761.5,360]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw2","pts":[[478,770],[761.5,770]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw3","pts":[[761.5,360],[908.67,360]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw4","pts":[[908.67,360],[1055.85,360]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw5","pts":[[761.5,770],[1055.85,770]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw6","pts":[[478,360],[478,553]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw7","pts":[[478,577],[478,770]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw8","pts":[[761.5,360],[761.5,432.5]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw9","pts":[[761.5,492.5],[761.5,565]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw10","pts":[[761.5,565],[761.5,637.5]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw11","pts":[[761.5,697.5],[761.5,770]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw12","pts":[[1055.85,360],[1055.85,432.5]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw13","pts":[[1055.85,492.5],[1055.85,565]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw14","pts":[[1055.85,565],[1055.85,637.5]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw15","pts":[[1055.85,697.5],[1055.85,770]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw16","pts":[[783.67,565],[813.67,565]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw17","pts":[[813.67,565],[878.67,565]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw18","pts":[[938.67,565],[1003.67,565]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw19","pts":[[1003.67,565],[1033.67,565]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw20","pts":[[761.5,565],[783.67,565]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYw21","pts":[[1033.67,565],[1055.85,565]],"vis":[1],"dash":0},{"t":"w","id":"u8s5brYx1L","pts":[[478,360],[478,560],[752,560]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1Rw","pts":[[772,560],[1045,560],[1045,360]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w1","pts":[[478,360],[535.33,360]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w2","pts":[[652.67,280],[652.67,440]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w3","pts":[[1022.67,280],[1022.67,440]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w4","pts":[[652.67,280],[724.33,280]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w5","pts":[[784.33,280],[891,280]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w6","pts":[[951,280],[1022.67,280]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w7","pts":[[652.67,440],[724.33,440]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w8","pts":[[784.33,440],[891,440]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w9","pts":[[951,440],[1022.67,440]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w10","pts":[[595.33,360],[652.67,360]],"vis":[2],"dash":0},{"t":"w","id":"u8s5brYx1w11","pts":[[1022.67,360],[1045,360]],"vis":[2],"dash":0},{"t":"p","k":"c","x":908.67,"y":360,"dir":"h","vis":[1],"node":"L0:n1","side":1,"z":"hi","nl":[908.67,388.44,null]},{"t":"e","k":"src","dir":"v","xp":478,"yp":553,"xm":478,"ym":577,"vis":[1],"side":-1,"sp":[522.05,543.08],"sm":[522.05,586.92],"lab":[545.91,565,"start"]},{"t":"r","k":"r1","x":761.5,"y":462.5,"dir":"v","vis":[1],"lab":[781.41,462.5,"start"]},{"t":"r","k":"r3","x":761.5,"y":667.5,"dir":"v","vis":[1],"lab":[781.41,667.5,"start"]},{"t":"r","k":"r2","x":1055.85,"y":462.5,"dir":"v","vis":[1],"lab":[1035.94,422.5,"end"]},{"t":"r","k":"r4","x":1055.85,"y":667.5,"dir":"v","vis":[1],"lab":[1035.94,627.5,"end"]},{"t":"p","k":"a","x":813.67,"y":565,"dir":"h","vis":[1],"node":"L0:n7","side":1,"z":"mid","nl":[813.67,593.44,null]},{"t":"r","k":"r5","x":908.67,"y":565,"dir":"h","vis":[1],"lab":[908.67,532.56,null]},{"t":"p","k":"b","x":1003.67,"y":565,"dir":"h","vis":[1],"node":"L0:n8","side":1,"z":"mid2","nl":[1003.67,593.44,null]},{"t":"d","id":"u8s5brYj4","x":761.5,"y":360,"vis":[1]},{"t":"d","id":"u8s5brYj7","x":761.5,"y":565,"vis":[1]},{"t":"d","id":"u8s5brYj10","x":761.5,"y":770,"vis":[1]},{"t":"d","id":"u8s5brYj21","x":1055.85,"y":565,"vis":[1]},{"t":"i","k":"i","x0":478,"y0":541.5,"x1":478,"y1":501.5,"lab":[493.91,505.5,"start"],"vis":[1],"ax":"v","sd":-1},{"t":"e","k":"src","dir":"h","xp":752,"yp":560,"xm":772,"ym":560,"vis":[2],"side":1,"loop":1,"sp":[729.85,531.39],"sm":[794.15,531.39],"lab":[762,606.53,null],"n":"srcx1"},{"t":"r","k":"rc","x":565.33,"y":360,"dir":"h","vis":[2],"lab":[565.33,327.56,null],"n":"rcx1"},{"t":"r","k":"ra","x":754.33,"y":280,"dir":"h","vis":[2],"lab":[754.33,247.56,null],"n":"rax1"},{"t":"r","k":"r3","x":921,"y":280,"dir":"h","vis":[2],"lab":[921,247.56,null],"n":"r3x1"},{"t":"r","k":"rb","x":754.33,"y":440,"dir":"h","vis":[2],"lab":[754.33,407.56,null],"n":"rbx1"},{"t":"r","k":"r4","x":921,"y":440,"dir":"h","vis":[2],"lab":[921,407.56,null],"n":"r4x1"},{"t":"d","id":"u8s5brYx1j117","x":652.67,"y":360,"vis":[2]},{"t":"d","id":"u8s5brYx1j218","x":1022.67,"y":360,"vis":[2]},{"t":"i","k":"i","x0":478,"y0":500,"x1":478,"y1":460,"lab":[493.91,480,"start"],"vis":[2],"ax":"v","sd":1,"n":"ix1"}],"flows":[{"c":[1],"paths":[{"I":1,"pts":[[761.5,770],[478,770],[478,577]]},{"I":0.5,"pts":[[761.5,360],[1055.85,360],[1055.85,565]]},{"I":1,"pts":[[478,553],[478,360],[761.5,360]]},{"I":0.5,"pts":[[761.5,360],[761.5,565]]},{"I":0.4,"pts":[[761.5,565],[761.5,770]]},{"I":0.6,"pts":[[1055.85,565],[1055.85,770],[761.5,770]]},{"I":0.1,"pts":[[761.5,565],[1055.85,565]]}]},{"c":[2],"paths":[{"I":1,"pts":[[752,560],[478,560],[478,360],[652.67,360]]},{"I":0.4,"pts":[[652.67,360],[652.67,280],[1022.67,280],[1022.67,360]]},{"I":0.6,"pts":[[652.67,360],[652.67,440],[1022.67,440],[1022.67,360]]},{"I":1,"pts":[[1022.67,360],[1045,360],[1045,560],[772,560]]}]}],"base":110,"von":["src"],"bands":"volt","pts":["c","a","b"],"net":[["E","src","L0:n1","L0:n4",30,[1]],["R","r1","L0:n1","L0:n7",4,[1]],["R","r3","L0:n7","L0:n4",10,[1]],["R","r2","L0:n1","L0:n8",6,[1]],["R","r4","L0:n8","L0:n4",5,[1]],["R","r5","L0:n7","L0:n8",10,[1]],["E","src","L1:P","L1:N",30,[2]],["R","rc","L1:P","L1:n1",1.2,[2]],["R","ra","L1:n1","L1:n2",2,[2]],["R","r3","L1:n2","L1:N",10,[2]],["R","rb","L1:n1","L1:n3",3,[2]],["R","r4","L1:n3","L1:N",5,[2]]]},
+  brp: {"vars":[],"items":[{"t":"z","id":"zbu8s5brp0hi","z":"hi","lines":[[[761.5,360],[478,360],[478,553]],[[761.5,360],[1055.85,360],[1055.85,432.5]],[[761.5,360],[761.5,432.5]]],"vis":[],"pts":["c"],"node":"n1"},{"t":"z","id":"zbu8s5brp1lo","z":"lo","lines":[[[761.5,770],[478,770],[478,577]],[[761.5,770],[1055.85,770],[1055.85,697.5]],[[761.5,697.5],[761.5,770]]],"vis":[],"pts":[],"node":"n4"},{"t":"z","id":"zbu8s5brp2mid","z":"mid","lines":[[[761.5,492.5],[761.5,565]],[[761.5,565],[761.5,637.5]],[[878.67,565],[761.5,565]]],"vis":[],"pts":["a"],"node":"n7"},{"t":"z","id":"zbu8s5brp3mid2","z":"mid2","lines":[[[1055.85,492.5],[1055.85,565]],[[1055.85,565],[1055.85,637.5]],[[938.67,565],[1055.85,565]]],"vis":[],"pts":["b"],"node":"n8"},{"t":"w","id":"u8s5brpL","pts":[[478,360],[761.5,360]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw2","pts":[[478,770],[761.5,770]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw3","pts":[[761.5,360],[908.67,360]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw4","pts":[[908.67,360],[1055.85,360]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw5","pts":[[761.5,770],[1055.85,770]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw6","pts":[[478,360],[478,553]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw7","pts":[[478,577],[478,770]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw8","pts":[[761.5,360],[761.5,432.5]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw9","pts":[[761.5,492.5],[761.5,565]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw10","pts":[[761.5,565],[761.5,637.5]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw11","pts":[[761.5,697.5],[761.5,770]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw12","pts":[[1055.85,360],[1055.85,432.5]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw13","pts":[[1055.85,492.5],[1055.85,565]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw14","pts":[[1055.85,565],[1055.85,637.5]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw15","pts":[[1055.85,697.5],[1055.85,770]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw16","pts":[[783.67,565],[813.67,565]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw17","pts":[[813.67,565],[878.67,565]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw18","pts":[[938.67,565],[1003.67,565]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw19","pts":[[1003.67,565],[1033.67,565]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw20","pts":[[761.5,565],[783.67,565]],"vis":[],"dash":0},{"t":"w","id":"u8s5brpw21","pts":[[1033.67,565],[1055.85,565]],"vis":[],"dash":0},{"t":"p","k":"c","x":908.67,"y":360,"dir":"h","vis":[],"node":"n1","side":1,"z":"hi","nl":[908.67,388.43,null]},{"t":"e","k":"src","dir":"v","xp":478,"yp":553,"xm":478,"ym":577,"vis":[],"side":-1,"sp":[522.05,543.08],"sm":[522.05,586.92],"lab":[545.91,565,"start"]},{"t":"r","k":"r1","x":761.5,"y":462.5,"dir":"v","vis":[],"lab":[781.41,462.5,"start"]},{"t":"r","k":"r3","x":761.5,"y":667.5,"dir":"v","vis":[],"lab":[781.41,667.5,"start"]},{"t":"r","k":"r2","x":1055.85,"y":462.5,"dir":"v","vis":[],"lab":[1035.94,422.5,"end"]},{"t":"r","k":"r4","x":1055.85,"y":667.5,"dir":"v","vis":[],"lab":[1035.94,627.5,"end"]},{"t":"p","k":"a","x":813.67,"y":565,"dir":"h","vis":[],"node":"n7","side":1,"z":"mid","nl":[813.67,593.43,null]},{"t":"r","k":"r5","x":908.67,"y":565,"dir":"h","vis":[],"lab":[908.67,532.57,null]},{"t":"p","k":"b","x":1003.67,"y":565,"dir":"h","vis":[],"node":"n8","side":1,"z":"mid2","nl":[1003.67,593.43,null]},{"t":"d","id":"u8s5brpj4","x":761.5,"y":360,"vis":[]},{"t":"d","id":"u8s5brpj7","x":761.5,"y":565,"vis":[]},{"t":"d","id":"u8s5brpj10","x":761.5,"y":770,"vis":[]},{"t":"d","id":"u8s5brpj21","x":1055.85,"y":565,"vis":[]},{"t":"i","k":"i","x0":478,"y0":541.5,"x1":478,"y1":501.5,"lab":[493.91,505.5,"start"],"vis":[],"ax":"v","sd":-1}],"flows":[{"c":[],"paths":[{"I":1,"pts":[[761.5,770],[478,770],[478,577]]},{"I":0.5,"pts":[[761.5,360],[1055.85,360],[1055.85,565]]},{"I":1,"pts":[[478,553],[478,360],[761.5,360]]},{"I":0.5,"pts":[[761.5,360],[761.5,565]]},{"I":0.4,"pts":[[761.5,565],[761.5,770]]},{"I":0.6,"pts":[[1055.85,565],[1055.85,770],[761.5,770]]},{"I":0.1,"pts":[[761.5,565],[1055.85,565]]}]}],"base":110,"von":["src"],"bands":"volt","pts":["c","a","b"],"net":[["E","src","n1","n4",1,[]],["R","r1","n1","n7",4,[]],["R","r3","n7","n4",10,[]],["R","r2","n1","n8",6,[]],["R","r4","n8","n4",5,[]],["R","r5","n7","n8",10,[]]]}
+};
+function tbU8s5brY(d, p, L){ tbGen_Draw(d, p, L, U8S5K.brY); }
+function tbU8s5brp(d, p, L){ tbGen_Draw(d, p, L, U8S5K.brp); }
+// ---- 8-6 Δ の中の Y の図（※ textbook/gen/make_section.py が textbook/gen/data/u08_s6.py から作った。手で直さない（データを直して作り直す）。。図の道具＝gen/runtime.js の tbGen_…）
+var U8S6K = {
+  dy: {"vars":[],"items":[{"t":"w","id":"u8s6dyL","pts":[[531,600],[731,600]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw2","pts":[[791,600],[991,600]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw3","pts":[[991,600],[892.48,450.07]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw4","pts":[[859.52,399.93],[761,250]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw5","pts":[[761,250],[662.48,399.93]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw6","pts":[[629.52,450.07],[531,600]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw7","pts":[[761,483.33],[761,396.67]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw8","pts":[[761,336.67],[761,250]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw9","pts":[[761,483.33],[672.75,528.1]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw10","pts":[[619.25,555.24],[531,600]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw11","pts":[[761,483.33],[849.25,528.1]],"vis":[],"dash":0},{"t":"w","id":"u8s6dyw12","pts":[[902.75,555.24],[991,600]],"vis":[],"dash":0},{"t":"r","k":"r2","x":761,"y":600,"dir":"h","rot":0,"vis":[],"lab":[761,640.8,null],"nrm":[0,1]},{"t":"r","k":"r1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[],"lab":[916.11,402.59,"start"],"nrm":[0.84,-0.55]},{"t":"r","k":"r3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55]},{"t":"r","k":"ra","x":761,"y":366.67,"dir":"h","rot":-90,"vis":[],"lab":[829,310.67,"start"],"nrm":[1,0]},{"t":"r","k":"rc","x":646,"y":541.67,"dir":"h","rot":153.1,"vis":[],"lab":[690.9,566.29,"start"],"nrm":[-0.45,-0.89]},{"t":"r","k":"rb","x":876,"y":541.67,"dir":"h","rot":26.9,"vis":[],"lab":[940.81,477.8,"start"],"nrm":[0.45,-0.89]},{"t":"d","id":"u8s6dyo","x":761,"y":483.33,"vis":[]},{"t":"d","id":"u8s6dyv761250","x":761,"y":250,"vis":[]},{"t":"d","id":"u8s6dyv531600","x":531,"y":600,"vis":[]},{"t":"d","id":"u8s6dyv991600","x":991,"y":600,"vis":[]},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[],"side":1,"vx":1,"lab":[789,250,"start"]},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[515,600,"end"]},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[],"side":1,"vx":1,"lab":[1007,600,"start"]}],"flows":[{"c":[],"paths":[]}],"base":110,"von":[],"bands":"never","pts":[],"net":[]},
+  dm: {"vars":[],"items":[{"t":"w","id":"u8s6dmL","pts":[[531,600],[731,600]],"vis":[],"dash":0},{"t":"w","id":"u8s6dmw2","pts":[[791,600],[991,600]],"vis":[],"dash":0},{"t":"w","id":"u8s6dmw3","pts":[[991,600],[892.48,450.07]],"vis":[],"dash":0},{"t":"w","id":"u8s6dmw4","pts":[[859.52,399.93],[761,250]],"vis":[],"dash":0},{"t":"w","id":"u8s6dmw5","pts":[[761,250],[662.48,399.93]],"vis":[],"dash":0},{"t":"w","id":"u8s6dmw6","pts":[[629.52,450.07],[531,600]],"vis":[],"dash":0},{"t":"r","k":"q2","x":761,"y":600,"dir":"h","rot":0,"vis":[],"lab":[761,640.8,null],"nrm":[0,1]},{"t":"r","k":"q1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[],"lab":[916.11,402.59,"start"],"nrm":[0.84,-0.55]},{"t":"r","k":"q3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55]},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[],"side":1,"vx":1,"lab":[789,250,"start"]},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[],"side":-1,"vx":1,"lab":[515,600,"end"]},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[],"side":1,"vx":1,"lab":[1007,600,"start"]}],"flows":[{"c":[],"paths":[]}],"base":110,"von":[],"bands":"never","pts":[],"net":[]},
+  esw: {"vars":[["a","t",0],["a","t",1]],"items":[{"t":"w","id":"u8s6eswL","pts":[[531,600],[731,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww2","pts":[[791,600],[991,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww3","pts":[[991,600],[892.48,450.07]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww4","pts":[[859.52,399.93],[761,250]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww5","pts":[[761,250],[662.48,399.93]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww6","pts":[[629.52,450.07],[531,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww7","pts":[[761,483.33],[761,396.67]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww8","pts":[[761,336.67],[761,250]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww9","pts":[[761,483.33],[672.75,528.1]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww10","pts":[[619.25,555.24],[531,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww11","pts":[[761,483.33],[849.25,528.1]],"vis":[1],"dash":0},{"t":"w","id":"u8s6esww12","pts":[[902.75,555.24],[991,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6eswx1L","pts":[[531,600],[731,600]],"vis":[2],"dash":0},{"t":"w","id":"u8s6eswx1w2","pts":[[791,600],[991,600]],"vis":[2],"dash":0},{"t":"w","id":"u8s6eswx1w3","pts":[[991,600],[892.48,450.07]],"vis":[2],"dash":0},{"t":"w","id":"u8s6eswx1w4","pts":[[859.52,399.93],[761,250]],"vis":[2],"dash":0},{"t":"w","id":"u8s6eswx1w5","pts":[[761,250],[662.48,399.93]],"vis":[2],"dash":0},{"t":"w","id":"u8s6eswx1w6","pts":[[629.52,450.07],[531,600]],"vis":[2],"dash":0},{"t":"r","k":"r2","x":761,"y":600,"dir":"h","rot":0,"vis":[1],"lab":[761,640.8,null],"nrm":[0,1]},{"t":"r","k":"r1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[1],"lab":[916.11,402.59,"start"],"nrm":[0.84,-0.55]},{"t":"r","k":"r3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[1],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55]},{"t":"r","k":"ra","x":761,"y":366.67,"dir":"h","rot":-90,"vis":[1],"lab":[829,310.67,"start"],"nrm":[1,0]},{"t":"r","k":"rc","x":646,"y":541.67,"dir":"h","rot":153.1,"vis":[1],"lab":[690.9,566.29,"start"],"nrm":[-0.45,-0.89]},{"t":"r","k":"rb","x":876,"y":541.67,"dir":"h","rot":26.9,"vis":[1],"lab":[940.81,477.8,"start"],"nrm":[0.45,-0.89]},{"t":"d","id":"u8s6eswo","x":761,"y":483.33,"vis":[1]},{"t":"d","id":"u8s6eswv761250","x":761,"y":250,"vis":[1]},{"t":"d","id":"u8s6eswv531600","x":531,"y":600,"vis":[1]},{"t":"d","id":"u8s6eswv991600","x":991,"y":600,"vis":[1]},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[1],"side":1,"vx":1,"lab":[789,250,"start"]},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[1],"side":-1,"vx":1,"lab":[515,600,"end"]},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[1],"side":1,"vx":1,"lab":[1007,600,"start"]},{"t":"r","k":"q2","x":761,"y":600,"dir":"h","rot":0,"vis":[2],"lab":[761,640.8,null],"nrm":[0,1],"n":"q2x1"},{"t":"r","k":"q1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[2],"lab":[916.11,402.59,"start"],"nrm":[0.84,-0.55],"n":"q1x1"},{"t":"r","k":"q3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[2],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55],"n":"q3x1"},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[2],"side":1,"vx":1,"lab":[789,250,"start"],"n":"ax1"},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[2],"side":-1,"vx":1,"lab":[515,600,"end"],"n":"cx1"},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[2],"side":1,"vx":1,"lab":[1007,600,"start"],"n":"bx1"}],"flows":[{"c":[1],"paths":[]},{"c":[2],"paths":[]}],"base":110,"von":[],"bands":"never","pts":[],"net":[]},
+  xsw: {"vars":[["a","t",0],["a","t",1]],"items":[{"t":"w","id":"u8s6xswL","pts":[[531,600],[731,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww2","pts":[[791,600],[991,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww3","pts":[[991,600],[892.48,450.07]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww4","pts":[[859.52,399.93],[761,250]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww5","pts":[[761,250],[662.48,399.93]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww6","pts":[[629.52,450.07],[531,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww7","pts":[[761,483.33],[761,396.67]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww8","pts":[[761,336.67],[761,250]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww9","pts":[[761,483.33],[672.75,528.1]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww10","pts":[[619.25,555.24],[531,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww11","pts":[[761,483.33],[849.25,528.1]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xsww12","pts":[[902.75,555.24],[991,600]],"vis":[1],"dash":0},{"t":"w","id":"u8s6xswx1L","pts":[[531,600],[731,600]],"vis":[2],"dash":0},{"t":"w","id":"u8s6xswx1w2","pts":[[791,600],[991,600]],"vis":[2],"dash":0},{"t":"w","id":"u8s6xswx1w3","pts":[[991,600],[892.48,450.07]],"vis":[2],"dash":0},{"t":"w","id":"u8s6xswx1w4","pts":[[859.52,399.93],[761,250]],"vis":[2],"dash":0},{"t":"w","id":"u8s6xswx1w5","pts":[[761,250],[662.48,399.93]],"vis":[2],"dash":0},{"t":"w","id":"u8s6xswx1w6","pts":[[629.52,450.07],[531,600]],"vis":[2],"dash":0},{"t":"r","k":"r2","x":761,"y":600,"dir":"h","rot":0,"vis":[1],"lab":[761,640.8,null],"nrm":[0,1]},{"t":"r","k":"r1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[1],"lab":[916.11,402.59,"start"],"nrm":[0.84,-0.55]},{"t":"r","k":"r3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[1],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55]},{"t":"r","k":"ra","x":761,"y":366.67,"dir":"h","rot":-90,"vis":[1],"lab":[829,310.67,"start"],"nrm":[1,0]},{"t":"r","k":"rc","x":646,"y":541.67,"dir":"h","rot":153.1,"vis":[1],"lab":[690.9,566.29,"start"],"nrm":[-0.45,-0.89]},{"t":"r","k":"rb","x":876,"y":541.67,"dir":"h","rot":26.9,"vis":[1],"lab":[940.81,477.8,"start"],"nrm":[0.45,-0.89]},{"t":"d","id":"u8s6xswo","x":761,"y":483.33,"vis":[1]},{"t":"d","id":"u8s6xswv761250","x":761,"y":250,"vis":[1]},{"t":"d","id":"u8s6xswv531600","x":531,"y":600,"vis":[1]},{"t":"d","id":"u8s6xswv991600","x":991,"y":600,"vis":[1]},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[1],"side":1,"vx":1,"lab":[789,250,"start"]},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[1],"side":-1,"vx":1,"lab":[515,600,"end"]},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[1],"side":1,"vx":1,"lab":[1007,600,"start"]},{"t":"r","k":"q2","x":761,"y":600,"dir":"h","rot":0,"vis":[2],"lab":[761,640.8,null],"nrm":[0,1],"n":"q2x1"},{"t":"r","k":"q1","x":876,"y":425,"dir":"h","rot":-123.31,"vis":[2],"lab":[916.11,402.59,"start"],"nrm":[0.84,-0.55],"n":"q1x1"},{"t":"r","k":"q3","x":646,"y":425,"dir":"h","rot":123.31,"vis":[2],"lab":[605.89,402.59,"end"],"nrm":[-0.84,-0.55],"n":"q3x1"},{"t":"T","k":"a","x":761,"y":250,"dir":"h","vis":[2],"side":1,"vx":1,"lab":[789,250,"start"],"n":"ax1"},{"t":"T","k":"c","x":531,"y":600,"dir":"h","vis":[2],"side":-1,"vx":1,"lab":[515,600,"end"],"n":"cx1"},{"t":"T","k":"b","x":991,"y":600,"dir":"h","vis":[2],"side":1,"vx":1,"lab":[1007,600,"start"],"n":"bx1"}],"flows":[{"c":[1],"paths":[]},{"c":[2],"paths":[]}],"base":110,"von":[],"bands":"never","pts":[],"net":[]}
+};
+function tbU8s6dy(d, p, L){ tbGen_Draw(d, p, L, U8S6K.dy); }
+function tbU8s6dm(d, p, L){ tbGen_Draw(d, p, L, U8S6K.dm); }
+function tbU8s6esw(d, p, L){ tbGen_Draw(d, p, L, U8S6K.esw); }
+function tbU8s6xsw(d, p, L){ tbGen_Draw(d, p, L, U8S6K.xsw); }
+var KINDS = {u8s1both: tbU8s1both, u8s2both: tbU8s2both, u8s3both: tbU8s3both, u8s4both: tbU8s4both, u8s5brY: tbU8s5brY, u8s5brp: tbU8s5brp, u8s6dy: tbU8s6dy, u8s6dm: tbU8s6dm, u8s6esw: tbU8s6esw, u8s6xsw: tbU8s6xsw};
+// 電流の点の通り道（＋極から出る向き）。点の間隔＝base / I（I＝その道の電流の比）
+var FLOWK = {
+  // 8-1 の図は電流が流れないので載せない,
+  // 8-2 の図は電流が流れないので載せない,
+  // 8-3 の図は電流が流れないので載せない,
+  // 8-4 の図は電流が流れないので載せない,
+  u8s5brY: function(p, L){ return tbGen_Flow(p, L, U8S5K.brY); },
+  u8s5brp: function(p, L){ return tbGen_Flow(p, L, U8S5K.brp); },
+  // 8-6 の図は電流が流れないので載せない
+};
+
+// 8-1 Δ結線とY結線 の練習（※ textbook/gen/make_section.py が textbook/gen/data/u08_s1.py から作った。手で直さない（データを直して作り直す）。）
+function tbU8s1_gcd(a, b){ a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { var t = a % b; a = b; b = t; } return a; }
+function tbU8s1_ratio(a){ var g = a.reduce(function(x, y){ return tbU8s1_gcd(x, y); }); return a.map(function(x){ return fmt(x / g); }).join(" : "); }
+function tbU8s1_par(a, b){ return a * b / (a + b); }
+function tbU8s1_three(ok, cands){ var out = []; cands.forEach(function(z){ var x = Math.round(z.x * 1000) / 1000;
+  if (out.length < 3 && isFinite(z.x) && nice(z.x) && x > 0 &&distinct([ok].concat(out.map(function(w){ return w.x; }), [x]))) out.push({x: x, why: z.why}); });
+  return out.length === 3 ? out : null; }
+function tbU8s1_fig(base, a){ var o = Object.assign({}, base); a.forEach(function(kv){ if (kv[1] === null) delete o[kv[0]]; else o[kv[0]] = kv[1]; }); return o; }
+function tbU8s1_Qname(r){
+  var gcd = tbU8s1_gcd, ratio = tbU8s1_ratio, par = tbU8s1_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var k = pick(r, [1,2]);
+    var own = (k == 1 ? '三角形の形につないだ' : '片方の端を1点にまとめた');
+    var nm = (k == 1 ? 'Δ結線' : 'Y結線');
+    var ot = (k == 1 ? 'Y結線' : 'Δ結線');
+    var why = (k == 1 ? '1点にまとめた形が Y結線' : '三角形の形が Δ結線');
+    var _c = choices(r, [{t: String(nm), v: String(nm)}, {t: String(ot), v: String(ot), why: String(why)}, {t: "直列", v: "ser", why: "直列は、1本の道につなぐこと"}, {t: "並列", v: "par", why: "並列は、同じ2点の間に並べてつなぐこと"}]);
+    return {form: "u8s1name", text: "3つの抵抗を" + String(own) + "結線を □ という。", fig: {kind: "u8s1both", L: tbU8s1_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, []), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["三角形の形が Δ結線、片方の端を1点にまとめた形が Y結線", "3つの抵抗を" + String(own) + "結線は " + String(nm)], chk: {form: "u8s1name", p: {k: k}}};
+  }
+  throw new Error("u8s1name：条件に合う数字が見つからない");
+}
+function tbU8s1_Qedge(r){
+  var gcd = tbU8s1_gcd, ratio = tbU8s1_ratio, par = tbU8s1_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var k = pick(r, [1,2,3]);
+    var x = (k == 1 ? 'a' : (k == 2 ? 'b' : 'c'));
+    var y = (k == 1 ? 'b' : (k == 2 ? 'c' : 'a'));
+    var o1 = (k == 1 ? 2 : (k == 2 ? 3 : 1));
+    var o2 = (k == 1 ? 3 : (k == 2 ? 1 : 2));
+    var e1 = (k == 1 ? 'b と c' : (k == 2 ? 'c と a' : 'a と b'));
+    var e2 = (k == 1 ? 'c と a' : (k == 2 ? 'a と b' : 'b と c'));
+    var _c = choices(r, [{t: "$R_" + fmt(k) + "$", v: fmt(k)}, {t: "$R_" + fmt(o1) + "$", v: fmt(o1), why: "$R_" + fmt(o1) + "$ は端子 " + String(e1) + " の間"}, {t: "$R_" + fmt(o2) + "$", v: fmt(o2), why: "$R_" + fmt(o2) + "$ は端子 " + String(e2) + " の間"}, {t: "$R_" + String(x) + "$ と $R_" + String(y) + "$", v: "Y", why: "Y結線で " + String(x) + " と " + String(y) + " の間にある抵抗"}]);
+    return {form: "u8s1edge", text: "図の Δ結線で、端子 " + String(x) + " と端子 " + String(y) + " の間にある抵抗は □ である。", fig: {kind: "u8s1both", L: tbU8s1_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, []), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["Δ結線では、どの抵抗も2つの端子の間にある", "端子 " + String(x) + " と " + String(y) + " の間にあるのは $R_" + fmt(k) + "$"], chk: {form: "u8s1edge", p: {k: k}}};
+  }
+  throw new Error("u8s1edge：条件に合う数字が見つからない");
+}
+function tbU8s1_Qtouch(r){
+  var gcd = tbU8s1_gcd, ratio = tbU8s1_ratio, par = tbU8s1_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var k = pick(r, [1,2,3]);
+    var x = (k == 1 ? 'a' : (k == 2 ? 'b' : 'c'));
+    var own = (k == 1 ? '$R_1$ と $R_3$' : (k == 2 ? '$R_1$ と $R_2$' : '$R_2$ と $R_3$'));
+    var w1 = (k == 1 ? '$R_1$ と $R_2$' : (k == 2 ? '$R_2$ と $R_3$' : '$R_1$ と $R_3$'));
+    var w2 = (k == 1 ? '$R_2$ と $R_3$' : (k == 2 ? '$R_1$ と $R_3$' : '$R_1$ と $R_2$'));
+    var n1 = (k == 1 ? 'b' : (k == 2 ? 'c' : 'a'));
+    var n2 = (k == 1 ? 'c' : (k == 2 ? 'a' : 'b'));
+    var _c = choices(r, [{t: String(own), v: "own"}, {t: String(w1), v: "w1", why: "端子 " + String(n1) + " につながっている2つ"}, {t: String(w2), v: "w2", why: "端子 " + String(n2) + " につながっている2つ"}, {t: "$R_" + String(x) + "$ だけ", v: "Y", why: "Y結線で端子 " + String(x) + " につながっている抵抗"}]);
+    return {form: "u8s1touch", text: "図の Δ結線で、端子 " + String(x) + " につながっている2つの抵抗は □ である。", fig: {kind: "u8s1both", L: tbU8s1_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, []), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["Δ結線では、どの端子にも2つの抵抗がつながる", "端子 " + String(x) + " につながっているのは " + String(own)], chk: {form: "u8s1touch", p: {k: k}}};
+  }
+  throw new Error("u8s1touch：条件に合う数字が見つからない");
+}
+function tbU8s1_Qarm(r){
+  var gcd = tbU8s1_gcd, ratio = tbU8s1_ratio, par = tbU8s1_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var k = pick(r, [1,2,3]);
+    var x = (k == 1 ? 'a' : (k == 2 ? 'b' : 'c'));
+    var y = (k == 1 ? 'b' : (k == 2 ? 'c' : 'a'));
+    var z = (k == 1 ? 'c' : (k == 2 ? 'a' : 'b'));
+    var _c = choices(r, [{t: "$R_" + String(x) + "$ と $R_" + String(y) + "$", v: "own"}, {t: "$R_" + String(x) + "$ と $R_" + String(z) + "$", v: "xz", why: "$R_" + String(z) + "$ は端子 " + String(z) + " へ出る抵抗で、通らない"}, {t: "$R_" + String(y) + "$ と $R_" + String(z) + "$", v: "yz", why: "$R_" + String(z) + "$ は端子 " + String(z) + " へ出る抵抗で、通らない"}, {t: "$R_" + fmt(k) + "$", v: "D", why: "Δ結線で " + String(x) + " と " + String(y) + " の間にある抵抗"}]);
+    return {form: "u8s1arm", text: "図の Y結線で、端子 " + String(x) + " から端子 " + String(y) + " へ行く間に通る抵抗は □ である。", fig: {kind: "u8s1both", L: tbU8s1_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, []), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["Y結線では、端子 " + String(x) + " から真ん中の点を通って端子 " + String(y) + " へ行く", "通るのは $R_" + String(x) + "$ と $R_" + String(y) + "$"], chk: {form: "u8s1arm", p: {k: k}}};
+  }
+  throw new Error("u8s1arm：条件に合う数字が見つからない");
+}
+function tbU8s1_Qdc(r){
+  var gcd = tbU8s1_gcd, ratio = tbU8s1_ratio, par = tbU8s1_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var _c = choices(r, [{t: "Δ結線から Y結線", v: "own"}, {t: "Y結線から Δ結線", v: "yd", why: "直流の回路では、計算しにくい Δ を Y にすることが多い"}, {t: "Δ結線から直列", v: "ser", why: "Δ-Y変換は、Δ結線と Y結線の間の置き換え"}, {t: "Y結線から並列", v: "par", why: "Δ-Y変換は、Δ結線と Y結線の間の置き換え"}]);
+    return {form: "u8s1dc", text: "直流の回路で多いのは、□ への変換である。", fig: {kind: "u8s1both", L: tbU8s1_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, []), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["Δ結線は、直流の回路では計算しにくい形", "Δ結線から Y結線に変換することが多い"], chk: {form: "u8s1dc", p: {}}};
+  }
+  throw new Error("u8s1dc：条件に合う数字が見つからない");
+}
+// 8-2 Δ から Y への変換 の練習（※ textbook/gen/make_section.py が textbook/gen/data/u08_s2.py から作った。手で直さない（データを直して作り直す）。）
+function tbU8s2_gcd(a, b){ a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { var t = a % b; a = b; b = t; } return a; }
+function tbU8s2_ratio(a){ var g = a.reduce(function(x, y){ return tbU8s2_gcd(x, y); }); return a.map(function(x){ return fmt(x / g); }).join(" : "); }
+function tbU8s2_par(a, b){ return a * b / (a + b); }
+function tbU8s2_three(ok, cands){ var out = []; cands.forEach(function(z){ var x = Math.round(z.x * 1000) / 1000;
+  if (out.length < 3 && isFinite(z.x) && nice(z.x) && x > 0 &&distinct([ok].concat(out.map(function(w){ return w.x; }), [x]))) out.push({x: x, why: z.why}); });
+  return out.length === 3 ? out : null; }
+function tbU8s2_fig(base, a){ var o = Object.assign({}, base); a.forEach(function(kv){ if (kv[1] === null) delete o[kv[0]]; else o[kv[0]] = kv[1]; }); return o; }
+function tbU8s2_Qf(r){
+  var gcd = tbU8s2_gcd, ratio = tbU8s2_ratio, par = tbU8s2_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var k = pick(r, [1,2,3]);
+    var x = (k == 1 ? 'a' : (k == 2 ? 'b' : 'c'));
+    var pr = (k == 1 ? 'R_1 R_3' : (k == 2 ? 'R_1 R_2' : 'R_2 R_3'));
+    var q1 = (k == 1 ? 'R_1 R_2' : (k == 2 ? 'R_2 R_3' : 'R_1 R_3'));
+    var q2 = (k == 1 ? 'R_2 R_3' : (k == 2 ? 'R_1 R_3' : 'R_1 R_2'));
+    var n1 = (k == 1 ? 'b' : (k == 2 ? 'c' : 'a'));
+    var n2 = (k == 1 ? 'c' : (k == 2 ? 'a' : 'b'));
+    var sm = (k == 1 ? 'R_1 + R_3' : (k == 2 ? 'R_1 + R_2' : 'R_2 + R_3'));
+    var _c = choices(r, [{t: "$\\dfrac{" + String(pr) + "}{R_1 + R_2 + R_3}$", v: "own"}, {t: "$\\dfrac{" + String(q1) + "}{R_1 + R_2 + R_3}$", v: "q1", why: "端子 " + String(n1) + " につながる2つの積にした"}, {t: "$\\dfrac{" + String(q2) + "}{R_1 + R_2 + R_3}$", v: "q2", why: "端子 " + String(n2) + " につながる2つの積にした"}, {t: "$\\dfrac{" + String(pr) + "}{" + String(sm) + "}$", v: "two", why: "分母は Δ の3つの抵抗の和"}]);
+    return {form: "u8s2f", text: "図の Δ結線を Y結線に変換すると、端子 " + String(x) + " へ出る抵抗は $R_" + String(x) + " =$ □ である。", fig: {kind: "u8s2both", L: tbU8s2_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, [["r" + String(x), "{R}_" + String(x)]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["分母は Δ の3つの抵抗の和、分子は Δ で端子 " + String(x) + " につながっている2つの積", "$R_" + String(x) + " = \\dfrac{" + String(pr) + "}{R_1 + R_2 + R_3}$"], chk: {form: "u8s2f", p: {k: k}}};
+  }
+  throw new Error("u8s2f：条件に合う数字が見つからない");
+}
+function tbU8s2_Qv(r){
+  var gcd = tbU8s2_gcd, ratio = tbU8s2_ratio, par = tbU8s2_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var R1 = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30,35,36,40,45,48,50,60,70,75,80,90,100]);
+    var R2 = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30,35,36,40,45,48,50,60,70,75,80,90,100]);
+    var R3 = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30,35,36,40,45,48,50,60,70,75,80,90,100]);
+    var k = pick(r, [1,2,3]);
+    var S = (R1 + R2 + R3);
+    var x = (k == 1 ? 'a' : (k == 2 ? 'b' : 'c'));
+    var P = (k == 1 ? R1 * R3 : (k == 2 ? R1 * R2 : R2 * R3));
+    var Q1 = (k == 1 ? R1 * R2 : (k == 2 ? R2 * R3 : R1 * R3));
+    var Q2 = (k == 1 ? R2 * R3 : (k == 2 ? R1 * R3 : R1 * R2));
+    var T = (k == 1 ? R1 + R3 : (k == 2 ? R1 + R2 : R2 + R3));
+    var pr = (k == 1 ? 'R_1 R_3' : (k == 2 ? 'R_1 R_2' : 'R_2 R_3'));
+    var pv = (k == 1 ? R1 + ' \\times ' + R3 : (k == 2 ? R1 + ' \\times ' + R2 : R2 + ' \\times ' + R3));
+    if (!(R1 != R2 && R2 != R3 && R1 != R3 && S <= 120 && (R1 * R3 * 10) % S == 0 && (R1 * R2 * 10) % S == 0 && (R2 * R3 * 10) % S == 0)) continue;
+    var ok = (P / S);
+    if (!(isFinite(ok) && nice(ok) && ok > 0)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s2_three(ok, [{x: (Q1 / S), why: "ほかの端子につながる2つの積にした"}, {x: (Q2 / S), why: "ほかの端子につながる2つの積にした"}, {x: (P / T), why: "分母を2つの和にした（分母は3つの和）"}, {x: (P), why: "3つの和で割っていない"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "O", ok, _w);
+    return {form: "u8s2v", text: "図の Δ結線を Y結線に変換する。$R_1 = " + qv(R1, "O") + "$、$R_2 = " + qv(R2, "O") + "$、$R_3 = " + qv(R3, "O") + "$ のとき、端子 " + String(x) + " へ出る $R_" + String(x) + "$ は何 Ω か。", fig: {kind: "u8s2both", L: tbU8s2_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, [["r1", "{R}_1=" + qf(R1, "O")], ["r2", "{R}_2=" + qf(R2, "O")], ["r3", "{R}_3=" + qf(R3, "O")]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["分母は3つの和 $" + fmt(R1) + " + " + fmt(R2) + " + " + fmt(R3) + " = " + qv(S, "O") + "$、分子は端子 " + String(x) + " につながる2つの積 $" + String(pr) + "$", "$R_" + String(x) + " = \\dfrac{" + String(pv) + "}{" + fmt(S) + "} = " + qv(ok, "O") + "$"], chk: {form: "u8s2v", p: {R1: R1, R2: R2, R3: R3, k: k}}};
+  }
+  throw new Error("u8s2v：条件に合う数字が見つからない");
+}
+// 8-3 Y から Δ への変換 の練習（※ textbook/gen/make_section.py が textbook/gen/data/u08_s3.py から作った。手で直さない（データを直して作り直す）。）
+function tbU8s3_gcd(a, b){ a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { var t = a % b; a = b; b = t; } return a; }
+function tbU8s3_ratio(a){ var g = a.reduce(function(x, y){ return tbU8s3_gcd(x, y); }); return a.map(function(x){ return fmt(x / g); }).join(" : "); }
+function tbU8s3_par(a, b){ return a * b / (a + b); }
+function tbU8s3_three(ok, cands){ var out = []; cands.forEach(function(z){ var x = Math.round(z.x * 1000) / 1000;
+  if (out.length < 3 && isFinite(z.x) && nice(z.x) && x > 0 &&distinct([ok].concat(out.map(function(w){ return w.x; }), [x]))) out.push({x: x, why: z.why}); });
+  return out.length === 3 ? out : null; }
+function tbU8s3_fig(base, a){ var o = Object.assign({}, base); a.forEach(function(kv){ if (kv[1] === null) delete o[kv[0]]; else o[kv[0]] = kv[1]; }); return o; }
+function tbU8s3_Qf(r){
+  var gcd = tbU8s3_gcd, ratio = tbU8s3_ratio, par = tbU8s3_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var k = pick(r, [1,2,3]);
+    var e = (k == 1 ? 'a と b' : (k == 2 ? 'b と c' : 'c と a'));
+    var d = (k == 1 ? 'R_c' : (k == 2 ? 'R_a' : 'R_b'));
+    var d1 = (k == 1 ? 'R_a' : (k == 2 ? 'R_b' : 'R_c'));
+    var d2 = (k == 1 ? 'R_b' : (k == 2 ? 'R_c' : 'R_a'));
+    var _c = choices(r, [{t: "$\\dfrac{R_a R_b + R_b R_c + R_c R_a}{" + String(d) + "}$", v: "own"}, {t: "$\\dfrac{R_a R_b + R_b R_c + R_c R_a}{" + String(d1) + "}$", v: "d1", why: "分母は、$R_" + fmt(k) + "$ の反対方向にある1つ"}, {t: "$\\dfrac{R_a R_b + R_b R_c + R_c R_a}{" + String(d2) + "}$", v: "d2", why: "分母は、$R_" + fmt(k) + "$ の反対方向にある1つ"}, {t: "$\\dfrac{R_a R_b + R_b R_c + R_c R_a}{R_a + R_b + R_c}$", v: "sum", why: "分母は3つの和でなく、反対方向にある1つ"}]);
+    return {form: "u8s3f", text: "図の Y結線を Δ結線に変換すると、端子 " + String(e) + " の間の抵抗は $R_" + fmt(k) + " =$ □ である。", fig: {kind: "u8s3both", L: tbU8s3_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, [["r" + fmt(k), "{R}_" + fmt(k)]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["分子は隣り合う2つの積の和、分母は $R_" + fmt(k) + "$ の反対方向にある $" + String(d) + "$", "$R_" + fmt(k) + " = \\dfrac{R_a R_b + R_b R_c + R_c R_a}{" + String(d) + "}$"], chk: {form: "u8s3f", p: {k: k}}};
+  }
+  throw new Error("u8s3f：条件に合う数字が見つからない");
+}
+function tbU8s3_Qv(r){
+  var gcd = tbU8s3_gcd, ratio = tbU8s3_ratio, par = tbU8s3_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var Ra = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30,35,36,40,45,48,50,60,70,75,80,90,100]);
+    var Rb = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30,35,36,40,45,48,50,60,70,75,80,90,100]);
+    var Rc = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30,35,36,40,45,48,50,60,70,75,80,90,100]);
+    var k = pick(r, [1,2,3]);
+    var N = (Ra * Rb + Rb * Rc + Rc * Ra);
+    var D = (k == 1 ? Rc : (k == 2 ? Ra : Rb));
+    var D1 = (k == 1 ? Ra : (k == 2 ? Rb : Rc));
+    var D2 = (k == 1 ? Rb : (k == 2 ? Rc : Ra));
+    var e = (k == 1 ? 'a と b' : (k == 2 ? 'b と c' : 'c と a'));
+    var d = (k == 1 ? 'R_c' : (k == 2 ? 'R_a' : 'R_b'));
+    var T = (k == 1 ? Ra + Rb : (k == 2 ? Rb + Rc : Rc + Ra));
+    if (!(Ra != Rb && Rb != Rc && Ra != Rc && max(Ra, max(Rb, Rc)) <= 30 && (N * 10) % Ra == 0 && (N * 10) % Rb == 0 && (N * 10) % Rc == 0 && N / D <= 300)) continue;
+    var ok = (N / D);
+    if (!(isFinite(ok) && nice(ok) && ok > 0)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s3_three(ok, [{x: (N / D1), why: "分母を反対方向でない抵抗にした"}, {x: (N / D2), why: "分母を反対方向でない抵抗にした"}, {x: (N / (Ra + Rb + Rc)), why: "分母を3つの和にした"}, {x: (T), why: "Y で端子 " + String(e) + " の間にある2つを足しただけ"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "O", ok, _w);
+    return {form: "u8s3v", text: "図の Y結線を Δ結線に変換する。$R_a = " + qv(Ra, "O") + "$、$R_b = " + qv(Rb, "O") + "$、$R_c = " + qv(Rc, "O") + "$ のとき、端子 " + String(e) + " の間の $R_" + fmt(k) + "$ は何 Ω か。", fig: {kind: "u8s3both", L: tbU8s3_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"}, [["ra", "{R}_a=" + qf(Ra, "O")], ["rb", "{R}_b=" + qf(Rb, "O")], ["rc", "{R}_c=" + qf(Rc, "O")], ["r" + fmt(k), "{R}_" + fmt(k)]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["分子は $" + fmt(Ra) + " \\times " + fmt(Rb) + " + " + fmt(Rb) + " \\times " + fmt(Rc) + " + " + fmt(Rc) + " \\times " + fmt(Ra) + " = " + fmt(N) + "$、分母は反対方向の $" + String(d) + " = " + qv(D, "O") + "$", "$R_" + fmt(k) + " = \\dfrac{" + fmt(N) + "}{" + fmt(D) + "} = " + qv(ok, "O") + "$"], chk: {form: "u8s3v", p: {Ra: Ra, Rb: Rb, Rc: Rc, k: k}}};
+  }
+  throw new Error("u8s3v：条件に合う数字が見つからない");
+}
+// 8-4 等しい抵抗の Δ-Y変換 の練習（※ textbook/gen/make_section.py が textbook/gen/data/u08_s4.py から作った。手で直さない（データを直して作り直す）。）
+function tbU8s4_gcd(a, b){ a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { var t = a % b; a = b; b = t; } return a; }
+function tbU8s4_ratio(a){ var g = a.reduce(function(x, y){ return tbU8s4_gcd(x, y); }); return a.map(function(x){ return fmt(x / g); }).join(" : "); }
+function tbU8s4_par(a, b){ return a * b / (a + b); }
+function tbU8s4_three(ok, cands){ var out = []; cands.forEach(function(z){ var x = Math.round(z.x * 1000) / 1000;
+  if (out.length < 3 && isFinite(z.x) && nice(z.x) && x > 0 &&distinct([ok].concat(out.map(function(w){ return w.x; }), [x]))) out.push({x: x, why: z.why}); });
+  return out.length === 3 ? out : null; }
+function tbU8s4_fig(base, a){ var o = Object.assign({}, base); a.forEach(function(kv){ if (kv[1] === null) delete o[kv[0]]; else o[kv[0]] = kv[1]; }); return o; }
+function tbU8s4_QtoY(r){
+  var gcd = tbU8s4_gcd, ratio = tbU8s4_ratio, par = tbU8s4_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var R = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30,35,36,40,45,48,50,60,70,75,80,90,100]);
+    if (!(R % 3 == 0)) continue;
+    var ok = (R / 3);
+    if (!(isFinite(ok) && nice(ok) && ok > 0 && Math.abs(ok - Math.round(ok)) < 1e-9)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s4_three(ok, [{x: (R * 3), why: "3倍にした（Δ から Y は $\\dfrac{1}{3}$）"}, {x: (R), why: "変換しても変わらないと考えた"}, {x: (R / 2), why: "$\\dfrac{1}{2}$ にした（Δ から Y は $\\dfrac{1}{3}$）"}, {x: (R * 2 / 3), why: "$\\dfrac{2}{3}$ にした（Δ から Y は $\\dfrac{1}{3}$）"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "O", ok, _w);
+    return {form: "u8s4toY", text: "図の Δ結線の抵抗は、どれも $R = " + qv(R, "O") + "$ である。Y結線に変換した時の1つの抵抗 $r$ は何 Ω か。", fig: {kind: "u8s4both", L: tbU8s4_fig({"r1":"{R}","r2":"{R}","r3":"{R}","ra":"{r}","rb":"{r}","rc":"{r}"}, [["r1", "{R}=" + qf(R, "O")], ["r2", "{R}=" + qf(R, "O")], ["r3", "{R}=" + qf(R, "O")]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["抵抗がどれも等しいので、Y は Δ の $\\dfrac{1}{3}$", "$r = \\dfrac{" + fmt(R) + "}{3} = " + qv(ok, "O") + "$"], chk: {form: "u8s4toY", p: {R: R}}};
+  }
+  throw new Error("u8s4toY：条件に合う数字が見つからない");
+}
+function tbU8s4_QtoD(r){
+  var gcd = tbU8s4_gcd, ratio = tbU8s4_ratio, par = tbU8s4_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var y = pick(r, [3,6,9,12,15,18,21,24,27,30,36,45,48,60]);
+    var ok = (y * 3);
+    if (!(isFinite(ok) && nice(ok) && ok > 0 && Math.abs(ok - Math.round(ok)) < 1e-9)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s4_three(ok, [{x: (y / 3), why: "$\\dfrac{1}{3}$ にした（Y から Δ は3倍）"}, {x: (y), why: "変換しても変わらないと考えた"}, {x: (y * 2), why: "Y で2つの端子の間にある2つを足しただけ"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "O", ok, _w);
+    return {form: "u8s4toD", text: "図の Y結線の抵抗は、どれも $r = " + qv(y, "O") + "$ である。Δ結線に変換した時の1つの抵抗 $R$ は何 Ω か。", fig: {kind: "u8s4both", L: tbU8s4_fig({"r1":"{R}","r2":"{R}","r3":"{R}","ra":"{r}","rb":"{r}","rc":"{r}"}, [["ra", "{r}=" + qf(y, "O")], ["rb", "{r}=" + qf(y, "O")], ["rc", "{r}=" + qf(y, "O")]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["抵抗がどれも等しいので、Δ は Y の3倍", "$R = 3 \\times " + fmt(y) + " = " + qv(ok, "O") + "$"], chk: {form: "u8s4toD", p: {y: y}}};
+  }
+  throw new Error("u8s4toD：条件に合う数字が見つからない");
+}
+function tbU8s4_Qwhich(r){
+  var gcd = tbU8s4_gcd, ratio = tbU8s4_ratio, par = tbU8s4_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var k = pick(r, [1,2]);
+    var fr = (k == 1 ? 'Δ結線' : 'Y結線');
+    var to = (k == 1 ? 'Y結線' : 'Δ結線');
+    var own = (k == 1 ? '$\\dfrac{1}{3}$ 倍' : '3倍');
+    var oth = (k == 1 ? '3倍' : '$\\dfrac{1}{3}$ 倍');
+    var _c = choices(r, [{t: String(own), v: "own"}, {t: String(oth), v: "oth", why: "逆にした（Δ の方が大きい）"}, {t: "同じ", v: "same", why: "変換すると、抵抗の値は変わる"}, {t: "2倍", v: "x2", why: "Δ と Y の間は 3倍か $\\dfrac{1}{3}$"}]);
+    return {form: "u8s4which", text: "抵抗がどれも等しい " + String(fr) + "を " + String(to) + "に変換すると、1つの抵抗は □ になる。", fig: {kind: "u8s4both", L: tbU8s4_fig({"r1":"{R}","r2":"{R}","r3":"{R}","ra":"{r}","rb":"{r}","rc":"{r}"}, []), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["Δ の方が大きく、Y→Δ は3倍、Δ→Y は $\\dfrac{1}{3}$", String(fr) + "から " + String(to) + "へは " + String(own)], chk: {form: "u8s4which", p: {k: k}}};
+  }
+  throw new Error("u8s4which：条件に合う数字が見つからない");
+}
+// 8-5 ブリッジの中の Δ の練習（※ textbook/gen/make_section.py が textbook/gen/data/u08_s5.py から作った。手で直さない（データを直して作り直す）。）
+function tbU8s5_gcd(a, b){ a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { var t = a % b; a = b; b = t; } return a; }
+function tbU8s5_ratio(a){ var g = a.reduce(function(x, y){ return tbU8s5_gcd(x, y); }); return a.map(function(x){ return fmt(x / g); }).join(" : "); }
+function tbU8s5_par(a, b){ return a * b / (a + b); }
+function tbU8s5_three(ok, cands){ var out = []; cands.forEach(function(z){ var x = Math.round(z.x * 1000) / 1000;
+  if (out.length < 3 && isFinite(z.x) && nice(z.x) && x > 0 &&distinct([ok].concat(out.map(function(w){ return w.x; }), [x]))) out.push({x: x, why: z.why}); });
+  return out.length === 3 ? out : null; }
+function tbU8s5_fig(base, a){ var o = Object.assign({}, base); a.forEach(function(kv){ if (kv[1] === null) delete o[kv[0]]; else o[kv[0]] = kv[1]; }); return o; }
+function tbU8s5_Qfind(r){
+  var gcd = tbU8s5_gcd, ratio = tbU8s5_ratio, par = tbU8s5_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var k = pick(r, [1,2]);
+    var own = (k == 1 ? '$R_1$・$R_2$・$R_5$' : '$R_3$・$R_4$・$R_5$');
+    var _c = choices(r, [{t: String(own), v: "own"}, {t: "$R_1$・$R_3$・$R_5$", v: "a", why: "点 a に集まる3つで、三角形にならない"}, {t: "$R_2$・$R_4$・$R_5$", v: "b", why: "点 b に集まる3つで、三角形にならない"}, {t: "$R_1$・$R_2$・$R_3$", v: "n", why: "三角形に閉じていない"}]);
+    return {form: "u8s5find", text: "図のブリッジの中で、三角形の形につながった Δ の1つは □ である。", fig: {kind: "u8s5brp", L: tbU8s5_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","r4":"{R}_4","r5":"{R}_5","pa":{},"pb":{},"pc":{}}, []), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["c・a・b の間の $R_1$・$R_2$・$R_5$ と、a・b と－極の側の点の間の $R_3$・$R_4$・$R_5$ が Δ", "答えは " + String(own)], chk: {form: "u8s5find", p: {k: k}}};
+  }
+  throw new Error("u8s5find：条件に合う数字が見つからない");
+}
+function tbU8s5_Qarm(r){
+  var gcd = tbU8s5_gcd, ratio = tbU8s5_ratio, par = tbU8s5_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var n = pick(r, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47]);
+    var k = pick(r, [1,2,3]);
+    var R1 = ([3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 6, 8, 10, 12, 12, 12, 15, 15, 15, 16, 16, 18, 20, 20, 20, 24, 24, 24, 24, 24, 24, 24, 24, 25, 25, 30, 30][n]);
+    var R2 = ([2, 12, 12, 12, 18, 24, 24, 24, 30, 8, 10, 12, 16, 2, 20, 25, 30, 2, 12, 24, 30, 30, 10, 18, 3, 6, 18, 10, 10, 30, 4, 12, 24, 8, 8, 25, 3, 3, 3, 6, 6, 10, 12, 12, 10, 10, 5, 15][n]);
+    var R5 = ([5, 30, 30, 30, 24, 18, 18, 18, 12, 20, 6, 16, 12, 3, 25, 20, 15, 12, 18, 15, 24, 24, 2, 12, 30, 2, 30, 25, 25, 5, 12, 4, 3, 4, 12, 5, 18, 18, 18, 10, 15, 6, 4, 4, 15, 15, 15, 5][n]);
+    var R3 = ([15, 10, 16, 20, 5, 6, 10, 30, 16, 15, 6, 18, 2, 3, 5, 4, 12, 3, 15, 25, 12, 24, 20, 30, 4, 3, 15, 3, 10, 30, 15, 3, 12, 8, 16, 3, 3, 6, 24, 3, 25, 3, 4, 6, 15, 15, 18, 18][n]);
+    var R4 = ([5, 10, 4, 25, 8, 12, 24, 6, 4, 2, 6, 6, 15, 3, 5, 8, 18, 12, 3, 10, 12, 10, 12, 10, 16, 5, 5, 16, 2, 6, 2, 6, 5, 20, 24, 5, 24, 30, 24, 12, 10, 4, 18, 10, 12, 15, 12, 2][n]);
+    var S = (R1 + R2 + R5);
+    var Rc = (R1 * R2 / S);
+    var Ra = (R1 * R5 / S);
+    var Rb = (R2 * R5 / S);
+    var A = (Ra + R3);
+    var B = (Rb + R4);
+    var Rp = (A * B / (A + B));
+    var Rt = (Rc + A * B / (A + B));
+    var x = (k == 1 ? 'c' : (k == 2 ? 'a' : 'b'));
+    var P = (k == 1 ? R1 * R2 : (k == 2 ? R1 * R5 : R2 * R5));
+    var Q1 = (k == 1 ? R1 * R5 : (k == 2 ? R2 * R5 : R1 * R2));
+    var Q2 = (k == 1 ? R2 * R5 : (k == 2 ? R1 * R2 : R1 * R5));
+    var T = (k == 1 ? R1 + R2 : (k == 2 ? R1 + R5 : R2 + R5));
+    var pr = (k == 1 ? 'R_1 R_2' : (k == 2 ? 'R_1 R_5' : 'R_2 R_5'));
+    var ok = (P / S);
+    if (!(isFinite(ok) && nice(ok) && ok > 0)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s5_three(ok, [{x: (Q1 / S), why: "ほかの点につながる2つの積にした"}, {x: (Q2 / S), why: "ほかの点につながる2つの積にした"}, {x: (P / T), why: "分母を2つの和にした（分母は Δ の3つの和）"}, {x: (P), why: "3つの和で割っていない"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "O", ok, _w);
+    return {form: "u8s5arm", text: "図のブリッジの、点 c・a・b の間の Δ（$R_1$・$R_2$・$R_5$）を Y に変換する。$R_1 = " + qv(R1, "O") + "$、$R_2 = " + qv(R2, "O") + "$、$R_3 = " + qv(R3, "O") + "$、$R_4 = " + qv(R4, "O") + "$、$R_5 = " + qv(R5, "O") + "$ のとき、点 " + String(x) + " へ出る $R_" + String(x) + "$ は何 Ω か。", fig: {kind: "u8s5brp", L: tbU8s5_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","r4":"{R}_4","r5":"{R}_5","pa":{},"pb":{},"pc":{}}, [["r1", "{R}_1=" + qf(R1, "O")], ["r2", "{R}_2=" + qf(R2, "O")], ["r3", "{R}_3=" + qf(R3, "O")], ["r4", "{R}_4=" + qf(R4, "O")], ["r5", "{R}_5=" + qf(R5, "O")], ["_v", {"r1": (R1), "r2": (R2), "r3": (R3), "r4": (R4), "r5": (R5)}]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["分母は Δ の3つの和 $" + fmt(R1) + " + " + fmt(R2) + " + " + fmt(R5) + " = " + qv(S, "O") + "$、分子は点 " + String(x) + " につながる2つの積 $" + String(pr) + "$", "$R_" + String(x) + " = \\dfrac{" + fmt(P) + "}{" + fmt(S) + "} = " + qv(ok, "O") + "$"], chk: {form: "u8s5arm", p: {R1: R1, R2: R2, R5: R5, k: k}}};
+  }
+  throw new Error("u8s5arm：条件に合う数字が見つからない");
+}
+function tbU8s5_Qrt(r){
+  var gcd = tbU8s5_gcd, ratio = tbU8s5_ratio, par = tbU8s5_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var n = pick(r, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47]);
+    var R1 = ([3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 6, 8, 10, 12, 12, 12, 15, 15, 15, 16, 16, 18, 20, 20, 20, 24, 24, 24, 24, 24, 24, 24, 24, 25, 25, 30, 30][n]);
+    var R2 = ([2, 12, 12, 12, 18, 24, 24, 24, 30, 8, 10, 12, 16, 2, 20, 25, 30, 2, 12, 24, 30, 30, 10, 18, 3, 6, 18, 10, 10, 30, 4, 12, 24, 8, 8, 25, 3, 3, 3, 6, 6, 10, 12, 12, 10, 10, 5, 15][n]);
+    var R5 = ([5, 30, 30, 30, 24, 18, 18, 18, 12, 20, 6, 16, 12, 3, 25, 20, 15, 12, 18, 15, 24, 24, 2, 12, 30, 2, 30, 25, 25, 5, 12, 4, 3, 4, 12, 5, 18, 18, 18, 10, 15, 6, 4, 4, 15, 15, 15, 5][n]);
+    var R3 = ([15, 10, 16, 20, 5, 6, 10, 30, 16, 15, 6, 18, 2, 3, 5, 4, 12, 3, 15, 25, 12, 24, 20, 30, 4, 3, 15, 3, 10, 30, 15, 3, 12, 8, 16, 3, 3, 6, 24, 3, 25, 3, 4, 6, 15, 15, 18, 18][n]);
+    var R4 = ([5, 10, 4, 25, 8, 12, 24, 6, 4, 2, 6, 6, 15, 3, 5, 8, 18, 12, 3, 10, 12, 10, 12, 10, 16, 5, 5, 16, 2, 6, 2, 6, 5, 20, 24, 5, 24, 30, 24, 12, 10, 4, 18, 10, 12, 15, 12, 2][n]);
+    var S = (R1 + R2 + R5);
+    var Rc = (R1 * R2 / S);
+    var Ra = (R1 * R5 / S);
+    var Rb = (R2 * R5 / S);
+    var A = (Ra + R3);
+    var B = (Rb + R4);
+    var Rp = (A * B / (A + B));
+    var Rt = (Rc + A * B / (A + B));
+    var ok = (Rt);
+    if (!(isFinite(ok) && nice(ok) && ok > 0)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s5_three(ok, [{x: (Rp), why: "Y にした後の $R_c$ を足し忘れた"}, {x: (Rc + A + B), why: "2つの道を並列でなく直列に足した"}, {x: ((R1 + R3) * (R2 + R4) / (R1 + R2 + R3 + R4)), why: "$R_5$ を消した（平衡していないので消せない）"}, {x: (Rc + Ra + Rb), why: "Y の3つを足しただけ"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "O", ok, _w);
+    return {form: "u8s5rt", text: "図のブリッジで、$R_1 = " + qv(R1, "O") + "$、$R_2 = " + qv(R2, "O") + "$、$R_3 = " + qv(R3, "O") + "$、$R_4 = " + qv(R4, "O") + "$、$R_5 = " + qv(R5, "O") + "$ である。回路全体の合成抵抗は何 Ω か。", fig: {kind: "u8s5brp", L: tbU8s5_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","r4":"{R}_4","r5":"{R}_5","pa":{},"pb":{},"pc":{}}, [["r1", "{R}_1=" + qf(R1, "O")], ["r2", "{R}_2=" + qf(R2, "O")], ["r3", "{R}_3=" + qf(R3, "O")], ["r4", "{R}_4=" + qf(R4, "O")], ["r5", "{R}_5=" + qf(R5, "O")], ["_v", {"r1": (R1), "r2": (R2), "r3": (R3), "r4": (R4), "r5": (R5)}]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["平衡していないので、c・a・b の間の Δ を Y に変換。$R_c = " + qv(Rc, "O") + "$、$R_a = " + qv(Ra, "O") + "$、$R_b = " + qv(Rb, "O") + "$", "道は $" + qv(A, "O") + "$ と $" + qv(B, "O") + "$　$R = " + fmt(Rc) + " + \\dfrac{" + fmt(A) + " \\times " + fmt(B) + "}{" + fmt(A) + " + " + fmt(B) + "} = " + qv(ok, "O") + "$"], chk: {form: "u8s5rt", p: {R1: R1, R2: R2, R3: R3, R4: R4, R5: R5}}};
+  }
+  throw new Error("u8s5rt：条件に合う数字が見つからない");
+}
+function tbU8s5_Qv(r){
+  var gcd = tbU8s5_gcd, ratio = tbU8s5_ratio, par = tbU8s5_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var n = pick(r, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47]);
+    var I = pick(r, [1,2,3,4,5,6,8,10]);
+    var R1 = ([3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 6, 8, 10, 12, 12, 12, 15, 15, 15, 16, 16, 18, 20, 20, 20, 24, 24, 24, 24, 24, 24, 24, 24, 25, 25, 30, 30][n]);
+    var R2 = ([2, 12, 12, 12, 18, 24, 24, 24, 30, 8, 10, 12, 16, 2, 20, 25, 30, 2, 12, 24, 30, 30, 10, 18, 3, 6, 18, 10, 10, 30, 4, 12, 24, 8, 8, 25, 3, 3, 3, 6, 6, 10, 12, 12, 10, 10, 5, 15][n]);
+    var R5 = ([5, 30, 30, 30, 24, 18, 18, 18, 12, 20, 6, 16, 12, 3, 25, 20, 15, 12, 18, 15, 24, 24, 2, 12, 30, 2, 30, 25, 25, 5, 12, 4, 3, 4, 12, 5, 18, 18, 18, 10, 15, 6, 4, 4, 15, 15, 15, 5][n]);
+    var R3 = ([15, 10, 16, 20, 5, 6, 10, 30, 16, 15, 6, 18, 2, 3, 5, 4, 12, 3, 15, 25, 12, 24, 20, 30, 4, 3, 15, 3, 10, 30, 15, 3, 12, 8, 16, 3, 3, 6, 24, 3, 25, 3, 4, 6, 15, 15, 18, 18][n]);
+    var R4 = ([5, 10, 4, 25, 8, 12, 24, 6, 4, 2, 6, 6, 15, 3, 5, 8, 18, 12, 3, 10, 12, 10, 12, 10, 16, 5, 5, 16, 2, 6, 2, 6, 5, 20, 24, 5, 24, 30, 24, 12, 10, 4, 18, 10, 12, 15, 12, 2][n]);
+    var S = (R1 + R2 + R5);
+    var Rc = (R1 * R2 / S);
+    var Ra = (R1 * R5 / S);
+    var Rb = (R2 * R5 / S);
+    var A = (Ra + R3);
+    var B = (Rb + R4);
+    var Rp = (A * B / (A + B));
+    var Rt = (Rc + A * B / (A + B));
+    if (!(I * Rt <= 240)) continue;
+    var ok = (I * Rt);
+    if (!(isFinite(ok) && nice(ok) && ok > 0)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s5_three(ok, [{x: (I * Rp), why: "Y にした後の $R_c$ を足し忘れた"}, {x: (I * (Rc + A + B)), why: "2つの道を並列でなく直列に足した"}, {x: (Rt), why: "合成抵抗に電流を掛けていない"}, {x: (I * (R1 + R3) * (R2 + R4) / (R1 + R2 + R3 + R4)), why: "$R_5$ を消した（平衡していないので消せない）"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "V", ok, _w);
+    return {form: "u8s5v", text: "図のブリッジで、電源から流れ出る電流は $I = " + qv(I, "A") + "$ である。$R_1 = " + qv(R1, "O") + "$、$R_2 = " + qv(R2, "O") + "$、$R_3 = " + qv(R3, "O") + "$、$R_4 = " + qv(R4, "O") + "$、$R_5 = " + qv(R5, "O") + "$ のとき、電源の電圧 $V$ は何 V か。", fig: {kind: "u8s5brp", L: tbU8s5_fig({"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","r4":"{R}_4","r5":"{R}_5","pa":{},"pb":{},"pc":{}}, [["r1", "{R}_1=" + qf(R1, "O")], ["r2", "{R}_2=" + qf(R2, "O")], ["r3", "{R}_3=" + qf(R3, "O")], ["r4", "{R}_4=" + qf(R4, "O")], ["r5", "{R}_5=" + qf(R5, "O")], ["i", "{I}=" + qf(I, "A")], ["_v", {"r1": (R1), "r2": (R2), "r3": (R3), "r4": (R4), "r5": (R5)}]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["Δ（$R_1$・$R_2$・$R_5$）を Y にすると $R_c = " + qv(Rc, "O") + "$、$R_a = " + qv(Ra, "O") + "$、$R_b = " + qv(Rb, "O") + "$。合成抵抗は $" + qv(Rt, "O") + "$", "$V = " + fmt(Rt) + " \\times " + fmt(I) + " = " + qv(ok, "V") + "$"], chk: {form: "u8s5v", p: {I: I, R1: R1, R2: R2, R3: R3, R4: R4, R5: R5}}};
+  }
+  throw new Error("u8s5v：条件に合う数字が見つからない");
+}
+// 8-6 Δ の中の Y の練習（※ textbook/gen/make_section.py が textbook/gen/data/u08_s6.py から作った。手で直さない（データを直して作り直す）。）
+function tbU8s6_gcd(a, b){ a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) { var t = a % b; a = b; b = t; } return a; }
+function tbU8s6_ratio(a){ var g = a.reduce(function(x, y){ return tbU8s6_gcd(x, y); }); return a.map(function(x){ return fmt(x / g); }).join(" : "); }
+function tbU8s6_par(a, b){ return a * b / (a + b); }
+function tbU8s6_three(ok, cands){ var out = []; cands.forEach(function(z){ var x = Math.round(z.x * 1000) / 1000;
+  if (out.length < 3 && isFinite(z.x) && nice(z.x) && x > 0 &&distinct([ok].concat(out.map(function(w){ return w.x; }), [x]))) out.push({x: x, why: z.why}); });
+  return out.length === 3 ? out : null; }
+function tbU8s6_fig(base, a){ var o = Object.assign({}, base); a.forEach(function(kv){ if (kv[1] === null) delete o[kv[0]]; else o[kv[0]] = kv[1]; }); return o; }
+function tbU8s6_Qedge(r){
+  var gcd = tbU8s6_gcd, ratio = tbU8s6_ratio, par = tbU8s6_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var R = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30,35,36,40,45,48,50,60,70,75,80,90,100]);
+    var y = pick(r, [2,3,4,5,6,8,10,12,15,16,18,20,24,25,30]);
+    var r3 = (3 * y);
+    if (!(R != r3 && R <= 90 && (R * r3 * 10) % (R + r3) == 0)) continue;
+    var ok = (R * r3 / (R + r3));
+    if (!(isFinite(ok) && nice(ok) && ok > 0)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s6_three(ok, [{x: (R + r3), why: "並列でなく直列に足した"}, {x: (r3), why: "中の Y を Δ にしただけで、元の Δ との並列にしていない"}, {x: (R * y / (R + y)), why: "中の Y を3倍せずに、そのまま並列にした"}, {x: (R * (y / 3) / (R + y / 3)), why: "Y から Δ を $\\dfrac{1}{3}$ にした（3倍）"}, {x: (R), why: "元の Δ の抵抗のまま（変換した抵抗との並列にしていない）"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "O", ok, _w);
+    return {form: "u8s6edge", text: "図の Δ結線の抵抗はどれも $R = " + qv(R, "O") + "$、中の Y結線の抵抗はどれも $r = " + qv(y, "O") + "$ である。これを1つの Δ結線にまとめた時、1つの抵抗は何 Ω か。", fig: {kind: "u8s6dy", L: tbU8s6_fig({"r1":"{R}","r2":"{R}","r3":"{R}","ra":"{r}","rb":"{r}","rc":"{r}"}, [["r1", "{R}=" + qf(R, "O")], ["r2", "{R}=" + qf(R, "O")], ["r3", "{R}=" + qf(R, "O")], ["ra", "{r}=" + qf(y, "O")], ["rb", "{r}=" + qf(y, "O")], ["rc", "{r}=" + qf(y, "O")]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["中の Y を Δ にすると $3 \\times " + fmt(y) + " = " + qv(r3, "O") + "$。元の $" + qv(R, "O") + "$ と並列になる", "$\\dfrac{" + fmt(R) + " \\times " + fmt(r3) + "}{" + fmt(R) + " + " + fmt(r3) + "} = " + qv(ok, "O") + "$"], chk: {form: "u8s6edge", p: {R: R, y: y}}};
+  }
+  throw new Error("u8s6edge：条件に合う数字が見つからない");
+}
+function tbU8s6_Qhow(r){
+  var gcd = tbU8s6_gcd, ratio = tbU8s6_ratio, par = tbU8s6_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var _c = choices(r, [{t: "並列", v: "own"}, {t: "直列", v: "ser", why: "同じ2つの端子の間に並ぶので並列"}, {t: "入れ替わる形", v: "swap", why: "元の Δ の抵抗も残る。同じ2つの端子の間に並ぶので並列"}, {t: "真ん中の点で1つ", v: "mid", why: "Δ に変換すると真ん中の点は無くなる。抵抗は端子の間に入る"}]);
+    return {form: "u8s6how", text: "図の中の Y結線だけを Δ結線に変換すると、変換した抵抗は、元の Δ結線の抵抗と □ につながる。", fig: {kind: "u8s6dy", L: tbU8s6_fig({"r1":"{R}","r2":"{R}","r3":"{R}","ra":"{r}","rb":"{r}","rc":"{r}"}, []), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["変換した抵抗は、元の Δ の抵抗と同じ2つの端子の間に入る", "同じ2つの端子の間に並ぶので並列"], chk: {form: "u8s6how", p: {}}};
+  }
+  throw new Error("u8s6how：条件に合う数字が見つからない");
+}
+function tbU8s6_Qy3(r){
+  var gcd = tbU8s6_gcd, ratio = tbU8s6_ratio, par = tbU8s6_par, max = Math.max, min = Math.min, abs = Math.abs;
+  for (var _t = 0; _t < 20000; _t++) {
+    var y = pick(r, [3,6,9,12,15,18,21,24,27,30]);
+    var ok = (3 * y);
+    if (!(isFinite(ok) && nice(ok) && ok > 0 && Math.abs(ok - Math.round(ok)) < 1e-9)) continue;
+    ok = Math.round(ok * 1000) / 1000;
+    var _w = tbU8s6_three(ok, [{x: (y / 3), why: "$\\dfrac{1}{3}$ にした（Y から Δ は3倍）"}, {x: (y), why: "変換しても変わらないと考えた"}, {x: (2 * y), why: "Y で2つの端子の間にある2つを足しただけ"}]);
+    if (!_w) continue;
+    var _c = num(r, null, "O", ok, _w);
+    return {form: "u8s6y3", text: "図の中の Y結線の抵抗はどれも $r = " + qv(y, "O") + "$ である。中の Y結線だけを Δ結線に変換した時、1つの抵抗は何 Ω か。", fig: {kind: "u8s6dy", L: tbU8s6_fig({"r1":"{R}","r2":"{R}","r3":"{R}","ra":"{r}","rb":"{r}","rc":"{r}"}, [["ra", "{r}=" + qf(y, "O")], ["rb", "{r}=" + qf(y, "O")], ["rc", "{r}=" + qf(y, "O")]]), P: {}}, ch: _c.ch, ans: _c.ans, ex: ["抵抗がどれも等しいので、Y から Δ は3倍", "$3 \\times " + fmt(y) + " = " + qv(ok, "O") + "$"], chk: {form: "u8s6y3", p: {y: y}}};
+  }
+  throw new Error("u8s6y3：条件に合う数字が見つからない");
+}
+var GEN = {
+  // 8-1 Δ結線とY結線
+  1: function(r){ return pick(r, [tbU8s1_Qname, tbU8s1_Qedge, tbU8s1_Qedge, tbU8s1_Qtouch, tbU8s1_Qtouch, tbU8s1_Qarm, tbU8s1_Qdc])(r); },
+  // 8-2 Δ から Y への変換
+  2: function(r){ return pick(r, [tbU8s2_Qf, tbU8s2_Qv, tbU8s2_Qv, tbU8s2_Qv, tbU8s2_Qv])(r); },
+  // 8-3 Y から Δ への変換
+  3: function(r){ return pick(r, [tbU8s3_Qf, tbU8s3_Qv, tbU8s3_Qv, tbU8s3_Qv, tbU8s3_Qv])(r); },
+  // 8-4 等しい抵抗の Δ-Y変換
+  4: function(r){ return pick(r, [tbU8s4_QtoY, tbU8s4_QtoY, tbU8s4_QtoY, tbU8s4_QtoD, tbU8s4_QtoD, tbU8s4_QtoD, tbU8s4_Qwhich])(r); },
+  // 8-5 ブリッジの中の Δ
+  5: function(r){ return pick(r, [tbU8s5_Qfind, tbU8s5_Qarm, tbU8s5_Qarm, tbU8s5_Qrt, tbU8s5_Qrt, tbU8s5_Qv, tbU8s5_Qv, tbU8s5_Qv])(r); },
+  // 8-6 Δ の中の Y
+  6: function(r){ return pick(r, [tbU8s6_Qedge, tbU8s6_Qedge, tbU8s6_Qedge, tbU8s6_Qedge, tbU8s6_Qhow, tbU8s6_Qy3])(r); }
+};
+
+return {kinds: KINDS, flowk: FLOWK, gen: GEN, data: {"slides":[{"id":"t8s1e","scene":"t8s1e","kind":"u8s1both","lab":{"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"},"viewbox":"472 196 584 996","band":{"want":"Δ結線と Y結線","ans":"三角形の形が Δ結線、1点にまとめた形が Y結線","full":"3つの抵抗を三角形の形につないだ物を Δ結線、片方の端を1点にまとめた物を Y結線という。Δ結線と Y結線は互いに置き換えられる（Δ-Y変換）。直流の回路では Δ を Y にすることが多い。"},"narr":{"start":{"co":1},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"①Δ結線\n②Y結線\n③変換\nこの順に見ます。","at":{"道筋":1.0},"after":[],"route":0}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"3つの抵抗を、三角形の形につないだ物を Δ結線といいます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":1,"emph":["R1","R2","R3"]},{"text":"端子 a・b・c は三角形の角にあり、どの抵抗も2つの端子の間にあります。$R_1$ は a と b の間です。","at":{"強調":1.0},"after":[],"emph":["R1"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"3つの抵抗の片方の端を1点にまとめ、もう片方を端子 a・b・c につないだ物を Y結線といいます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["Ra","Rb","Rc"]},{"text":"Y結線では、端子 a と b の間に $R_a$ と $R_b$ が直列に入ります。","at":{"強調":1.0},"after":[],"emph":["Ra","Rb"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Δ結線の抵抗は Y結線の抵抗に、Y結線の抵抗は Δ結線の抵抗に置き換えることができます。これを Δ-Y変換といいます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":3,"emph":["R1","R2","R3","Ra","Rb","Rc"]},{"text":"直流の回路では、Δ結線は計算しにくい形なので、Δ から Y に変換することが多いです。","at":{"強調":1.0,"答え":1.0},"after":[],"emph":["R1","R2","R3"],"ans":true}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Ra":["rax1","rax1t0","rax1t1"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"]},"moves":{},"route":["Δ結線","Y結線","変換"]}},{"id":"t8s1x","scene":"t8s1x","kind":"u8s1both","lab":{"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"},"viewbox":"472 196 584 996","band":{"want":"Δ結線で、端子 a と b の間にある抵抗","ans":"$R_1$"},"narr":{"start":{"co":1},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、Δ結線で端子 a と b の間にある抵抗です。","at":{"強調":1.0},"after":[],"emph":["R1","R2","R3"]},{"text":"①Δ結線を見る\n②両端の端子\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Δ結線は三角形の形で、どの抵抗も2つの端子の間にあります。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":1,"emph":["R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"$R_2$ は b と c の間、$R_3$ は c と a の間です。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["R2","R3"]},{"text":"a と b の間にあるのは $R_1$ です。","at":{"強調":1.0,"答え":1.0},"after":[],"emph":["R1"],"ans":true}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Ra":["rax1","rax1t0","rax1t1"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"]},"moves":{},"route":["Δ結線を見る","両端の端子"]}},{"id":"t8s2e","scene":"t8s2e","kind":"u8s2both","lab":{"r1":["{R}_1","{R}_1=4 Ω"],"r2":["{R}_2","{R}_2=6 Ω"],"r3":["{R}_3","{R}_3=10 Ω"],"ra":["{R}_a","{R}_a=2 Ω"],"rb":["{R}_b","{R}_b=1.2 Ω"],"rc":["{R}_c","{R}_c=3 Ω"]},"viewbox":"347 196 709 997","band":{"want":"Δ結線を置き換える Y結線の抵抗","ans":"3つの和分の、その端子につながる2つの積　$R_a = \\dfrac{R_1 R_3}{R_1 + R_2 + R_3}$","full":"Δ から Y への変換では、分母は Δ の3つの抵抗の和、分子は、Δ でその端子につながっている2つの抵抗の積。"},"narr":{"start":{"co":1,"r1v":0,"r2v":0,"r3v":0,"rav":0,"rbv":0,"rcv":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、Δ結線を置き換える Y結線の $R_a$・$R_b$・$R_c$ です。","at":{"強調":1.0},"after":[],"emph":["Ra","Rb","Rc"]},{"text":"①分母は3つの和\n②分子は2つの積\n③数字で見る\nこの順に見ます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Δ から Y への変換の式は、どれも、分母が3つの抵抗の和です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":1,"emph":["R1","R2","R3"],"eq":[{"cont":false,"items":[["R_1 + R_2 + R_3"]]}],"emphPre":["R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"$R_a$ は端子 a へ出る抵抗です。分子は、Δ で端子 a につながっている $R_1$ と $R_3$ の積です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":2,"emph":["Ra","R1","R2","R3"],"eq":[{"cont":false,"items":[["R_a = \\dfrac{R_1 R_3}{R_1 + R_2 + R_3}"]]}],"emphPre":["Ra","R1","R3"]},{"text":"$R_b$ の分子は、端子 b につながっている $R_1$ と $R_2$ の積です。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["Rb","R1","R2","R3"],"eq":[{"cont":false,"items":[["R_b = \\dfrac{R_1 R_2}{R_1 + R_2 + R_3}"]]}],"emphPre":["Rb","R1","R2"]},{"text":"$R_c$ の分子は、端子 c につながっている $R_2$ と $R_3$ の積です。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["Rc","R1","R2","R3"],"eq":[{"cont":false,"items":[["R_c = \\dfrac{R_2 R_3}{R_1 + R_2 + R_3}"]]}],"emphPre":["Rc","R2","R3"]},{"text":"並列の和分の積と似た形で、3つの和分の、その端子につながる2つの積と覚えます。","at":{"強調":1.0},"after":[],"emph":["Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"$R_1 = 4\\,\\Omega$、$R_2 = 6\\,\\Omega$、$R_3 = 10\\,\\Omega$ のとき、3つの和は $20\\,\\Omega$ です。","at":{"道筋":1.0,"強調":1.0,"動き":1.0,"式":1.0},"after":["強調"],"route":3,"emph":["R1","R2","R3"],"move":"dv","eq":[{"cont":false,"items":[["4 + 6 + 10 = 20\\,\\Omega"]]}],"emphPre":["R1","R2","R3"]},{"text":"$R_a$ は、端子 a につながる $R_1$ と $R_3$ の積を和で割ります。","at":{"強調":1.0,"式":1.0,"動き":1.0},"after":["動き","強調"],"emph":["Ra","R1","R3"],"eq":[{"cont":false,"items":[["R_a = \\dfrac{4 \\times 10}{20} = 2\\,\\Omega"]]}],"move":"rav","emphPre":["Ra","R1","R3"]},{"text":"$R_b$ と $R_c$ も同じように出します。","at":{"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"emph":["Rb","Rc","R1","R2","R3"],"eq":[{"cont":false,"items":[["R_b = \\dfrac{4 \\times 6}{20} = 1.2\\,\\Omega"],["R_c = \\dfrac{6 \\times 10}{20} = 3\\,\\Omega"]]}],"move":"rbcv","ans":true,"emphPre":["Rb","Rc","R1","R2","R3"]}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Ra":["rax1","rax1t0","rax1t1"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"]},"moves":{"dv":{"to":{"r1v":1,"r2v":1,"r3v":1},"dur":0.6},"rav":{"to":{"rav":1},"dur":0.4},"rbcv":{"to":{"rbv":1,"rcv":1},"dur":0.5}},"route":["分母は3つの和","分子は2つの積","数字で見る"]}},{"id":"t8s2x","scene":"t8s2x","kind":"u8s2both","lab":{"r1":"{R}_1=6 Ω","r2":"{R}_2=12 Ω","r3":"{R}_3=18 Ω","ra":"{R}_a","rb":"{R}_b","rc":["{R}_c","{R}_c=6 Ω"]},"viewbox":"347 196 709 997","band":{"want":"$R_c$","known":"$R_1 = 6\\,\\Omega,\\;\\; R_2 = 12\\,\\Omega,\\;\\; R_3 = 18\\,\\Omega$","ans":"$R_c = 6\\,\\Omega$"},"narr":{"start":{"co":1,"rcv":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、Y結線で端子 c へ出る $R_c$ です。","at":{"強調":1.0},"after":[],"emph":["Rc"]},{"text":"①3つの和\n②端子 c につながる2つの積\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"分母は、3つの抵抗の和です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":1,"emph":["R1","R2","R3"],"eq":[{"cont":false,"items":[["6 + 12 + 18 = 36\\,\\Omega"]]}],"emphPre":["R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Δ で端子 c につながっているのは $R_2$ と $R_3$ です。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["R2","R3","Rc"]},{"text":"その積を和で割ります。","at":{"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"emph":["Rc","R1","R2","R3"],"eq":[{"cont":false,"items":[["R_c = \\dfrac{R_2 R_3}{R_1 + R_2 + R_3}"],["R_c = \\dfrac{12 \\times 18}{36} = 6\\,\\Omega"]]}],"move":"rcv","ans":true,"emphPre":["Rc","R1","R2","R3"]}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Ra":["rax1","rax1t0","rax1t1"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"]},"moves":{"rcv":{"to":{"rcv":1},"dur":0.4}},"route":["3つの和","端子 c につながる2つの積"]}},{"id":"t8s3e","scene":"t8s3e","kind":"u8s3both","lab":{"ra":["{R}_a","{R}_a=2 Ω"],"rb":["{R}_b","{R}_b=3 Ω"],"rc":["{R}_c","{R}_c=6 Ω"],"r1":["{R}_1","{R}_1=6 Ω"],"r2":["{R}_2","{R}_2=18 Ω"],"r3":["{R}_3","{R}_3=12 Ω"]},"viewbox":"347 196 709 996","band":{"want":"Y結線を置き換える Δ結線の抵抗","ans":"隣り合う2つの積の和を、反対方向の1つで割る　$R_1 = \\dfrac{R_a R_b + R_b R_c + R_c R_a}{R_c}$","full":"Y から Δ への変換では、分子はどれも同じで Y の隣り合う2つの積の和。分母は、求める Δ の抵抗の反対方向にある Y の抵抗1つ。"},"narr":{"start":{"co":1,"rav":0,"rbv":0,"rcv":0,"r1v":0,"r2v":0,"r3v":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、Y結線を置き換える Δ結線の $R_1$・$R_2$・$R_3$ です。","at":{"強調":1.0},"after":[],"emph":["R1","R2","R3"]},{"text":"①分子は積の和\n②分母は反対方向の1つ\n③数字で見る\nこの順に見ます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Y から Δ への変換の式は、分子がどれも同じで、隣り合う2つの積の和です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":1,"emph":["Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["R_a R_b + R_b R_c + R_c R_a"]]}],"emphPre":["Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"$R_1$ は端子 a と b の間の抵抗です。分母は、その反対方向にある $R_c$ です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":2,"emph":["R1","Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["R_1","= \\dfrac{R_a R_b + R_b R_c + R_c R_a}{R_c}"]]}],"emphPre":["R1","Rc"]},{"text":"b と c の間の $R_2$ の分母は $R_a$、c と a の間の $R_3$ の分母は $R_b$ です。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["R2","R3","Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["R_2","= \\dfrac{R_a R_b + R_b R_c + R_c R_a}{R_a}"],["R_3","= \\dfrac{R_a R_b + R_b R_c + R_c R_a}{R_b}"]]}],"emphPre":["R2","R3","Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"$R_a = 2\\,\\Omega$、$R_b = 3\\,\\Omega$、$R_c = 6\\,\\Omega$ のとき、分子は次のとおりです。","at":{"道筋":1.0,"強調":1.0,"動き":1.0,"式":1.0},"after":["強調"],"route":3,"emph":["Ra","Rb","Rc"],"move":"yv","eq":[{"cont":false,"items":[["2 \\times 3 + 3 \\times 6 + 6 \\times 2 = 36"]]}],"emphPre":["Ra","Rb","Rc"]},{"text":"これを、反対方向にある1つで割ります。","at":{"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"emph":["R1","R2","R3","Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["R_1 = \\dfrac{36}{6} = 6\\,\\Omega"],["R_2 = \\dfrac{36}{2} = 18\\,\\Omega"],["R_3 = \\dfrac{36}{3} = 12\\,\\Omega"]]}],"move":"dv","ans":true,"emphPre":["R1","R2","R3","Ra","Rb","Rc"]}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Ra":["rax1","rax1t0","rax1t1"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"]},"moves":{"yv":{"to":{"rav":1,"rbv":1,"rcv":1},"dur":0.6},"dv":{"to":{"r1v":1,"r2v":1,"r3v":1},"dur":0.6}},"route":["分子は積の和","分母は反対方向の1つ","数字で見る"]}},{"id":"t8s3x","scene":"t8s3x","kind":"u8s3both","lab":{"ra":"{R}_a=4 Ω","rb":"{R}_b=6 Ω","rc":"{R}_c=12 Ω","r1":"{R}_1","r2":["{R}_2","{R}_2=36 Ω"],"r3":"{R}_3"},"viewbox":"347 196 709 996","band":{"want":"$R_2$","known":"$R_a = 4\\,\\Omega,\\;\\; R_b = 6\\,\\Omega,\\;\\; R_c = 12\\,\\Omega$","ans":"$R_2 = 36\\,\\Omega$"},"narr":{"start":{"co":1,"r2v":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、Δ結線で端子 b と c の間の $R_2$ です。","at":{"強調":1.0},"after":[],"emph":["R2"]},{"text":"①分子は積の和\n②分母は反対方向の1つ\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["R2"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"分子は、隣り合う2つの積の和です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":1,"emph":["Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["4 \\times 6 + 6 \\times 12 + 12 \\times 4","= 144"]]}],"emphPre":["Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"$R_2$ は b と c の間なので、反対方向にあるのは $R_a$ です。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["R2","Ra"]},{"text":"分子を $R_a$ で割ります。","at":{"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"emph":["R2","Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["R_2","= \\dfrac{R_a R_b + R_b R_c + R_c R_a}{R_a}"],["R_2 = \\dfrac{144}{4} = 36\\,\\Omega"]]}],"move":"r2v","ans":true,"emphPre":["R2","Ra","Rb","Rc"]}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Ra":["rax1","rax1t0","rax1t1"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"]},"moves":{"r2v":{"to":{"r2v":1},"dur":0.4}},"route":["分子は積の和","分母は反対方向の1つ"]}},{"id":"t8s4e","scene":"t8s4e","kind":"u8s4both","lab":{"r1":["{R}","{R}=18 Ω"],"r2":["{R}","{R}=18 Ω"],"r3":["{R}","{R}=18 Ω"],"ra":["{r}","{r}=6 Ω"],"rb":["{r}","{r}=6 Ω"],"rc":["{r}","{r}=6 Ω"]},"viewbox":"370 196 686 996","band":{"want":"抵抗がどれも等しい時の Δ-Y変換","ans":"Δ→Y は $\\dfrac{1}{3}$、Y→Δ は3倍","full":"Δ の3つの抵抗がどれも等しい時、Y の抵抗はどれも Δ の 1/3。Y の3つがどれも等しい時、Δ の抵抗はどれも Y の3倍。"},"narr":{"start":{"co":1,"r1v":0,"r2v":0,"r3v":0,"rav":0,"rbv":0,"rcv":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"①Δ から Y\n②Y から Δ\n③数字で見る\nこの順に見ます。","at":{"道筋":1.0},"after":[],"route":0}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Δ の3つの抵抗が、どれも同じ $R$ のときを考えます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":1,"emph":["R1","R2","R3"]},{"text":"Δ から Y の式に入れると、分母は $3R$、分子は $R \\times R$ です。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["Ra","R1","R2","R3"],"eq":[{"cont":false,"items":[["r = \\dfrac{R \\times R}{R + R + R} = \\dfrac{R}{3}"]]}],"emphPre":["Ra","R1","R2","R3"]},{"text":"Y の抵抗は、どれも Δ の $\\dfrac{1}{3}$ になります。","at":{"強調":1.0},"after":[],"emph":["Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"反対に、Y の3つの抵抗が、どれも同じ $r$ のときです。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["Ra","Rb","Rc"]},{"text":"Y から Δ の式に入れると、分子は $3r^2$、分母は $r$ です。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["R1","R2","R3","Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["R = \\dfrac{r \\times r + r \\times r + r \\times r}{r}","= 3r"]]}],"emphPre":["R1","Ra","Rb","Rc"]},{"text":"Δ の抵抗は、どれも Y の3倍になります。Δ の方が大きいと覚えます。","at":{"強調":1.0},"after":[],"emph":["R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Δ の抵抗がどれも $18\\,\\Omega$ なら、Y の抵抗はどれも $6\\,\\Omega$ です。","at":{"道筋":1.0,"強調":1.0,"動き":1.0,"式":1.0},"after":["強調"],"route":3,"emph":["R1","R2","R3","Ra","Rb","Rc"],"move":"both","eq":[{"cont":false,"items":[["\\dfrac{18}{3} = 6\\,\\Omega"]]}],"emphPre":["R1","R2","R3","Ra","Rb","Rc"]},{"text":"反対に Y が $6\\,\\Omega$ なら、Δ は $6 \\times 3 = 18\\,\\Omega$ に戻ります。","at":{"強調":1.0,"答え":1.0},"after":[],"emph":["Ra","Rb","Rc","R1","R2","R3"],"ans":true}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Ra":["rax1","rax1t0","rax1t1"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"]},"moves":{"both":{"to":{"r1v":1,"r2v":1,"r3v":1,"rav":1,"rbv":1,"rcv":1},"dur":0.6}},"route":["Δ から Y","Y から Δ","数字で見る"]}},{"id":"t8s4x","scene":"t8s4x","kind":"u8s4both","lab":{"r1":["{R}","{R}=45 Ω"],"r2":["{R}","{R}=45 Ω"],"r3":["{R}","{R}=45 Ω"],"ra":"{r}=15 Ω","rb":"{r}=15 Ω","rc":"{r}=15 Ω"},"viewbox":"370 196 686 996","band":{"want":"Δ結線の1つの抵抗 $R$","known":"Y の抵抗はどれも $r = 15\\,\\Omega$","ans":"$R = 45\\,\\Omega$"},"narr":{"start":{"co":1,"r1v":0,"r2v":0,"r3v":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、Δ結線に変換した時の1つの抵抗 $R$ です。","at":{"強調":1.0},"after":[],"emph":["R1","R2","R3"]},{"text":"①Y から Δ は3倍\n②数字を入れる\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Y の抵抗がどれも等しいので、Δ の抵抗はどれも Y の3倍です。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":1,"emph":["Ra","Rb","Rc","R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"$15\\,\\Omega$ を3倍します。","at":{"道筋":1.0,"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"route":2,"emph":["Ra","Rb","Rc","R1","R2","R3"],"eq":[{"cont":false,"items":[["R = 3r"],["R = 3 \\times 15 = 45\\,\\Omega"]]}],"move":"dv","ans":true,"emphPre":["Ra","Rb","Rc","R1","R2","R3"]}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Ra":["rax1","rax1t0","rax1t1"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"]},"moves":{"dv":{"to":{"r1v":1,"r2v":1,"r3v":1},"dur":0.5}},"route":["Y から Δ は3倍","数字を入れる"]}},{"id":"t8s5e","scene":"t8s5e","kind":"u8s5brY","lab":{"pm":1,"src":"{V}=30 V","r1":"{R}_1=4 Ω","r2":"{R}_2=6 Ω","r3":"{R}_3=10 Ω","r4":"{R}_4=5 Ω","r5":"{R}_5=10 Ω","rc":"{R}_c=1.2 Ω","ra":"{R}_a=2 Ω","rb":"{R}_b=3 Ω","pa":{},"pb":{},"pc":{},"i":["{I}","{I}=5 A"]},"viewbox":"440 216 665 574","band":{"want":"真ん中に抵抗がある、平衡していないブリッジの電流 $I$","ans":"中の Δ を Y に変換して、直列・並列で解く","full":"平衡していないブリッジは真ん中を消せない。ブリッジの中の Δ（R1・R2・R5）を Y に変換すると、Rc の先で2つの道の並列になり、合成抵抗が出せる。"},"narr":{"start":{"co":1,"t":0,"iv":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、電源から流れ出る電流 $I$ です。","at":{"強調":1.0},"after":[],"emph":["src","I"]},{"text":"①Δ を見つける\n②Y に変換\n③合成抵抗と電流\nこの順に見ます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["src"]}]},{"cap":null,"eqp":null,"vid":[7,8],"sents":[{"text":"向かい合う抵抗の積は $6 \\times 10 = 60$ と $4 \\times 5 = 20$ で、等しくありません。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":1,"emph":["R1","R2","R3","R4"]},{"text":"平衡していないので、真ん中の $R_5$ は消せません。","at":{"強調":1.0},"after":[],"emph":["R5"]},{"text":"三角形につながった Δ は、\n点 c・a・b の間の $R_1$・$R_2$・$R_5$ です。","at":{"強調":1.0},"after":[],"emph":["D","Pc","Pa","Pb"]},{"text":"a・b と－極の側の点の間の $R_3$・$R_4$・$R_5$ も Δ です。ここでは c・a・b の Δ を変換します。","at":{"強調":1.0},"after":[],"emph":["R3","R4","R5"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"Δ から Y への変換です。分母は3つの和です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":2,"emph":["D"],"eq":[{"cont":false,"items":[["R_1 + R_2 + R_5","= 4 + 6 + 10 = 20\\,\\Omega"]]}],"emphPre":["D"]},{"text":"分子は、それぞれの点につながる2つの積です。","at":{"強調":1.0,"動き":1.0,"式":1.0},"after":["強調"],"emph":["Y"],"move":"toY","eq":[{"cont":false,"items":[["R_c = \\dfrac{4 \\times 6}{20} = 1.2\\,\\Omega"],["R_a = \\dfrac{4 \\times 10}{20} = 2\\,\\Omega"],["R_b = \\dfrac{6 \\times 10}{20} = 3\\,\\Omega"]]}],"emphPre":["D","Y"]}]},{"cap":null,"eqp":null,"vid":[3,8],"sents":[{"text":"Y にすると、$R_c$ の先で2つの道に分かれます。それぞれの道は直列です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":3,"emph":["Rc","Ra","R3","Rb","R4"],"eq":[{"cont":false,"items":[["R_a + R_3 = 2 + 10 = 12\\,\\Omega"],["R_b + R_4 = 3 + 5 = 8\\,\\Omega"]]}],"emphPre":["Rc","Ra","R3","Rb","R4"]},{"text":"2つの道の並列に、$R_c$ を直列に足します。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["Rc","Ra","R3","Rb","R4"],"eq":[{"cont":false,"items":[["\\dfrac{12 \\times 8}{12 + 8} = 4.8\\,\\Omega"],["1.2 + 4.8 = 6\\,\\Omega"]]}],"emphPre":["Rc","Ra","R3","Rb","R4"]},{"text":"電流はオームの法則で求めます。","at":{"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"emph":["src","I"],"eq":[{"cont":false,"items":[["I = \\dfrac{30}{6} = 5\\,\\mathrm{A}"]]}],"move":"ival","ans":true,"emphPre":["src","I"]}]}],"groups":{"Pc":["dc","nc","pct0","pct1"],"src":["c:L","c:S","pp","pm","e0","e1","cx1:L","cx1:S","ppx1","pmx1","ex10","ex11"],"I":["ia","ia:h","it0","it1","ix1a","ix1a:h","ix1t0","ix1t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1","r3x1","r3x1t0","r3x1t1"],"R2":["r2","r2t0","r2t1"],"R4":["r4","r4t0","r4t1","r4x1","r4x1t0","r4x1t1"],"Pa":["da","na","pat0","pat1"],"R5":["r5","r5t0","r5t1"],"Pb":["db","nb","pbt0","pbt1"],"zhi":["u8s5brYL","u8s5brYw3","u8s5brYw4","u8s5brYw6","u8s5brYw8","u8s5brYw12","zbu8s5brY0hi","u8s5brYx1L","u8s5brYx1w1","zbu8s5brYx10hi"],"zlo":["u8s5brYw2","u8s5brYw5","u8s5brYw7","u8s5brYw11","u8s5brYw15","zbu8s5brY1lo","u8s5brYx1Rw","u8s5brYx1w3","u8s5brYx1w6","u8s5brYx1w9","u8s5brYx1w11","zbu8s5brYx11lo"],"zmid":["u8s5brYw9","u8s5brYw10","u8s5brYw16","u8s5brYw17","u8s5brYw20","zbu8s5brY2mid","u8s5brYx1w2","u8s5brYx1w4","u8s5brYx1w7","u8s5brYx1w10","zbu8s5brYx12mid"],"zmid2":["u8s5brYw13","u8s5brYw14","u8s5brYw18","u8s5brYw19","u8s5brYw21","zbu8s5brY3mid2","u8s5brYx1w5","zbu8s5brYx13mid2"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Ra":["rax1","rax1t0","rax1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"],"zmid3":["u8s5brYx1w8","zbu8s5brYx14mid3"],"D":["r1","r1t0","r1t1","r2","r2t0","r2t1","r5","r5t0","r5t1"],"Y":["rcx1","rcx1t0","rcx1t1","rax1","rax1t0","rax1t1","rbx1","rbx1t0","rbx1t1"]},"moves":{"toY":{"to":{"t":1},"dur":0.8},"ival":{"to":{"iv":1},"dur":0.4}},"route":["Δ を見つける","Y に変換","合成抵抗と電流"]}},{"id":"t8s5x","scene":"t8s5x","kind":"u8s5brY","lab":{"pm":1,"src":["{V}","{V}=24 V"],"r1":"{R}_1=3 Ω","r2":"{R}_2=12 Ω","r3":"{R}_3=10 Ω","r4":"{R}_4=10 Ω","r5":"{R}_5=30 Ω","rc":"{R}_c=0.8 Ω","ra":"{R}_a=2 Ω","rb":"{R}_b=8 Ω","pa":{},"pb":{},"pc":{},"i":"{I}=3 A","_v":{"src":24,"r1":3,"r2":12,"r3":10,"r4":10,"r5":30,"rc":0.8,"ra":2,"rb":8}},"viewbox":"440 216 665 574","band":{"want":"電源の電圧 $V$","known":"$I = 3\\,\\mathrm{A},\\;\\; R_1 = 3\\,\\Omega,\\;\\; R_2 = 12\\,\\Omega,\\;\\; R_3 = 10\\,\\Omega,\\;\\; R_4 = 10\\,\\Omega,\\;\\; R_5 = 30\\,\\Omega$","ans":"$V = 24\\,\\mathrm{V}$"},"narr":{"start":{"co":1,"t":0,"srcv":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、電源の電圧 $V$ です。電流が分かっているので、合成抵抗を出します。","at":{"強調":1.0},"after":[],"emph":["src"]},{"text":"①Δ を Y に\n②合成抵抗\n③電圧\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["src"]}]},{"cap":null,"eqp":null,"vid":[7,8],"sents":[{"text":"向かい合う抵抗の積は $12 \\times 10 = 120$ と $3 \\times 10 = 30$ で、平衡していません。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":1,"emph":["R1","R2","R3","R4"]},{"text":"c・a・b の間の Δ を Y に変換します。3つの和は $3 + 12 + 30 = 45\\,\\Omega$ です。","at":{"強調":1.0,"動き":1.0,"式":1.0},"after":["強調"],"emph":["Y"],"move":"toY","eq":[{"cont":false,"items":[["R_c = \\dfrac{3 \\times 12}{45} = 0.8\\,\\Omega"],["R_a = \\dfrac{3 \\times 30}{45} = 2\\,\\Omega"],["R_b = \\dfrac{12 \\times 30}{45} = 8\\,\\Omega"]]}],"emphPre":["D","Y","Pc","Pa","Pb"]}]},{"cap":null,"eqp":null,"vid":[3,8],"sents":[{"text":"2つの道は $2 + 10 = 12\\,\\Omega$ と $8 + 10 = 18\\,\\Omega$ です。その並列に $R_c$ を足します。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":2,"emph":["Rc","Ra","R3","Rb","R4"],"eq":[{"cont":false,"items":[["0.8 + \\dfrac{12 \\times 18}{12 + 18}","= 0.8 + 7.2 = 8\\,\\Omega"]]}],"emphPre":["Rc","Ra","R3","Rb","R4"]}]},{"cap":null,"eqp":null,"vid":[1],"sents":[{"text":"電圧は、電流と合成抵抗の積です。","at":{"道筋":1.0,"強調":1.0,"式":1.0,"動き":1.0,"答え":1.0},"after":["動き","答え","強調"],"route":3,"emph":["src"],"eq":[{"cont":false,"items":[["V = 8 \\times 3 = 24\\,\\mathrm{V}"]]}],"move":"vval","ans":true,"emphPre":["src","I"]}]}],"groups":{"Pc":["dc","nc","pct0","pct1"],"src":["c:L","c:S","pp","pm","e0","e1","cx1:L","cx1:S","ppx1","pmx1","ex10","ex11"],"I":["ia","ia:h","it0","it1","ix1a","ix1a:h","ix1t0","ix1t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1","r3x1","r3x1t0","r3x1t1"],"R2":["r2","r2t0","r2t1"],"R4":["r4","r4t0","r4t1","r4x1","r4x1t0","r4x1t1"],"Pa":["da","na","pat0","pat1"],"R5":["r5","r5t0","r5t1"],"Pb":["db","nb","pbt0","pbt1"],"zhi":["u8s5brYL","u8s5brYw3","u8s5brYw4","u8s5brYw6","u8s5brYw8","u8s5brYw12","zbu8s5brY0hi","u8s5brYx1L","u8s5brYx1w1","zbu8s5brYx10hi"],"zlo":["u8s5brYw2","u8s5brYw5","u8s5brYw7","u8s5brYw11","u8s5brYw15","zbu8s5brY1lo","u8s5brYx1Rw","u8s5brYx1w3","u8s5brYx1w6","u8s5brYx1w9","u8s5brYx1w11","zbu8s5brYx11lo"],"zmid":["u8s5brYw9","u8s5brYw10","u8s5brYw16","u8s5brYw17","u8s5brYw20","zbu8s5brY2mid","u8s5brYx1w2","u8s5brYx1w4","u8s5brYx1w7","u8s5brYx1w10","zbu8s5brYx12mid"],"zmid2":["u8s5brYw13","u8s5brYw14","u8s5brYw18","u8s5brYw19","u8s5brYw21","zbu8s5brY3mid2","u8s5brYx1w5","zbu8s5brYx13mid2"],"Rc":["rcx1","rcx1t0","rcx1t1"],"Ra":["rax1","rax1t0","rax1t1"],"Rb":["rbx1","rbx1t0","rbx1t1"],"zmid3":["u8s5brYx1w8","zbu8s5brYx14mid3"],"D":["r1","r1t0","r1t1","r2","r2t0","r2t1","r5","r5t0","r5t1"],"Y":["rcx1","rcx1t0","rcx1t1","rax1","rax1t0","rax1t1","rbx1","rbx1t0","rbx1t1"]},"moves":{"toY":{"to":{"t":1},"dur":0.8},"vval":{"to":{"srcv":1},"dur":0.4}},"route":["Δ を Y に","合成抵抗","電圧"]}},{"id":"t8s6e","scene":"t8s6e","kind":"u8s6esw","lab":{"r1":["{R}","{R}=30 Ω"],"r2":["{R}","{R}=30 Ω"],"r3":["{R}","{R}=30 Ω"],"ra":["{r}","{r}=5 Ω"],"rb":["{r}","{r}=5 Ω"],"rc":["{r}","{r}=5 Ω"],"q1":"10 Ω","q2":"10 Ω","q3":"10 Ω"},"viewbox":"467 220 603 450","band":{"want":"Δ の中に Y がある結線を、1つの Δ にまとめた時の抵抗","ans":"中の Y を Δ にすると、元の Δ の抵抗と並列になる","full":"Δ の中に、同じ端子につながる Y がある時は、中の Y だけを Δ に変換する。変換した抵抗は、元の Δ の抵抗と同じ2つの端子の間に入るので並列になる。"},"narr":{"start":{"co":1,"t":0,"r1v":0,"r2v":0,"r3v":0,"rav":0,"rbv":0,"rcv":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、Δ の中に Y がある結線を、1つの Δ にまとめた時の抵抗です。","at":{"強調":1.0},"after":[],"emph":["R1","R2","R3","Ra","Rb","Rc"]},{"text":"①Y を Δ に\n②並列になる\n③数字で見る\nこの順に見ます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["R1","R2","R3","Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"中の Y だけを Δ に変換します。抵抗がどれも等しい $r$ なので、Δ にすると $3r$ です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":1,"emph":["Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["r \\to 3r"]]}],"emphPre":["Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[3,8],"sents":[{"text":"変換した Δ の抵抗は、端子 a と b の間、b と c の間、c と a の間に入ります。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":2,"emph":["Ra","Rb","Rc"]},{"text":"そこには元の Δ の抵抗 $R$ もあるので、同じ2つの端子の間に2つが並びます。これは並列です。","at":{"強調":1.0},"after":[],"emph":["R1","R2","R3","Ra","Rb","Rc"]},{"text":"1つの辺は、$R$ と $3r$ の並列なので和分の積です。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["R1","R2","R3","Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["\\dfrac{R \\times 3r}{R + 3r}"]]}],"emphPre":["R1","R2","R3","Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"$R = 30\\,\\Omega$、$r = 5\\,\\Omega$ のときを見ます。中の Y を Δ にすると $15\\,\\Omega$ です。","at":{"道筋":1.0,"強調":1.0,"動き":1.0,"式":1.0},"after":["強調"],"route":3,"emph":["R1","R2","R3","Ra","Rb","Rc"],"move":"vals","eq":[{"cont":false,"items":[["3 \\times 5 = 15\\,\\Omega"]]}],"emphPre":["R1","R2","R3","Ra","Rb","Rc"]},{"text":"1つの辺は $30\\,\\Omega$ と $15\\,\\Omega$ の並列です。","at":{"強調":1.0,"式":1.0},"after":["強調"],"emph":["R1","R2","R3","Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["\\dfrac{30 \\times 15}{30 + 15} = 10\\,\\Omega"]]}],"emphPre":["R1","R2","R3","Ra","Rb","Rc"]},{"text":"どの辺も同じなので、1つの Δ にまとめると、どの抵抗も $10\\,\\Omega$ です。","at":{"動き":1.0,"答え":1.0,"強調":1.0},"after":[],"move":"toD","ans":true,"emph":["Q1","Q2","Q3"]}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ra":["ra","rat0","rat1"],"Rc":["rc","rct0","rct1"],"Rb":["rb","rbt0","rbt1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Q2":["q2x1","q2x1t0","q2x1t1"],"Q1":["q1x1","q1x1t0","q1x1t1"],"Q3":["q3x1","q3x1t0","q3x1t1"]},"moves":{"vals":{"to":{"r1v":1,"r2v":1,"r3v":1,"rav":1,"rbv":1,"rcv":1},"dur":0.6},"toD":{"to":{"t":1},"dur":0.6}},"route":["Y を Δ に","並列になる","数字で見る"]}},{"id":"t8s6x","scene":"t8s6x","kind":"u8s6xsw","lab":{"r1":"{R}=15 Ω","r2":"{R}=15 Ω","r3":"{R}=15 Ω","ra":"{r}=10 Ω","rb":"{r}=10 Ω","rc":"{r}=10 Ω","q1":"10 Ω","q2":"10 Ω","q3":"10 Ω"},"viewbox":"467 220 603 450","band":{"want":"1つの Δ にまとめた時の1つの抵抗","known":"Δ はどれも $R = 15\\,\\Omega$、中の Y はどれも $r = 10\\,\\Omega$","ans":"$10\\,\\Omega$"},"narr":{"start":{"co":1,"t":0},"steps":[{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"求めるのは、1つの Δ にまとめた時の1つの抵抗です。","at":{"強調":1.0},"after":[],"emph":["R1","R2","R3"]},{"text":"①Y を Δ に\n②並列\nこの順に解きます。","at":{"道筋":1.0,"強調":1.0},"after":[],"route":0,"emph":["R1","R2","R3"]}]},{"cap":null,"eqp":null,"vid":[8],"sents":[{"text":"中の Y はどれも $10\\,\\Omega$ なので、Δ にすると3倍です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":1,"emph":["Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["3 \\times 10 = 30\\,\\Omega"]]}],"emphPre":["Ra","Rb","Rc"]}]},{"cap":null,"eqp":null,"vid":[3,8],"sents":[{"text":"変換した $30\\,\\Omega$ は、元の $15\\,\\Omega$ と同じ2つの端子の間に入るので並列です。","at":{"道筋":1.0,"強調":1.0,"式":1.0},"after":["強調"],"route":2,"emph":["R1","R2","R3","Ra","Rb","Rc"],"eq":[{"cont":false,"items":[["\\dfrac{15 \\times 30}{15 + 30} = 10\\,\\Omega"]]}],"emphPre":["R1","R2","R3","Ra","Rb","Rc"]},{"text":"どの辺も同じなので、1つの Δ にまとめると、どの抵抗も $10\\,\\Omega$ です。","at":{"動き":1.0,"答え":1.0,"強調":1.0},"after":[],"move":"toD","ans":true,"emph":["Q1","Q2","Q3"]}]}],"groups":{"R2":["r2","r2t0","r2t1"],"R1":["r1","r1t0","r1t1"],"R3":["r3","r3t0","r3t1"],"Ra":["ra","rat0","rat1"],"Rc":["rc","rct0","rct1"],"Rb":["rb","rbt0","rbt1"],"Ta":["tma","tma:t","tmax1","tmax1:t"],"Tc":["tmc","tmc:t","tmcx1","tmcx1:t"],"Tb":["tmb","tmb:t","tmbx1","tmbx1:t"],"Q2":["q2x1","q2x1t0","q2x1t1"],"Q1":["q1x1","q1x1t0","q1x1t1"],"Q3":["q3x1","q3x1t0","q3x1t1"]},"moves":{"toD":{"to":{"t":1},"dur":0.6}},"route":["Y を Δ に","並列"]}}],"secs":[{"ex":{"text":"図の Δ結線で、端子 a と端子 b の間にある抵抗はどれか。","fig":{"kind":"u8s1both","L":{"r1":"{R}_1","r2":"{R}_2","r3":"{R}_3","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"},"P":{}},"ch":[{"t":"$R_2$","v":"2","why":"$R_2$ は端子 b と c の間"},{"t":"$R_3$","v":"3","why":"$R_3$ は端子 c と a の間"},{"t":"$R_1$","v":"1","why":""},{"t":"$R_a$ と $R_b$","v":"ab","why":"Y結線で a と b の間にある抵抗"}],"ans":2}},{"ex":{"text":"図の Δ結線を Y結線に変換する。$R_1 = 6\\,\\Omega$、$R_2 = 12\\,\\Omega$、$R_3 = 18\\,\\Omega$ のとき、端子 c へ出る $R_c$ は何 Ω か。","fig":{"kind":"u8s2both","L":{"r1":"{R}_1=6 Ω","r2":"{R}_2=12 Ω","r3":"{R}_3=18 Ω","ra":"{R}_a","rb":"{R}_b","rc":"{R}_c"},"P":{}},"ch":[{"t":"$3\\,\\Omega$","v":3,"why":"端子 a につながる $R_1$ と $R_3$ の積にした（$R_a$ を求めた）"},{"t":"$2\\,\\Omega$","v":2,"why":"端子 b につながる $R_1$ と $R_2$ の積にした（$R_b$ を求めた）"},{"t":"$7.2\\,\\Omega$","v":7.2,"why":"分母を $R_2 + R_3$ の2つの和にした（分母は3つの和）"},{"t":"$6\\,\\Omega$","v":6,"why":""}],"ans":3}},{"ex":{"text":"図の Y結線を Δ結線に変換する。$R_a = 4\\,\\Omega$、$R_b = 6\\,\\Omega$、$R_c = 12\\,\\Omega$ のとき、端子 b と c の間の $R_2$ は何 Ω か。","fig":{"kind":"u8s3both","L":{"ra":"{R}_a=4 Ω","rb":"{R}_b=6 Ω","rc":"{R}_c=12 Ω","r1":"{R}_1","r2":"{R}_2","r3":"{R}_3"},"P":{}},"ch":[{"t":"$36\\,\\Omega$","v":36,"why":""},{"t":"$12\\,\\Omega$","v":12,"why":"$R_c$ で割った（$R_2$ の反対方向にあるのは $R_a$）"},{"t":"$24\\,\\Omega$","v":24,"why":"$R_b$ で割った（$R_2$ の反対方向にあるのは $R_a$）"},{"t":"$18\\,\\Omega$","v":18,"why":"Y で b と c の間にある $R_b$ と $R_c$ を足しただけ"}],"ans":0}},{"ex":{"text":"図の Y結線の抵抗は、どれも $15\\,\\Omega$ である。Δ結線に変換した時の1つの抵抗は何 Ω か。","fig":{"kind":"u8s4both","L":{"r1":"{R}","r2":"{R}","r3":"{R}","ra":"{r}=15 Ω","rb":"{r}=15 Ω","rc":"{r}=15 Ω"},"P":{}},"ch":[{"t":"$5\\,\\Omega$","v":5,"why":"$\\dfrac{1}{3}$ にした（Y から Δ は3倍）"},{"t":"$45\\,\\Omega$","v":45,"why":""},{"t":"$15\\,\\Omega$","v":15,"why":"変換しても変わらないと考えた"},{"t":"$30\\,\\Omega$","v":30,"why":"Y で2つの端子の間にある2つを足しただけ（$15 + 15$）"}],"ans":1}},{"ex":{"text":"図のブリッジで、電源から流れ出る電流は $I = 3\\,\\mathrm{A}$ である。$R_1 = 3\\,\\Omega$、$R_2 = 12\\,\\Omega$、$R_3 = 10\\,\\Omega$、$R_4 = 10\\,\\Omega$、$R_5 = 30\\,\\Omega$ のとき、電源の電圧 $V$ は何 V か。","fig":{"kind":"u8s5brp","L":{"r1":"{R}_1=3 Ω","r2":"{R}_2=12 Ω","r3":"{R}_3=10 Ω","r4":"{R}_4=10 Ω","r5":"{R}_5=30 Ω","pa":{},"pb":{},"pc":{},"i":"{I}=3 A","_v":{"r1":3,"r2":12,"r3":10,"r4":10,"r5":30}},"P":{}},"ch":[{"t":"$21.6\\,\\mathrm{V}$","v":21.6,"why":"Y にした後の $R_c$ を足し忘れた"},{"t":"$92.4\\,\\mathrm{V}$","v":92.4,"why":"2つの道を並列でなく直列に足した"},{"t":"$24\\,\\mathrm{V}$","v":24,"why":""},{"t":"$8\\,\\mathrm{V}$","v":8,"why":"合成抵抗 $8\\,\\Omega$ に電流を掛けていない"}],"ans":2}},{"ex":{"text":"図の Δ結線の抵抗はどれも $R = 15\\,\\Omega$、中の Y結線の抵抗はどれも $r = 10\\,\\Omega$ である。これを1つの Δ結線にまとめた時、1つの抵抗は何 Ω か。","fig":{"kind":"u8s6dy","L":{"r1":"{R}=15 Ω","r2":"{R}=15 Ω","r3":"{R}=15 Ω","ra":"{r}=10 Ω","rb":"{r}=10 Ω","rc":"{r}=10 Ω"},"P":{}},"ch":[{"t":"$45\\,\\Omega$","v":45,"why":"並列でなく直列に足した"},{"t":"$30\\,\\Omega$","v":30,"why":"中の Y を Δ にしただけで、元の Δ との並列にしていない"},{"t":"$6\\,\\Omega$","v":6,"why":"中の Y を3倍せずに、そのまま並列にした"},{"t":"$10\\,\\Omega$","v":10,"why":""}],"ans":3}}],"past":[]}};
+});

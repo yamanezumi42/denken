@@ -285,6 +285,8 @@ button{font:inherit;color:inherit}
   .tbq{position:absolute;width:820px;background:#fff;padding:12px 18px 8px;box-sizing:border-box;transform-origin:0 0;color:var(--ink)}
   .tbq .tbfig{display:flex;justify-content:center;margin-bottom:4px}
   .tbq svg.fig{display:block;height:auto;max-width:100%}
+  .tbq svg.fig path.zband{visibility:hidden !important}
+  .tbq svg.fig [data-zt]{fill:#000 !important}
   .tbq svg.fig text{font-size:27px}
   .tbq .tbtx{font-size:19px;line-height:1.75;margin:4px 0 12px}
   .tbq .tbch{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -672,6 +674,41 @@ function markInto(el){
     });
   })(el);
 }
+// 塊（.g＝式と前の名詞・後ろの助詞。white-space:nowrap）の境目に改行してよい所を <wbr> で明示する（2026-11-09 本人「解説の右端が切れてる」iPad）。
+// Chrome は「、」の後ろなどで隣り合う nowrap の塊の間を改行するが、Safari（WebKit）は nowrap の塊の境目では改行しない。
+// そのため iPad では字幕の行が折り返されず、字幕の囲みからはみ出した（囲みが右の時は画面の右端で切れた）。
+// 改行してよい所＝前の字が 、。）」・空白（細い空白も）、または brk（ひらがなの後ろに漢字・カタカナ・英数字）。〖〗は字として見ない。
+function gWbr(el){
+  function chars(n){                                     // 見えている字（KaTeX の読み上げ用の MathML は飛ばす）
+    var s = "";
+    (function walk(x){ if (x.nodeType === 3) { s += x.nodeValue; return; } if (x.nodeType !== 1 || x.classList.contains("katex-mathml")) return; Array.prototype.forEach.call(x.childNodes, walk); })(n);
+    return Array.from(s.replace(/[〖〗⁠​]/g, ""));
+  }
+  function isG(n){ return n && n.nodeType === 1 && n.classList.contains("g"); }
+  Array.prototype.slice.call(el.childNodes).forEach(function(c){
+    var nx = c.nextSibling;
+    if (!nx || !(isG(c) || isG(nx))) return;
+    if (/^(WBR|BR)$/.test(c.nodeName) || /^(WBR|BR)$/.test(nx.nodeName)) return;
+    var ca = chars(c), nb = chars(nx), a = ca[ca.length - 1] || "", b = nb[0] || "";
+    if (!a || !b) return;
+    if (/[、。）」  ]/.test(a) || /[  ]/.test(b) || brk(a, b)) el.insertBefore(document.createElement("wbr"), nx);
+  });
+  // 塊の前の普通の文の中の「、。」の後ろにも <wbr>（「…ので、S の両端の 1 V が、」で、Safari は「、」の後ろで切らずに塊ごとはみ出した。t10k1x）。
+  // Chrome は「、。」の後ろで元から改行してよいので、Chrome の組み方は変わらない
+  Array.prototype.slice.call(el.childNodes).forEach(function(c){
+    if (c.nodeType !== 1 || c.nodeName !== "SPAN" || isG(c) || !isG(c.nextElementSibling)) return;
+    Array.prototype.slice.call(c.childNodes).forEach(function(tn){
+      if (tn.nodeType !== 3) return;
+      var parts = [], s0 = "";                             // 「、。」の後ろで分ける（後読みの正規表現は古い Safari で動かないので使わない）
+      Array.from(tn.nodeValue).forEach(function(ch){ if (s0 && /[、。]$/.test(s0)) { parts.push(s0); s0 = ""; } s0 += ch; });
+      if (s0) parts.push(s0);
+      if (parts.length < 2) return;
+      var frag = document.createDocumentFragment();
+      parts.forEach(function(s, i){ if (i) frag.appendChild(document.createElement("wbr")); frag.appendChild(document.createTextNode(s)); });
+      c.replaceChild(frag, tn);
+    });
+  });
+}
 function Slide(sec, render){
   var NR = sec.narr, ST = NR.steps, N = ST.length, MV = NR.moves, G = NR.groups, vb = sec.viewbox.split(" ").map(Number);
   var el = document.createElement("div"); el.className = "slide"; el.dataset.id = sec.id;
@@ -765,7 +802,7 @@ function Slide(sec, render){
       } else beats.push({s: tt, e: o.e, j: si});
       tt = o.e + 0.35; sents.push(o);
     });
-    sents.forEach(function(o){ var d = document.createElement("div"); capInto(d, o.text); markInto(d); d.style.display = "none"; cap.appendChild(d); o.capEl = d;
+    sents.forEach(function(o){ var d = document.createElement("div"); capInto(d, o.text); gWbr(d); markInto(d); d.style.display = "none"; cap.appendChild(d); o.capEl = d;
     });
     var sp = document.createElement("div"); sp.className = "sp"; box.appendChild(sp);
     var pips = beats.map(function(){ var i = document.createElement("i"); sp.appendChild(i); return i; });
@@ -1075,9 +1112,10 @@ function zband(d, id, lines, z, o){
   e.style.fill = "none"; e.style.stroke = ZC[z][0]; e.style.strokeWidth = 16; e.style.strokeLinecap = "butt";
   return d.style(e, {o: o, keep: 1});
 }
-// 点と、その点の電位の文字を、その電位の色（濃い方）で書く
+// 点と、その点の電位の文字を、その電位の色（濃い方）で書く。
+// data-zt＝色を付けた印（問題の画面の図では make_tb.py の CSS .tbq svg.fig [data-zt] で黒に戻す。2026-11-09 本人「過去問とかに電圧の色分けしなくていいのよ。いるのは解説だけね」）
 function ztint(d, ids, z){
-  ids.forEach(function(id){ var e = d.els[id]; if (e && e.style.display !== "none") e.style.fill = ZC[z][1]; });
+  ids.forEach(function(id){ var e = d.els[id]; if (e && e.style.display !== "none") { e.style.fill = ZC[z][1]; e.setAttribute("data-zt", z); } });
 }
 // 点 k（"a" など）の点と電位の文字の id
 function zpt(k){ return ["d" + k, "p" + k + "t0", "p" + k + "t1"]; }
@@ -1158,7 +1196,7 @@ function genQ(G, sec, r){
 }
 
 var H = {NS: NS, Drawer: Drawer, n: n, clamp01: clamp01, lerp: lerp, seriesPair: seriesPair, parallelPair: parallelPair, vdim: vdim, pv: pv, swapText: swapText, ZC: ZC, zband: zband, ztint: ztint, zpt: zpt, zones: zones, vOn: vOn, zoneTint: zoneTint, zSides: zSides, rngOf: rngOf, pick: pick, shuffled: shuffled, nice: nice, fmt: fmt, UNIT: UNIT, qv: qv, qf: qf, choices: choices, num: num, distinct: distinct, UNIT_CH: UNIT_CH, unitQ: unitQ, genQ: genQ};
-var TBD = {"ver":"2026-11-09 20:06 版　新：単元31「交流の直列回路」（31-1〜31-7）","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","f":0,"secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"75fca07c"},{"name":"直列回路と並列回路","f":0,"secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"ccd23e1f"},{"name":"合成抵抗","f":0,"secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"5be82756"},{"name":"分圧と分流","f":0,"secs":["分圧（2つの抵抗）","分圧（3つ以上）","分流（2つの抵抗）","分流（3つ以上）","短絡","分かれた電流から全体の電流"],"file":"tb/u04.js","hash":"8317ce02"},{"name":"キルヒホッフの法則","f":0,"secs":["キルヒホッフの第1法則","キルヒホッフの第2法則","閉回路の向きと符号","直列の電源をまとめる","ループ電流法で式を立てる","連立方程式を解く","電位の基準を決める"],"file":"tb/u05.js","hash":"ca8de754"},{"name":"抵抗率と温度","f":0,"secs":["抵抗率","単位を式から出す","長さと断面積","抵抗を長さで分ける","コンダクタンス","導電率","温度と抵抗","抵抗温度係数","温度が変わった後の抵抗"],"file":"tb/u06.js","hash":"5e541ed3"},{"name":"ブリッジ回路","f":0,"secs":["ブリッジ回路の形","ブリッジの平衡","平衡条件","平衡なら真ん中を消す","平衡していないブリッジ"],"file":"tb/u07.js","hash":"cc457ee7"},{"name":"Δ-Y変換","f":0,"secs":["Δ結線とY結線","Δ から Y への変換","Y から Δ への変換","等しい抵抗の Δ-Y変換","ブリッジの中の Δ","Δ の中の Y"],"file":"tb/u08.js","hash":"ef16aa6a"},{"name":"重ね合わせの理","f":0,"secs":["重ね合わせの理","向きが逆の成分","電流源と開放","電圧源と電流源が混ざる回路","書かずに足す"],"file":"tb/u09.js","hash":"9d93ee7b"},{"name":"テブナンの定理","f":0,"secs":["テブナンの定理","a・b 間の電圧","a・b 間の合成抵抗","平衡しないブリッジ","電流源の回路"],"file":"tb/u10.js","hash":"e8600d83"},{"name":"ミルマンの定理","f":0,"secs":["ミルマンの定理","分母と分子の意味","3つの枝で計算する","電源の無い枝","枝の電流"],"file":"tb/u11.js","hash":"7f027e36"},{"name":"電力と電力量","f":0,"secs":["電力","電力の3つの式","電力量","回路の電力量","グラフの面積"],"file":"tb/u12.js","hash":"f2c9780f"},{"name":"電池の内部抵抗と最大電力","f":0,"secs":["内部抵抗","負荷の電力","最大電力の条件","電源側の合成抵抗"],"file":"tb/u13.js","hash":"e13eefd6"},{"name":"クーロンの法則","f":1,"secs":["点電荷とクーロン力","クーロンの法則","距離の2乗に反比例","符号の扱い","電荷が3つ"],"file":"tb/u14.js","hash":"9edd516e"},{"name":"電界と電位","f":1,"secs":["電界の強さ","電界の中の力","誘電率","電位","電位差と仕事","平行な極板の間の電界"],"file":"tb/u15.js","hash":"1b3cd3c8"},{"name":"電束と電気力線","f":1,"secs":["電束","電気力線","電束密度と電気力線の密度","電気力線の性質"],"file":"tb/u16.js","hash":"ea19bf8f"},{"name":"コンデンサ","f":1,"secs":["電荷と電圧","平行平板コンデンサ","コンデンサの直列","直列の電圧","コンデンサの並列","誘電体の入れ方"],"file":"tb/u17.js","hash":"83d6f212"},{"name":"静電エネルギーと電荷の移動","f":1,"secs":["静電エネルギー","静電エネルギーの式の変形","直列の電圧と電荷","電荷の合計は変わらない","つなぎ替え"],"file":"tb/u18.js","hash":"7a29dfab"},{"name":"磁界と磁束","f":2,"secs":["磁界と磁極","磁気の力","透磁率","磁界の強さと磁力線","磁束と磁束密度"],"file":"tb/u19.js","hash":"1d4f09f6"},{"name":"電流がつくる磁界","f":2,"secs":["右ねじの法則","直線の導体","円形コイルの中心","環状ソレノイド"],"file":"tb/u20.js","hash":"52a253af"},{"name":"電磁力","f":2,"secs":["電磁力の向き","フレミングの左手の法則","電磁力の大きさ","斜めの導体","平行な2本の導体"],"file":"tb/u21.js","hash":"575a4be9"},{"name":"電磁誘導","f":2,"secs":["電磁誘導","誘導電流の向き","ファラデーの法則","磁束のグラフと起電力","導体棒","斜めに動かす"],"file":"tb/u22.js","hash":"dfcecf0e"},{"name":"磁気回路","f":2,"secs":["起磁力","磁気抵抗","磁気回路のオームの法則","磁気抵抗の単位","エアギャップ"],"file":"tb/u23.js","hash":"fa085d86"},{"name":"自己インダクタンス","f":2,"secs":["自己誘導","自己インダクタンスと磁束","自己インダクタンスの式","巻数の2乗に比例"],"file":"tb/u24.js","hash":"b7f06606"},{"name":"相互インダクタンスと磁気エネルギー","f":2,"secs":["相互インダクタンス","相互インダクタンスの式","結合係数","和動と差動","磁気エネルギー"],"file":"tb/u25.js","hash":"c9c9609b"},{"name":"過渡現象","f":3,"secs":["過渡と定常","コイルの振る舞い","時定数","コンデンサの振る舞い","RC の時定数","放電","電圧のグラフ"],"file":"tb/u26.js","hash":"5ebba0c8"},{"name":"正弦波交流","f":4,"secs":["交流と正弦波","周期と周波数","瞬時値の式","時刻を入れる","位相","抵抗の電流とベクトル図"],"file":"tb/u27.js","hash":"1a98450b"},{"name":"平均値と実効値","f":4,"secs":["決まった値になる時刻","平均値","実効値","波高率と波形率","整流した波形"],"file":"tb/u28.js","hash":"a2a7aa70"},{"name":"ベクトル図","f":4,"secs":["ベクトル表示","同じ向き・逆向き","向きの違う2つ","引き算","斜めのベクトル","複素数で書く"],"file":"tb/u29.js","hash":"00a4f4b7"},{"name":"コイルとコンデンサ（リアクタンス）","f":4,"secs":["誘導性リアクタンス","容量性リアクタンス","周波数との関係","抵抗は同相","コイルは 90° 遅れ","コンデンサは 90° 進み"],"file":"tb/u30.js","hash":"8aaf0a3c"},{"name":"交流の直列回路","f":4,"secs":["インピーダンス","交流のオームの法則","電流を基準にした図","電圧を基準にした計算","RC 直列","RLC 直列","答えが2つ"],"file":"tb/u31.js","hash":"12973ccc"}]};
+var TBD = {"ver":"2026-11-10 03:34 版　新：問題の図の電位の色分けをやめた・iPad で解説の字幕が右で切れたのを直した・単元31「交流の直列回路」（31-1〜31-7）","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","f":0,"secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"75fca07c"},{"name":"直列回路と並列回路","f":0,"secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"ccd23e1f"},{"name":"合成抵抗","f":0,"secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"5be82756"},{"name":"分圧と分流","f":0,"secs":["分圧（2つの抵抗）","分圧（3つ以上）","分流（2つの抵抗）","分流（3つ以上）","短絡","分かれた電流から全体の電流"],"file":"tb/u04.js","hash":"8317ce02"},{"name":"キルヒホッフの法則","f":0,"secs":["キルヒホッフの第1法則","キルヒホッフの第2法則","閉回路の向きと符号","直列の電源をまとめる","ループ電流法で式を立てる","連立方程式を解く","電位の基準を決める"],"file":"tb/u05.js","hash":"71059e17"},{"name":"抵抗率と温度","f":0,"secs":["抵抗率","単位を式から出す","長さと断面積","抵抗を長さで分ける","コンダクタンス","導電率","温度と抵抗","抵抗温度係数","温度が変わった後の抵抗"],"file":"tb/u06.js","hash":"8fa24fed"},{"name":"ブリッジ回路","f":0,"secs":["ブリッジ回路の形","ブリッジの平衡","平衡条件","平衡なら真ん中を消す","平衡していないブリッジ"],"file":"tb/u07.js","hash":"cc457ee7"},{"name":"Δ-Y変換","f":0,"secs":["Δ結線とY結線","Δ から Y への変換","Y から Δ への変換","等しい抵抗の Δ-Y変換","ブリッジの中の Δ","Δ の中の Y"],"file":"tb/u08.js","hash":"ef16aa6a"},{"name":"重ね合わせの理","f":0,"secs":["重ね合わせの理","向きが逆の成分","電流源と開放","電圧源と電流源が混ざる回路","書かずに足す"],"file":"tb/u09.js","hash":"9d93ee7b"},{"name":"テブナンの定理","f":0,"secs":["テブナンの定理","a・b 間の電圧","a・b 間の合成抵抗","平衡しないブリッジ","電流源の回路"],"file":"tb/u10.js","hash":"e8600d83"},{"name":"ミルマンの定理","f":0,"secs":["ミルマンの定理","分母と分子の意味","3つの枝で計算する","電源の無い枝","枝の電流"],"file":"tb/u11.js","hash":"7f027e36"},{"name":"電力と電力量","f":0,"secs":["電力","電力の3つの式","電力量","回路の電力量","グラフの面積"],"file":"tb/u12.js","hash":"f2c9780f"},{"name":"電池の内部抵抗と最大電力","f":0,"secs":["内部抵抗","負荷の電力","最大電力の条件","電源側の合成抵抗"],"file":"tb/u13.js","hash":"e13eefd6"},{"name":"クーロンの法則","f":1,"secs":["点電荷とクーロン力","クーロンの法則","距離の2乗に反比例","符号の扱い","電荷が3つ"],"file":"tb/u14.js","hash":"9edd516e"},{"name":"電界と電位","f":1,"secs":["電界の強さ","電界の中の力","誘電率","電位","電位差と仕事","平行な極板の間の電界"],"file":"tb/u15.js","hash":"1b3cd3c8"},{"name":"電束と電気力線","f":1,"secs":["電束","電気力線","電束密度と電気力線の密度","電気力線の性質"],"file":"tb/u16.js","hash":"ea19bf8f"},{"name":"コンデンサ","f":1,"secs":["電荷と電圧","平行平板コンデンサ","コンデンサの直列","直列の電圧","コンデンサの並列","誘電体の入れ方"],"file":"tb/u17.js","hash":"83d6f212"},{"name":"静電エネルギーと電荷の移動","f":1,"secs":["静電エネルギー","静電エネルギーの式の変形","直列の電圧と電荷","電荷の合計は変わらない","つなぎ替え"],"file":"tb/u18.js","hash":"7a29dfab"},{"name":"磁界と磁束","f":2,"secs":["磁界と磁極","磁気の力","透磁率","磁界の強さと磁力線","磁束と磁束密度"],"file":"tb/u19.js","hash":"1d4f09f6"},{"name":"電流がつくる磁界","f":2,"secs":["右ねじの法則","直線の導体","円形コイルの中心","環状ソレノイド"],"file":"tb/u20.js","hash":"52a253af"},{"name":"電磁力","f":2,"secs":["電磁力の向き","フレミングの左手の法則","電磁力の大きさ","斜めの導体","平行な2本の導体"],"file":"tb/u21.js","hash":"575a4be9"},{"name":"電磁誘導","f":2,"secs":["電磁誘導","誘導電流の向き","ファラデーの法則","磁束のグラフと起電力","導体棒","斜めに動かす"],"file":"tb/u22.js","hash":"dfcecf0e"},{"name":"磁気回路","f":2,"secs":["起磁力","磁気抵抗","磁気回路のオームの法則","磁気抵抗の単位","エアギャップ"],"file":"tb/u23.js","hash":"fa085d86"},{"name":"自己インダクタンス","f":2,"secs":["自己誘導","自己インダクタンスと磁束","自己インダクタンスの式","巻数の2乗に比例"],"file":"tb/u24.js","hash":"b7f06606"},{"name":"相互インダクタンスと磁気エネルギー","f":2,"secs":["相互インダクタンス","相互インダクタンスの式","結合係数","和動と差動","磁気エネルギー"],"file":"tb/u25.js","hash":"c9c9609b"},{"name":"過渡現象","f":3,"secs":["過渡と定常","コイルの振る舞い","時定数","コンデンサの振る舞い","RC の時定数","放電","電圧のグラフ"],"file":"tb/u26.js","hash":"5ebba0c8"},{"name":"正弦波交流","f":4,"secs":["交流と正弦波","周期と周波数","瞬時値の式","時刻を入れる","位相","抵抗の電流とベクトル図"],"file":"tb/u27.js","hash":"1a98450b"},{"name":"平均値と実効値","f":4,"secs":["決まった値になる時刻","平均値","実効値","波高率と波形率","整流した波形"],"file":"tb/u28.js","hash":"a2a7aa70"},{"name":"ベクトル図","f":4,"secs":["ベクトル表示","同じ向き・逆向き","向きの違う2つ","引き算","斜めのベクトル","複素数で書く"],"file":"tb/u29.js","hash":"00a4f4b7"},{"name":"コイルとコンデンサ（リアクタンス）","f":4,"secs":["誘導性リアクタンス","容量性リアクタンス","周波数との関係","抵抗は同相","コイルは 90° 遅れ","コンデンサは 90° 進み"],"file":"tb/u30.js","hash":"8aaf0a3c"},{"name":"交流の直列回路","f":4,"secs":["インピーダンス","交流のオームの法則","電流を基準にした図","電圧を基準にした計算","RC 直列","RLC 直列","答えが2つ"],"file":"tb/u31.js","hash":"12973ccc"}]};
 // 教科書の画面：ホームの単元の並び・単元の節・説明（スライド）・例題と練習（問題の画面＝手書きつき）・記録
 // 記録の id：例題＝"t:単元:節:x"、練習＝"t:単元:節:p"、済み＝"t:単元:節:done"（過去問 "dc001"・ドリル "d:単元:番号" と混ざらない）
 var IC = {
@@ -1210,7 +1248,9 @@ function unitOpen(u){ return u === 1 || unitDone(u - 1); }
 // ---- 文字の見切れを防ぐ（2026-11-03 本人「文章の右側が見切れる時がある」）。字が枠に入るまで少しずつ小さくし、入らなければ折り返す。
 // スマホ縦（幅 NARROW 未満）は、スライドの上の帯を2段目に置き、問題の面を画面の幅に合わせて組む。確かめ＝check_textfit.py
 var NARROW = 700;
-function overflows(e){ return e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1; }
+// 横は余りを見ない（2026-11-09 Chrome 768×1024 で t3s6x・t30s1x の上の帯が左右に 1px ずつはみ出した＝中央寄せの中身は左にはみ出した分が
+// scrollWidth に入らないので、+1 の余りでは「入った」と見ていた）。縦は今までどおり +1
+function overflows(e){ return e.scrollWidth > e.clientWidth || e.scrollHeight > e.clientHeight + 1; }
 function fitFont(e, max, min){
   var f = max; e.style.fontSize = f + "px";
   while (f > min && overflows(e)) { f -= 0.5; e.style.fontSize = f + "px"; }
@@ -1248,6 +1288,9 @@ function fitSideLines(){
     while (f > 0.6 && d.scrollWidth > d.clientWidth + 1) { f -= 0.05; d.style.fontSize = f.toFixed(2) + "em"; }
   });
 }
+// 式の字（KaTeX の大きい括弧などの字体）は使う時に初めて読み込まれる。測った後に読み込まれると式が広がり、答えの欄の右へはみ出した
+// （2026-11-09 WebKit 1024×768 の 29-5 の練習：字の大きさを縮めないまま scrollWidth 327／clientWidth 311 になっていた）。読み込みが終わったら合わせ直す
+if (document.fonts) document.fonts.addEventListener("loadingdone", function(){ var s = document.querySelector("#side"); if (s && s.classList.contains("on")) fitSideLines(); });
 // 問題の面の幅：iPad は 820px で組んで拡大する。スマホ縦は画面の幅に合わせて狭く組む（字が小さくなりすぎないように）
 function qWidth(){
   var sw = scroller.clientWidth;
@@ -1397,7 +1440,7 @@ function showAnswer(){
   var on = !$("#side").classList.contains("on");
   if (on) { $("#sidein").innerHTML = '<div class="tbx">' + q.ex.map(function(l){ return "<div>" + texHTML(l) + "</div>"; }).join("") + "</div>"; EZ = 1; placeSide(); }
   $("#side").classList.toggle("on", on); place(); fitQ();   // 解説の欄の分だけ狭くなるので、問題を入れ直す
-  if (on) fitSideLines();
+  if (on) { fitSideLines(); if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(function(){ if ($("#side").classList.contains("on")) fitSideLines(); }); }
 }
 function next(){
   if (!TBQ) return;

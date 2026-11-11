@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1-1 電流 段0</title>
+<script src="lock.js"></script>
+<style>
+  html,body{margin:0;height:100%;background:#868e96}
+  .scr{position:absolute;left:0;top:0;width:1180px;height:820px;background:#fff;transform-origin:0 0;overflow:hidden;cursor:pointer;
+       font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif}
+  .close{position:absolute;left:10px;top:4px;width:46px;height:42px;border:1px solid #bbb;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center}
+  .band{position:absolute;left:68px;right:10px;top:6px;height:38px;border-radius:8px;background:#f2f2f2;display:flex;align-items:center;justify-content:center;
+        font-size:17px;font-weight:700;color:#111}
+  .fig{position:absolute;left:59px;top:90px;width:1062px;height:678px}
+  .fig > svg{position:absolute;left:0;top:0}
+  .dots{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:36px}
+  .dots i{width:10px;height:10px;border-radius:50%;background:#ccc}
+  .dots i.on{width:13px;height:13px;background:#d9480f;margin-top:-1.5px}
+  .k{stroke:#000;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+  /* 文（字幕）：段1と同じ部品。1文が長いので 34px */
+  .nt{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-size:34px;font-weight:800;color:#111;line-height:1.3;
+      opacity:0;transition:opacity .3s;pointer-events:none}
+  .nt .u{display:inline-block;white-space:pre}
+  .nt .hl{font-weight:inherit;background:linear-gradient(transparent 55%,rgba(255,240,100,.75) 55%);background-size:0% 100%;background-repeat:no-repeat;transition:background-size .3s ease-out}
+  .nt .hl.on{background-size:100% 100%}
+  .tag .hl{background-image:linear-gradient(transparent 55%,rgba(255,146,43,.6) 55%)}
+  .tag{opacity:1}
+  /* 文はすべて中央（図をぼかした上・lock.js の FLOW が .blur／.cur を付ける）。
+     最初は文だけ（絵はまだ無い）。アニメの拍＝ .run：3つが弾んで出る（〜1.3秒）→ 左から順に動き出す（下の時刻は 1.3秒 足した値） */
+  .scr:not(.run) .obj,.scr:not(.run) .tag{opacity:0}
+
+  /* 明かり（1.5s）：電球が黄色に → 光の帯 */
+  .lb{fill:#dee2e6;transition:none}
+  .cone{opacity:0}
+  .run .lb{fill:#ffd43b;transition:fill .4s 1.5s}
+  .run .cone{opacity:.5;transition:opacity .5s 1.5s}
+  /* スマホ（2.3s）：画面がつく → 充電の目盛りが1つずつ増える */
+  .scn{fill:#212529}
+  .run .scn{fill:#e7f5ff;transition:fill .4s 2.3s}
+  .bo{opacity:0}
+  .run .bo{opacity:1;transition:opacity .3s 2.3s}
+  .bar{opacity:0}
+  .run .bar{opacity:1;transition:opacity .2s}
+  .run .b1{transition-delay:2.7s}.run .b2{transition-delay:3s}.run .b3{transition-delay:3.3s}.run .b4{transition-delay:3.6s}
+  /* 扇風機（3.1s）：羽が回り出す */
+  .run .bl{animation:spin .3s linear 3.1s infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  /* そっと光らせて目を導く（左から順に） */
+  .ping{opacity:0;transform-box:fill-box;transform-origin:center}
+  .run .p1{animation:ping 1s ease-out 1.5s 1 both}
+  .run .p2{animation:ping 1s ease-out 2.3s 1 both}
+  .run .p3{animation:ping 1s ease-out 3.1s 1 both}
+  /* 電流の流れ（電流の色＝オレンジの点が線を流れる）：各物が動き出す瞬間から */
+  .fl{fill:none;stroke:#fd7e14;stroke-width:5;stroke-linecap:round;stroke-dasharray:3 13;opacity:0}
+  .run .fl{opacity:1;animation:flow .5s linear infinite}
+  .run .f1{transition:opacity .3s 1.3s}.run .f2{transition:opacity .3s 2.1s}.run .f3{transition:opacity .3s 2.9s}
+  @keyframes flow{to{stroke-dashoffset:-16}}
+  /* 文で「電気で動く物」「電流」にマーカーが引かれた瞬間、絵の側も光る（文と絵を結ぶ） */
+  .g .ping{animation:ping 1s ease-out 0s 1 both}
+  .g .fl{stroke-width:9;transition:stroke-width .3s}
+  @keyframes ping{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.2)}}
+  /* 絵の出てき方：小さい所から弾んで出る（拡大縮小の中心＝各絵の中心） */
+  .obj{transform-box:fill-box;transform-origin:center}
+</style>
+</head>
+<body>
+<div class="scr s0" id="scr">
+  <div class="close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round"><path d="M5 5L19 19M19 5L5 19"/></svg></div>
+  <div class="band">1-1　電流</div>
+  <div class="fig" id="fig">
+    <!-- 絵（名札まで）を図の真ん中に大きめに：中身の範囲 x 120〜970・y 34〜440 の中心を図の中心に合わせる（縮尺 678/560） -->
+    <svg viewBox="107 -43 877 560" width="1062" height="678">
+      <!-- 明かり（天井の電灯） -->
+      <g class="obj">
+        <path class="cone" d="M190 196 L120 360 H342 L272 196 Z" fill="#ffe066"/>
+        <rect x="186" y="34" width="90" height="10" rx="3" fill="#ced4da" class="k"/>
+        <path d="M231 44 V120" class="k"/>
+        <path class="fl f1" d="M231 44 V120"/>
+        <circle class="lb k" cx="231" cy="196" r="22"/>
+        <path d="M181 196 L203 120 H259 L281 196 Z" fill="#4dabf7" class="k"/>
+        <circle class="ping p1" cx="231" cy="200" r="40" fill="none" stroke="#fab005" stroke-width="5"/>
+      </g>
+      <!-- スマホ（充電ケーブルつき） -->
+      <g class="obj">
+        <path d="M531 312 V350 Q531 362 543 362 H580" fill="none" stroke="#495057" stroke-width="4" stroke-linecap="round"/>
+        <rect x="578" y="353" width="22" height="18" rx="3" fill="#f8f9fa" class="k"/>
+        <path class="fl f2" d="M580 362 H543 Q531 362 531 350 V312"/>
+        <rect x="486" y="140" width="90" height="172" rx="14" fill="#343a40" class="k"/>
+        <rect class="scn" x="494" y="156" width="74" height="138" rx="5"/>
+        <g class="bo">
+          <rect x="510" y="214" width="40" height="22" rx="3" fill="#fff" stroke="#000" stroke-width="2"/>
+          <rect x="550" y="220" width="5" height="10" rx="1" fill="#000"/>
+          <rect class="bar b1" x="514" y="218" width="7" height="14" rx="1" fill="#40c057"/>
+          <rect class="bar b2" x="523" y="218" width="7" height="14" rx="1" fill="#40c057"/>
+          <rect class="bar b3" x="532" y="218" width="7" height="14" rx="1" fill="#40c057"/>
+          <rect class="bar b4" x="541" y="218" width="7" height="14" rx="1" fill="#40c057"/>
+          <path d="M533 246 L526 258 H532 L529 268 L538 255 H532 Z" fill="#fab005" stroke="#000" stroke-width="1.4" stroke-linejoin="round"/>
+        </g>
+        <circle class="ping p2" cx="531" cy="226" r="60" fill="none" stroke="#66d9e8" stroke-width="5"/>
+      </g>
+      <!-- 扇風機 -->
+      <g class="obj">
+        <path d="M884 364 H950" fill="none" stroke="#495057" stroke-width="4" stroke-linecap="round"/>
+        <rect x="948" y="355" width="22" height="18" rx="3" fill="#f8f9fa" class="k"/>
+        <path class="fl f3" d="M950 364 H884"/>
+        <ellipse cx="831" cy="362" rx="56" ry="12" fill="#adb5bd" class="k"/>
+        <rect x="824" y="262" width="14" height="98" fill="#dee2e6" class="k"/>
+        <circle cx="831" cy="196" r="76" fill="#f1f3f5" class="k"/>
+        <g transform="translate(831 196)">
+          <g class="bl">
+            <ellipse cx="0" cy="-34" rx="17" ry="32" fill="#74c0fc" class="k" style="stroke-width:2"/>
+            <ellipse cx="0" cy="-34" rx="17" ry="32" fill="#74c0fc" class="k" style="stroke-width:2" transform="rotate(120)"/>
+            <ellipse cx="0" cy="-34" rx="17" ry="32" fill="#74c0fc" class="k" style="stroke-width:2" transform="rotate(240)"/>
+          </g>
+          <circle r="12" fill="#495057" class="k"/>
+        </g>
+        <circle cx="831" cy="196" r="76" fill="none" stroke="#868e96" stroke-width="2" stroke-dasharray="3 9"/>
+        <circle class="ping p3" cx="831" cy="196" r="76" fill="none" stroke="#66d9e8" stroke-width="5"/>
+      </g>
+    </svg>
+    <!-- 名札：絵のすぐ下。〖〗＝マーカー -->
+    <div class="nt tag" data-x="231" data-y="420">〖明かり〗</div>
+    <div class="nt tag" data-x="531" data-y="420">〖スマホ〗</div>
+    <div class="nt tag" data-x="831" data-y="420">〖扇風機〗</div>
+    <!-- 文は本文（docs/script_1-1_text.md）どおり。／＝改行 -->
+    <div class="nt ctr g1" data-x="545" data-y="237">はじめまして。／これから一緒に、電験三種の〖「理論」〗を学んでいきましょう。</div>
+    <div class="nt ctr g2" data-x="545" data-y="237">最初は、電気のいちばん基本になる〖電流〗からです。</div>
+    <div class="nt ctr n0" data-glow="1" data-x="545" data-y="237">身の回りには、明かりやスマホ、扇風機のように、／〖電気で動く物〗がたくさんあります。</div>
+    <div class="nt ctr n1" data-glow="1" data-x="545" data-y="237">どれも、〖電流〗が流れて動いています。</div>
+    <div class="nt ctr n2" data-x="545" data-y="237">この節では、〖電流〗とは何かを、一緒に見ていきましょう。</div>
+  </div>
+  <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+<script>
+// 文の部品（段1と同じ）：左から1つずつ下からふわっと出し、大事な語にマーカーを引く
+var CAP = (function(){
+  function html(s){ return s.replace(/〖([^〗]*)〗/g, '<b class="hl">$1</b>').replace(/／/g, "<br>"); }
+  function units(el){
+    var us = [];
+    (function walk(n){
+      [].slice.call(n.childNodes).forEach(function(c){
+        if (c.nodeType === 3) {
+          var f = document.createDocumentFragment();
+          Array.from(c.textContent).forEach(function(ch){ var s = document.createElement("span"); s.className = "u"; s.textContent = ch; f.appendChild(s); us.push(s); });
+          c.parentNode.replaceChild(f, c);
+        } else walk(c);
+      });
+    })(el);
+    return us;
+  }
+  function type(el, d0){
+    d0 = 200 + (d0 || 0);
+    el.innerHTML = html(el.dataset.s);
+    var us = units(el), dt = Math.min(60, 800 / us.length);
+    us.forEach(function(u, i){ u.style.opacity = 0; u.style.transform = "translateY(18px)";
+      setTimeout(function(){ u.style.transition = "opacity .3s, transform .3s ease-out"; u.style.opacity = 1; u.style.transform = "none"; }, d0 + i * dt); });
+    el.querySelectorAll(".hl").forEach(function(h, i){ setTimeout(function(){ h.classList.add("on");
+      if (el.dataset.glow) glow(); }, d0 + us.length * dt + 100 + i * 150); });
+  }
+  // マーカーと同時に絵を光らせる
+  function glow(){ var scr = document.getElementById("scr"); scr.classList.remove("g"); void scr.offsetWidth; scr.classList.add("g");
+    setTimeout(function(){ scr.classList.remove("g"); }, 1000); }
+  var K = 678 / 560;
+  function place(fig){
+    fig.querySelectorAll(".nt").forEach(function(el){
+      if (!el.dataset.s) el.dataset.s = el.textContent.trim();
+      el.style.left = ((+el.dataset.x - 107) * K) + "px"; el.style.top = ((+el.dataset.y + 43) * K) + "px";   // 図の座標 → 画面
+      el.innerHTML = html(el.dataset.s); el.querySelectorAll(".hl").forEach(function(h){ h.classList.add("on"); });
+    });
+  }
+  return {type: type, place: place};
+})();
+(function(){
+  var scr = document.getElementById("scr"), fig = document.getElementById("fig"), tags = fig.querySelectorAll(".tag");
+  CAP.place(fig);
+  // 文「身の回りには…」の後のアニメ：絵が左から順に、小さい所から弾むように大きくなって出る（0.15秒ずつずらす・0.82秒で出そろう）→ 名札
+  var objs = fig.querySelectorAll(".obj"), gen = 0;
+  function entry(){ objs.forEach(function(o, i){
+      o.getAnimations().forEach(function(a){ if (!(window.CSSTransition && a instanceof CSSTransition)) a.cancel(); });
+      o.animate([{opacity: 0, transform: "scale(.55)"}, {opacity: 1, transform: "scale(1.08)", offset: .65}, {opacity: 1, transform: "scale(1)"}],
+        {duration: 520, delay: i * 150, easing: "ease-out", fill: "backwards"}); });
+    return 820; }
+  function intro(){
+    var my = ++gen;
+    tags.forEach(function(t){ t.innerHTML = ""; });
+    var T = entry();
+    function later(f, ms){ setTimeout(function(){ if (my === gen) f(); }, ms); }
+    // 名札は絵が出そろってから左から順に下からふわっと
+    later(function(){ CAP.type(tags[0], 0); CAP.type(tags[1], 150); CAP.type(tags[2], 300); }, T - 200);
+  }
+  function reset(){ ++gen; tags.forEach(function(t){ t.innerHTML = ""; }); }
+  reset();
+  // 文→アニメの並び（本文どおり・最初は文から）：
+  //   文「はじめまして。…」→ 文「最初は…電流からです。」（絵はまだ無い）→ 文「身の回りには…」
+  //   → アニメ（3つが弾んで出る → 左から順に動き出す）→ 文「どれも電流が…」→ 文「この節では…」
+  function T(sel){ var el = fig.querySelector(sel); return {text: el, go: function(){ CAP.type(el, 300); }}; }
+  FLOW.run({scr: scr, reset: reset, beats: [T(".g1"), T(".g2"), T(".n0"), {cls: "run", go: intro}, T(".n1"), T(".n2")]});
+  function fit(){ var s = Math.min(innerWidth / 1180, innerHeight / 820); scr.style.transform = "scale(" + s + ")"; }
+  fit(); addEventListener("resize", fit);
+})();
+</script>
+</body>
+</html>

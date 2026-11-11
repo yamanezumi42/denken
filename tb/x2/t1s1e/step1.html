@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1-1 電流 段1</title>
+<script src="lock.js"></script>
+<style>
+  html,body{margin:0;height:100%;background:#868e96}
+  .scr{position:absolute;left:0;top:0;width:1180px;height:820px;background:#fff;transform-origin:0 0;overflow:hidden;cursor:pointer;
+       font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif}
+  .close{position:absolute;left:10px;top:4px;width:46px;height:42px;border:1px solid #bbb;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center}
+  .band{position:absolute;left:68px;right:10px;top:6px;height:38px;border-radius:8px;background:#f2f2f2;display:flex;align-items:center;justify-content:center;
+        font-size:17px;font-weight:700;color:#111}
+  .fig{position:absolute;left:59px;top:90px;width:1062px;height:678px}
+  .fig > svg{position:absolute;left:0;top:0}
+  .dots{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:36px}
+  .dots i{width:10px;height:10px;border-radius:50%;background:#ccc}
+  .dots i.on{width:13px;height:13px;background:#d9480f;margin-top:-1.5px}
+  svg text.pl{font-family:inherit;font-weight:800;font-size:17px;fill:#111;text-anchor:middle;dominant-baseline:middle}
+  .k{stroke:#000;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+  /* 文（字幕）：図の中、変化した物のすぐ近く。小さな絵をはめ込む・大事な語は水色のマーカー */
+  .nt{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font-size:40px;font-weight:800;color:#111;line-height:1.3;
+      opacity:0;transition:opacity .3s,transform 1s ease-in-out;pointer-events:none}
+  .nt .u{display:inline-block;white-space:pre}
+  .nt .ic{vertical-align:-.1em;margin:0 .06em}
+  .nt .hl{font-weight:inherit;background:linear-gradient(transparent 55%,rgba(255,240,100,.75) 55%);background-size:0% 100%;background-repeat:no-repeat;transition:background-size .3s ease-out}
+  .nt .hl.on{background-size:100% 100%}
+  .tag .hl{background-image:linear-gradient(transparent 55%,rgba(255,146,43,.6) 55%)}
+  .tag{opacity:1}
+  /* 文はすべて中央（図をぼかした上・lock.js の FLOW）。最初は文だけ（絵はまだ無い）。
+     アニメの拍＝ .row（乾電池・豆電球・銅線の束が横並びで出る）→ .conn（所定の位置へすべり、銅線がつながって光る） */
+  .scr:not(.row) .mv,.scr:not(.row) .coil,.scr:not(.row) .tag{opacity:0}
+  /* 名札は絵のすぐ下。絵と一緒に所定の位置へすべる（図の座標の差 × 縮尺 1.784） */
+  .scr:not(.conn) .tb{transform:translate(-50%,-50%) translate(-267.6px,-160.6px)}
+  .scr:not(.conn) .tl{transform:translate(-50%,-50%) translate(0px,124.9px)}
+  /* 横並び（左から 乾電池・豆電球・銅線の束）→ 所定の位置へすべる */
+  .mv{transition:transform 1s ease-in-out}
+  .scr:not(.conn) .bat{transform:translate(-150px,-90px)}
+  .scr:not(.conn) .bulb{transform:translate(0px,70px)}
+  /* 銅線の束：つなぎ始めると消える（線になって伸びる） */
+  .conn .coil,.conn .tc{opacity:0;transition:opacity .6s .8s}
+  /* 銅線：すべり終わってから、線を描くように伸びる（1本目→2本目） */
+  .cu{fill:none;stroke:#b5652a;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 1;stroke-dashoffset:1}
+  .conn .w1{stroke-dashoffset:0;transition:stroke-dashoffset .9s ease-in-out 1s}
+  .conn .w2{stroke-dashoffset:0;transition:stroke-dashoffset .9s ease-in-out 1.9s}
+  /* 光：輪がつながった瞬間 */
+  .lit{opacity:0}
+  .glass{fill:#fff}
+  .ray{stroke:#fab005;stroke-width:4.5;stroke-linecap:round;stroke-dasharray:22 40;stroke-dashoffset:22}
+  .conn .lit{opacity:1;transition:opacity .5s 2.8s}
+  .conn .glass{fill:#ffd43b;transition:fill .4s 2.8s}
+  .conn .ray{stroke-dashoffset:0;transition:stroke-dashoffset .6s ease-out 2.8s}
+  .ping{opacity:0;transform-box:fill-box;transform-origin:center}
+  .conn .ping{animation:ping 1s ease-out 2.85s 1 both}
+  @keyframes ping{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(2.6)}}
+</style>
+</head>
+<body>
+<div class="scr s0" id="scr">
+  <div class="close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round"><path d="M5 5L19 19M19 5L5 19"/></svg></div>
+  <div class="band">1-1　電流</div>
+  <div class="fig" id="fig">
+    <svg viewBox="464 206 595 380" width="1062" height="678">
+      <!-- 銅線1：＋極から豆電球へ／銅線2：豆電球から－極へ -->
+      <path class="cu w1" pathLength="1" d="M686 490 H478 V336 H748"/>
+      <path class="cu w2" pathLength="1" d="M772 336 H1045 V490 H820"/>
+      <!-- 乾電池（左が＋極＝出っぱり、右が－極） -->
+      <g class="bat mv">
+        <rect x="686" y="482" width="10" height="16" rx="2" fill="#adb5bd" class="k"/>
+        <rect x="696" y="466" width="124" height="48" rx="6" fill="#e9ecef" class="k"/>
+        <rect x="696" y="466" width="34" height="48" rx="6" fill="#868e96" class="k"/>
+        <path d="M700 476 H816" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+        <text class="pl" x="690" y="446">＋極</text>
+        <text class="pl" x="820" y="446">－極</text>
+      </g>
+      <!-- 豆電球（ガラスの球とねじの口金） -->
+      <g class="bulb mv">
+        <circle class="lit" cx="760" cy="300" r="50" fill="#ffe066" fill-opacity=".6"/>
+        <g id="rays"></g>
+        <circle class="glass k" cx="760" cy="300" r="26"/>
+        <path d="M752 318 V306 L756 298 L760 306 L764 298 L768 306 V318" fill="none" class="k" style="stroke-width:2"/>
+        <rect x="748" y="322" width="24" height="26" rx="2" fill="#ced4da" class="k"/>
+        <path d="M748 329 H772 M748 336 H772 M748 343 H772" class="k" style="stroke-width:1.6"/>
+        <path d="M754 348 Q760 360 766 348" fill="#495057" class="k" style="stroke-width:2"/>
+        <circle class="ping" cx="760" cy="300" r="30" fill="none" stroke="#66d9e8" stroke-width="5"/>
+      </g>
+      <!-- 銅線の束（巻いた銅線）：横並びの右 -->
+      <g class="coil" fill="none" stroke="#b5652a" stroke-width="4" stroke-linecap="round">
+        <ellipse cx="915" cy="382" rx="36" ry="12"/>
+        <ellipse cx="915" cy="390" rx="36" ry="12"/>
+        <ellipse cx="915" cy="398" rx="36" ry="12"/>
+        <ellipse cx="915" cy="406" rx="36" ry="12"/>
+        <path d="M879 406 Q868 418 856 414 M951 382 Q962 370 972 376"/>
+      </g>
+    </svg>
+    <!-- 名札：絵のすぐ下（絵と一緒にすべる）。文：中央（図をぼかした上）。本文（docs/script_1-1_text.md）どおり。〖〗＝マーカー、／＝改行 -->
+    <div class="nt tag tb" data-x="753" data-y="545">〖乾電池〗</div>
+    <div class="nt tag tl" data-x="760" data-y="385">〖豆電球〗</div>
+    <div class="nt tag tc" data-x="915" data-y="455">〖銅線〗</div>
+    <div class="nt ctr n0" data-x="761" data-y="396">電流の仕組みを説明するために、／〖乾電池と豆電球と銅線〗を用意しました。</div>
+    <div class="nt ctr n2" data-x="761" data-y="396">乾電池と豆電球を銅線でつなぐと、／輪がつながった瞬間に、〖豆電球が光ります〗。</div>
+  </div>
+  <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div>
+</div>
+<script>
+// 文の部品：小さな絵をはめ込み、左から1つずつ出し、大事な語にマーカーを引く
+var CAP = (function(){
+  var I = {
+    bat: '<svg class="ic" viewBox="0 0 36 18" style="width:1.45em;height:.72em"><rect x="1" y="5.5" width="3.5" height="7" rx="1" fill="#adb5bd" stroke="#000" stroke-width="1.3"/><rect x="4.5" y="1" width="30" height="16" rx="2.5" fill="#e9ecef" stroke="#000" stroke-width="1.3"/><rect x="4.5" y="1" width="9" height="16" rx="2.5" fill="#868e96" stroke="#000" stroke-width="1.3"/></svg>',
+    bulb: '<svg class="ic" viewBox="0 0 20 30" style="width:.8em;height:1.2em;vertical-align:-.25em"><circle cx="10" cy="10" r="8.5" fill="#fff" stroke="#000" stroke-width="1.3"/><path d="M7.5 16 V12 L9 9.5 L10 12 L11 9.5 L12.5 12 V16" fill="none" stroke="#000" stroke-width="1"/><rect x="6" y="18" width="8" height="8" rx="1" fill="#ced4da" stroke="#000" stroke-width="1.3"/><path d="M8 26 Q10 29.5 12 26" fill="#495057" stroke="#000" stroke-width="1"/></svg>',
+    sbat: '<svg class="ic" viewBox="0 0 30 24" style="width:1.25em;height:1em"><path d="M1 12 H12 M18 12 H29" stroke="#000" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M12 2 V22" stroke="#000" stroke-width="1.8" stroke-linecap="round"/><path d="M18 7 V17" stroke="#000" stroke-width="3.2" stroke-linecap="round"/></svg>',
+    slamp: '<svg class="ic" viewBox="0 0 34 24" style="width:1.4em;height:1em"><path d="M1 12 H6 M28 12 H33" stroke="#000" stroke-width="1.6" stroke-linecap="round"/><circle cx="17" cy="12" r="10.5" fill="#fff" stroke="#000" stroke-width="1.6"/><path d="M9.6 4.6 L24.4 19.4 M24.4 4.6 L9.6 19.4" stroke="#000" stroke-width="1.6" stroke-linecap="round"/></svg>'
+  };
+  function html(s){
+    return s.replace(/\[(\w+)\]/g, function(_, k){ return '<span class="u">' + I[k] + '</span>'; }).replace(/〖([^〗]*)〗/g, '<b class="hl">$1</b>').replace(/／/g, "<br>");
+  }
+  function units(el){
+    var us = [];
+    (function walk(n){
+      [].slice.call(n.childNodes).forEach(function(c){
+        if (c.nodeType === 3) {
+          var f = document.createDocumentFragment();
+          Array.from(c.textContent).forEach(function(ch){ var s = document.createElement("span"); s.className = "u"; s.textContent = ch; f.appendChild(s); us.push(s); });
+          c.parentNode.replaceChild(f, c);
+        } else if (c.classList && c.classList.contains("u")) us.push(c);
+        else walk(c);
+      });
+    })(el);
+    return us;
+  }
+  function type(el, d0){
+    d0 = 200 + (d0 || 0);
+    el.innerHTML = html(el.dataset.s);
+    var us = units(el), dt = Math.min(60, 800 / us.length);
+    // 出し方＝1文字ずつ＋下からふわっと（本人が選んだ1番）
+    us.forEach(function(u, i){ u.style.opacity = 0; u.style.transform = "translateY(18px)";
+      setTimeout(function(){ u.style.transition = "opacity .3s, transform .3s ease-out"; u.style.opacity = 1; u.style.transform = "none"; }, d0 + i * dt); });
+    el.querySelectorAll(".hl").forEach(function(h, i){ setTimeout(function(){ h.classList.add("on"); }, d0 + us.length * dt + 100 + i * 150); });
+  }
+  function place(fig, VB, K){
+    fig.querySelectorAll(".nt").forEach(function(el){
+      if (!el.dataset.s) el.dataset.s = el.textContent.trim();
+      el.style.left = ((+el.dataset.x - VB[0]) * K) + "px"; el.style.top = ((+el.dataset.y - VB[1]) * K) + "px";
+      el.innerHTML = html(el.dataset.s); el.querySelectorAll(".hl").forEach(function(h){ h.classList.add("on"); });
+    });
+  }
+  return {type: type, place: place};
+})();
+(function(){
+  var g = document.getElementById("rays"), NS = "http://www.w3.org/2000/svg";
+  for (var i = 0; i < 8; i++) {
+    var a = i * Math.PI / 4 + Math.PI / 8, c = Math.cos(a), s = Math.sin(a), l = document.createElementNS(NS, "line");
+    l.setAttribute("x1", (760 + 34 * c).toFixed(1)); l.setAttribute("y1", (300 + 34 * s).toFixed(1));
+    l.setAttribute("x2", (760 + 56 * c).toFixed(1)); l.setAttribute("y2", (300 + 56 * s).toFixed(1));
+    l.setAttribute("class", "ray"); g.appendChild(l);
+  }
+  var scr = document.getElementById("scr"), fig = document.getElementById("fig");
+  CAP.place(fig, [464, 206], 678 / 380);
+  var tags = [".tb", ".tl", ".tc"].map(function(s){ return fig.querySelector(s); });
+  function reset(){ tags.forEach(function(t){ t.innerHTML = ""; }); }
+  reset();
+  // 文「…用意しました。」の後のアニメ：乾電池・豆電球・銅線の束が左から順にふわっと出る → 名札が左から順に
+  function row(){
+    [".bat", ".bulb", ".coil"].forEach(function(s, i){
+      fig.querySelector(s).animate([{opacity: 0}, {opacity: 1}], {duration: 450, delay: i * 200, easing: "ease-out", fill: "backwards"}); });
+    tags.forEach(function(t, i){ CAP.type(t, 700 + i * 200); });
+  }
+  // 文→アニメの並び（本文どおり・最初は文から）：
+  //   文「電流の仕組みを説明するために…用意しました。」→ アニメ（3つが横並びで出る）
+  //   → 文「乾電池と豆電球を銅線でつなぐと…光ります。」→ アニメ（所定の位置へすべり、銅線の束が線になって伸び、輪がつながって光る）
+  function T(sel){ var el = fig.querySelector(sel); return {text: el, go: function(){ CAP.type(el, 300); }}; }
+  FLOW.run({scr: scr, reset: reset, beats: [T(".n0"), {cls: "row", go: row}, T(".n2"), {cls: "conn"}]});
+  function fit(){ var s = Math.min(innerWidth / 1180, innerHeight / 820); scr.style.transform = "scale(" + s + ")"; }
+  fit(); addEventListener("resize", fit);
+})();
+</script>
+</body>
+</html>

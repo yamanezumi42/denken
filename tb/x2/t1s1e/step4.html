@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1-1 電流 段4</title>
+<script src="lock.js"></script>
+<style>
+  html,body{margin:0;height:100%;background:#868e96}
+  .scr{position:absolute;left:0;top:0;width:1180px;height:820px;background:#fff;transform-origin:0 0;overflow:hidden;cursor:pointer;
+       font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",sans-serif}
+  .close{position:absolute;left:10px;top:4px;width:46px;height:42px;border:1px solid #bbb;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center}
+  .band{position:absolute;left:68px;right:10px;top:6px;height:38px;border-radius:8px;background:#f2f2f2;display:flex;align-items:center;justify-content:center;
+        font-size:17px;font-weight:700;color:#111}
+  .fig{position:absolute;left:59px;top:90px;width:1062px;height:678px}
+  .fig > svg{position:absolute;left:0;top:0}
+  .dots{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:36px}
+  .dots i{width:10px;height:10px;border-radius:50%;background:#ccc}
+  .dots i.on{width:13px;height:13px;background:#d9480f;margin-top:-1.5px}
+  svg text.pl{font-family:inherit;font-weight:800;font-size:17px;fill:#111;text-anchor:middle;dominant-baseline:middle}
+  .k{stroke:#000;stroke-linecap:round;stroke-linejoin:round}
+  /* 文：図をぼかして中央に。1文字ずつ下からふわっと・前の文はその場で薄れる・大事な語は黄色のマーカー／名札は絵の下で橙 */
+  .nt{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;text-align:center;font-size:40px;font-weight:800;color:#111;line-height:1.3;
+      opacity:0;transition:opacity .3s,text-shadow .4s;pointer-events:none}
+  .nt.vis{opacity:1;transition:opacity .3s,text-shadow .4s}
+  .nt .u{display:inline-block;white-space:pre}
+  .nt .hl{font-weight:inherit;background:linear-gradient(transparent 55%,rgba(255,240,100,.75) 55%);background-size:0% 100%;background-repeat:no-repeat;transition:background-size .3s ease-out}
+  .nt .hl.on{background-size:100% 100%}
+  .tag .hl{background-image:linear-gradient(transparent 55%,rgba(255,146,43,.6) 55%)}
+  .nt.ctr{font-size:44px}
+  .nt.tag:not(.vis){opacity:0 !important}   /* 出す前の名札は、ぼかしの時も見せない */
+  /* 文の時のぼかし（案1）と ア/イ の切り替えは lock.js の FLOW が受け持つ */
+  /* 昔と後の場面（mini）：元の回路は退き、小さな回路が2つ並ぶ。back＝元の回路へ戻る */
+  #mini{opacity:0}
+  .mini:not(.back) #main{opacity:0}
+  .mini:not(.back) #mini{opacity:1}
+  .mini.blur:not(.back) #mini{opacity:.45}
+  #rt{opacity:.3;transition:opacity .5s}
+  .rt #rt{opacity:1}
+  .mini:not(.back) .te,.mini:not(.back) .tO,.mini:not(.back) .tB{opacity:0 !important}
+  .scr:not(.mini) .m1,.scr:not(.mini) .m2,.back .m1,.back .m2{opacity:0 !important}
+  /* 語や変化と同時に、絵がそっと光る */
+  /* 電流そのものの流れ（本人が選んだ案1＋矢じり）：線に沿って、光る小さな橙の矢印が＋極→－極へ次々に流れる。
+     元の回路は橙の矢印が引かれた後（cur）から、昔の場面は場面が出た時（mini）から流れ続ける */
+  .fl{opacity:0;transition:opacity .8s;filter:drop-shadow(0 0 2px #ffa94d) drop-shadow(0 0 5px #ffc078)}
+  .cur #cur,.mini #mcur{opacity:1}
+  .fl .fs{fill:none;stroke:#ff922b;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+  .fl .fh{fill:#ff922b;stroke:#ff922b;stroke-width:1;stroke-linejoin:round}
+  #arw,#barw,#mo,#mb,#pmk,#ring{transition:filter .4s}
+  #ring.gl,#barw.gl,#mb.gl{filter:drop-shadow(0 0 2.5px #4dabf7) drop-shadow(0 0 5px #a5d8ff)}
+  #arw.gl,#mo.gl,#pmk.gl{filter:drop-shadow(0 0 3px #fab005) drop-shadow(0 0 7px #ffd43b)}
+</style>
+</head>
+<body>
+<div class="scr" id="scr">
+  <div class="close"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round"><path d="M5 5L19 19M19 5L5 19"/></svg></div>
+  <div class="band">1-1　電流</div>
+  <div class="fig" id="fig">
+    <!-- 絵は画面の真ん中（上下左右の余白をそろえる）：図の中身 x470〜1052・y210〜500 の中心を枠の中心へ -->
+    <svg id="main" viewBox="461 164 600 383" width="1062" height="678">
+      <defs>
+        <clipPath id="cl"><circle cx="600" cy="276" r="64"/></clipPath>
+        <marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#1c7ed6"/>
+        </marker>
+        <marker id="oh" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="2.2" markerHeight="2.2" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#f76707"/>
+        </marker>
+        <marker id="bh" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="2.2" markerHeight="2.2" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 Z" fill="#1c7ed6"/>
+        </marker>
+      </defs>
+      <!-- 最初の形＝段3の終わり（記号の回路・虫めがね・流れる粒） -->
+      <path class="k" fill="none" stroke-width="3.2" d="M752 490 H478 V360 H736"/>
+      <path class="k" fill="none" stroke-width="3.2" d="M784 360 H1045 V490 H772"/>
+      <rect x="750.4" y="468" width="3.2" height="44" rx="1.6" fill="#000"/>
+      <rect x="769.5" y="479" width="5" height="22" rx="2.5" fill="#000"/>
+      <g id="pmk"><text class="pl" x="722" y="446">＋極</text><text class="pl" x="802" y="446">－極</text></g>
+      <!-- 豆電球の記号（粒が流れているので光っている：にじみ・光の線・黄色） -->
+      <circle cx="760" cy="360" r="35" fill="#ffe066" fill-opacity=".43"/>
+      <!-- 段5の最初（粒の量 0.5）と同じ明るさ -->
+      <g stroke="#fab005" stroke-width="4" stroke-linecap="round" opacity=".8">
+        <path d="M787.7 371.5 L796 374.9 M771.5 387.7 L774.9 396 M748.5 387.7 L745.1 396 M732.3 371.5 L724 374.9 M732.3 348.5 L724 345.1 M748.5 332.3 L745.1 324 M771.5 332.3 L774.9 324 M787.7 348.5 L796 345.1"/>
+      </g>
+      <circle class="k" cx="760" cy="360" r="24" fill="#ffe78b" stroke-width="3.2"/>
+      <path class="k" d="M743 343 L777 377 M777 343 L743 377" stroke-width="3.2"/>
+      <!-- 電流そのものの流れ（＋極から出て－極へ）。粒ではなく光で。電子の粒の下に重ねる -->
+      <g id="cur" class="fl"><path class="fs"/><path class="fh"/></g>
+      <g id="ring"></g>
+      <!-- 右上の線の外側＝電流の矢印（＋極から出て輪を回り－極へ向かう向き）／内側＝電子の矢印（逆向き） -->
+      <path id="arw" fill="none" stroke="#f76707" stroke-width="5" marker-end="url(#oh)"/>
+      <path id="barw" fill="none" stroke="#1c7ed6" stroke-width="5" marker-end="url(#bh)"/>
+      <g id="lens">
+        <path fill="#e7f5ff" fill-opacity=".7" stroke="#adb5bd" stroke-width="1.6" d="M587 360 L536 276 L664 276 L613 360 Z"/>
+        <circle cx="600" cy="360" r="13" fill="none" stroke="#495057" stroke-width="3"/>
+        <circle cx="600" cy="276" r="64" fill="#fff"/>
+        <g clip-path="url(#cl)">
+          <rect x="520" y="250" width="160" height="44" fill="#f8e3d2"/>
+          <path d="M520 250 H680 M520 294 H680" stroke="#b5652a" stroke-width="2.4"/>
+          <g id="el"></g>
+          <path d="M634 236 H568" stroke="#1c7ed6" stroke-width="4" stroke-linecap="round" marker-end="url(#ah)"/>
+        </g>
+        <circle cx="600" cy="276" r="64" fill="none" stroke="#495057" stroke-width="5"/>
+      </g>
+    </svg>
+    <!-- 昔（左）と後（右）：小さな回路の絵 -->
+    <svg id="mini" viewBox="461 164 600 383" width="1062" height="678">
+     <!-- 2場面も真ん中へ寄せて、少し大きく -->
+     <g transform="translate(760 355) scale(1.1) translate(-760 -392)">
+      <g id="lt">
+        <path class="k" fill="none" stroke-width="2.6" d="M604 440 H500 V320 H596 M624 320 H720 V440 H616"/>
+        <rect x="602.8" y="424" width="2.4" height="32" rx="1.2" fill="#000"/><rect x="614" y="432" width="4" height="16" rx="2" fill="#000"/>
+        <text class="pl" x="590" y="414">＋</text><text class="pl" x="630" y="414">－</text>
+        <circle class="k" cx="610" cy="320" r="14" fill="#ffe78b" stroke-width="2.6"/><path class="k" d="M600 310 L620 330 M620 310 L600 330" stroke-width="2.6"/>
+        <!-- 昔の回路にも電流そのものの流れ（＋極→－極）。右の「後」の青い粒と並べて比べる -->
+        <g id="mcur" class="fl"><path class="fs"/><path class="fh"/></g>
+        <path id="mo" fill="none" stroke="#f76707" stroke-width="5" marker-end="url(#oh)"/>
+      </g>
+      <g id="rt">
+        <path class="k" fill="none" stroke-width="2.6" d="M904 440 H800 V320 H896 M924 320 H1020 V440 H916"/>
+        <rect x="902.8" y="424" width="2.4" height="32" rx="1.2" fill="#000"/><rect x="914" y="432" width="4" height="16" rx="2" fill="#000"/>
+        <text class="pl" x="890" y="414">＋</text><text class="pl" x="930" y="414">－</text>
+        <circle class="k" cx="910" cy="320" r="14" fill="#ffe78b" stroke-width="2.6"/><path class="k" d="M900 310 L920 330 M920 310 L900 330" stroke-width="2.6"/>
+        <g id="mdots"></g>
+        <path id="mb" fill="none" stroke="#1c7ed6" stroke-width="5" marker-end="url(#bh)"/>
+      </g>
+     </g>
+    </svg>
+    <!-- 名札（〖〗＝マーカー） -->
+    <div class="nt tag te vis" data-x="600" data-y="316">〖電子〗</div>
+    <div class="nt tag tO" data-x="904" data-y="318">〖電流の向き〗</div>
+    <div class="nt tag tB" data-x="904" data-y="402">〖電子の向き〗</div>
+    <div class="nt tag m1" data-x="595" data-y="454">〖昔〗</div>
+    <div class="nt tag m2" data-x="925" data-y="454">〖後〗</div>
+  </div>
+  <div class="dots"><i></i><i></i><i></i><i></i><i class="on"></i><i></i><i></i></div></div>
+<script>
+(function(){
+  var NS = "http://www.w3.org/2000/svg", $ = function(id){ return document.getElementById(id); };
+  function L(a, b, u){ return a + (b - a) * u; }
+  function ease(u){ return u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2; }
+  var TM = [];
+  function T(f, d){ TM.push(setTimeout(f, d)); }
+  function clearT(){ TM.forEach(clearTimeout); TM = []; }
+  function dot(g, r){ var c = document.createElementNS(NS, "circle"); c.setAttribute("r", r); c.setAttribute("fill", "#339af0"); c.setAttribute("stroke", "#1864ab"); c.setAttribute("stroke-width", .9); g.appendChild(c); return c; }
+  // 虫めがねの中の電子（段3と同じ量・同じ並び）
+  var EL = [], X0 = 516, W = 168;
+  [259, 268, 277, 286].forEach(function(y, r){
+    for (var x = X0 + (r % 2) * 5; x < X0 + W; x += 10) EL.push({x: x + ((x * 7 + r * 13) % 5 - 2) * .5, y: y + ((x * 3 + r) % 3 - 1) * .7, c: dot($("el"), 3.1)});
+  });
+  function along(seg, s){
+    for (var i = 0; i < seg.length; i++) { var q = seg[i], l = Math.abs(q[2] - q[0]) + Math.abs(q[3] - q[1]);
+      if (s <= l) { var t = s / l; return [L(q[0], q[2], t), L(q[1], q[3], t)]; } s -= l; }
+    return [seg[seg.length - 1][2], seg[seg.length - 1][3]];
+  }
+  function len(seg){ return seg.reduce(function(a, q){ return a + Math.abs(q[2] - q[0]) + Math.abs(q[3] - q[1]); }, 0); }
+  // 輪全体の電子：－極から出て右の線→上の線（右から左）→左の線→＋極へ
+  var SG = [[772, 490, 1045, 490], [1045, 490, 1045, 360], [1045, 360, 478, 360], [478, 360, 478, 490], [478, 490, 752, 490]], RL = len(SG), RD = [];
+  for (var s = 0; s < RL; s += 20) RD.push({s: s, c: dot($("ring"), 3.4)});
+  // 後の場面の小さな回路の電子：－極から＋極へ
+  var MS = [[916, 440, 1020, 440], [1020, 440, 1020, 320], [1020, 320, 800, 320], [800, 320, 800, 440], [800, 440, 904, 440]], ML = len(MS), MD = [];
+  for (s = 0; s < ML; s += 16) MD.push({s: s, c: dot($("mdots"), 2.6)});
+  var off = 0, last = 0, mOn = 0;
+  function draw(){
+    EL.forEach(function(d){ var x = X0 + ((((d.x - X0 - off * 1.3) % W) + W) % W); d.c.setAttribute("cx", x); d.c.setAttribute("cy", d.y); });
+    RD.forEach(function(d){ var p = along(SG, ((d.s + off) % RL + RL) % RL), hide = (p[1] === 360 && p[0] > 731 && p[0] < 789);
+      d.c.setAttribute("cx", p[0]); d.c.setAttribute("cy", p[1]); d.c.setAttribute("opacity", hide ? 0 : 1); });
+    MD.forEach(function(d){ var p = along(MS, ((d.s + off * .7) % ML + ML) % ML), hide = (p[1] === 320 && p[0] > 893 && p[0] < 927);
+      d.c.setAttribute("cx", p[0]); d.c.setAttribute("cy", p[1]); d.c.setAttribute("opacity", hide ? 0 : mOn); });
+    flow($("cur"), CG, off, 40, 1, function(p){ return p[1] === 360 && p[0] > 729 && p[0] < 791; });
+    flow($("mcur"), CM, off * .7, 30, .8, function(p){ return p[1] === 320 && p[0] > 592 && p[0] < 628; });
+  }
+  // ===== 電流そのものの流れ：光る小さな橙の矢印（筋＋矢じり）が、線に沿って＋極→－極へ次々に流れる。電子の青い粒とは逆向きにすれ違う =====
+  var CG = [[752, 490, 478, 490], [478, 490, 478, 360], [478, 360, 1045, 360], [1045, 360, 1045, 490], [1045, 490, 772, 490]];
+  var CM = [[604, 440, 500, 440], [500, 440, 500, 320], [500, 320, 720, 320], [720, 320, 720, 440], [720, 440, 616, 440]];   // 昔の回路
+  // g＝描く先、seg＝＋極からの道、sh＝進んだ量、gap＝間隔、k＝大きさ、hide＝描かない所（豆電球の記号の中）
+  function flow(g, seg, sh, gap, k, hide){
+    var tot = len(seg), sd = "", hd = "", f = function(q){ return q[0].toFixed(1) + " " + q[1].toFixed(1); };
+    for (var h = 0; h < tot; h += gap) {
+      var s = ((h + sh) % tot + tot) % tot, tail = s - 15 * k, neck = s - 6 * k;
+      if (tail < 0) continue;   // 乾電池のすき間（－極→＋極）はまたがない
+      var p = along(seg, s), pts = [];
+      for (var b = tail; b < neck; b += 3) pts.push(along(seg, b));
+      pts.push(along(seg, neck));
+      if (hide(p) || pts.some(hide)) continue;
+      var q = along(seg, s - 1), tx = p[0] - q[0], ty = p[1] - q[1], tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+      var nx = p[0] - tx * 7 * k, ny = p[1] - ty * 7 * k, w = 4.6 * k;
+      sd += "M" + pts.map(f).join(" L");
+      hd += "M" + f(p) + " L" + f([nx - ty * w, ny + tx * w]) + " L" + f([nx + ty * w, ny - tx * w]) + " Z";
+    }
+    g.querySelector(".fs").setAttribute("d", sd); g.querySelector(".fh").setAttribute("d", hd);
+  }
+  function loop(now){ if (last) off += (now - last) / 1000 * 34; last = now; draw(); requestAnimationFrame(loop); }
+  loop.free = true;   // 粒がずっと流れる動きは、クリックの受付を止めない
+  // 矢印を引くように伸ばす
+  function drawArrow(el, x0, x1, y, d0, ms){
+    T(function(){ var t0 = performance.now(); el.style.opacity = 1;
+      (function step(now){ var u = Math.min(1, (now - t0) / ms); el.setAttribute("d", "M" + x0 + " " + y + " H" + L(x0, x1, ease(Math.max(.02, u))).toFixed(1)); if (u < 1) requestAnimationFrame(step); })(t0); }, d0);
+  }
+  function fade(v, d0, ms){ T(function(){ var t0 = performance.now(), a = mOn;
+    (function step(now){ var u = Math.min(1, (now - t0) / ms); mOn = L(a, v, u); if (u < 1) requestAnimationFrame(step); })(t0); }, d0); }
+  // 文と名札
+  var VB = [461, 164], K = 1062 / 600, fig = $("fig");
+  function html(s){ return s.replace(/〖([^〗]*)〗/g, '<b class="hl">$1</b>').replace(/／/g, "<br>"); }
+  function put(el){ el.style.left = ((+el.dataset.x - VB[0]) * K) + "px"; el.style.top = ((+el.dataset.y - VB[1]) * K) + "px"; }
+  // 1文字ずつ下からふわっと。返す値＝{hl: マーカーを引く時刻, end: 出し切る時刻}
+  function type(el, d0){
+    d0 = 200 + (d0 || 0); el.innerHTML = html(el.dataset.s);
+    var us = [];
+    (function walk(nd){ [].slice.call(nd.childNodes).forEach(function(c){
+      if (c.nodeType === 3) { var f = document.createDocumentFragment();
+        Array.from(c.textContent).forEach(function(ch){ var u = document.createElement("span"); u.className = "u"; u.textContent = ch; u.style.opacity = 0; f.appendChild(u); us.push(u); });
+        c.parentNode.replaceChild(f, c); } else walk(c); }); })(el);
+    var dt = Math.min(60, 800 / us.length);
+    us.forEach(function(u, i){ u.style.transform = "translateY(18px)";
+      T(function(){ u.style.transition = "opacity .3s, transform .3s ease-out"; u.style.opacity = 1; u.style.transform = "none"; }, d0 + i * dt); });
+    var hs = el.querySelectorAll(".hl"), k = 0, end = d0 + us.length * dt + 300, tw = end - 200;
+    if (hs.length) { var pre = 0; (function walk(nd){ [].slice.call(nd.childNodes).forEach(function(c){ if (k) return; if (c.classList && c.classList.contains("hl")) { k = 1; tw = d0 + (pre + c.textContent.length) * dt + 150; } else if (c.classList && c.classList.contains("u")) pre++; else walk(c); }); })(el); }
+    hs.forEach(function(h){ T(function(){ h.classList.add("on"); }, tw); });
+    return {hl: tw, end: Math.max(end, tw + 300)};
+  }
+  function tag(el, d){ T(function(){ el.classList.add("vis"); }, d); return type(el, d); }
+  function glow(els, t){ T(function(){ els.forEach(function(g){ g.classList.add("gl"); T(function(){ g.classList.remove("gl"); }, 1300); }); }, t); }
+  var q = function(c){ return fig.querySelector("." + c); };
+  fig.querySelectorAll(".nt").forEach(function(el){ el.dataset.s = el.textContent.trim(); put(el); });
+  q("te").innerHTML = html(q("te").dataset.s); q("te").querySelector(".hl").classList.add("on");
+
+  // ===== 進め方（lock.js の FLOW）：文の拍＝図をぼかして中央に文／アニメの拍＝文が消え、ぼかしが解けて変化。ア/イ は FLOW がキー M で切り替え =====
+  var SAY = [];
+  function mk(s, y){ var el = document.createElement("div"); el.className = "nt ctr"; el.dataset.s = s; el.dataset.x = 761; el.dataset.y = y; fig.appendChild(el); put(el); SAY.push(el); return el; }
+  // 文の拍を作る。t2＝少し間をおいて下に足す2つ目の文、g＝マーカーの語を言った瞬間に光らせる物
+  function TX(t, t2, g){
+    var n = t.split("／").length, e, e2;
+    if (t2) { e = mk(t, 355 - 20); e2 = mk(t2, 355 - 20 + n * 16 + 26); } else e = mk(t, 355);
+    return {text: t2 ? [e, e2] : e, go: function(){
+      var r = type(e, 300);
+      if (g) glow(g(), r.hl);
+      if (t2) type(e2, r.end + 700);
+    }};
+  }
+  function AN(c, f){ return {cls: c, go: f}; }
+  var beats = [
+    // 文は本文（docs\script_1-1_text.md 第4・5段落）どおり。／＝改行、〖〗＝マーカー
+    TX("電子の粒は、乾電池の〖－極から出て、／＋極へ戻る〗向きに流れています。", null, function(){ return [$("ring")]; }),
+    TX("では、〖電流の向き〗も／－極から＋極なのでしょうか？"),
+    TX("……実は、電流の向きは〖逆〗で、／＋極から出て－極へ流れる、／と決められています。"),
+    // 線の外側に電流の矢印（＋極から出て輪を回り－極へ）が引かれ、名札「電流の向き」
+    // ここから電流そのもの（光）が＋極→－極へ線に沿って流れ出し、以後ずっと流れる（cur）
+    AN("cur", function(){ drawArrow($("arw"), 818, 990, 343, 200, 900); tag(q("tO"), 900); glow([$("arw"), $("pmk")], 1300); }),
+    TX("〖電流の向きと、電子の動く向きは逆〗なのです。"),
+    // 粒の流れに沿って青い矢印。橙と青が逆向きに並ぶ
+    AN("", function(){ drawArrow($("barw"), 990, 818, 377, 200, 900); tag(q("tB"), 900); glow([$("arw"), $("barw")], 1400); }),
+    TX("なぜ、逆向きなのでしょう？"),
+    TX("電流が見つかったとき、人々は、／電流は〖＋極から－極へ〗流れるものだと／決めました。"),
+    // 昔（左）：矢印を引いて「電流はこの向き」と決めた
+    AN("mini", function(){ tag(q("m1"), 500); drawArrow($("mo"), 560, 652, 290, 800, 900);   /* 豆電球の記号（上端306）にかからない高さ */ glow([$("mo")], 1800); }),
+    TX("ところが、あとで電流の正体が／電子の流れだと分かり、その電子は／〖－極から＋極へ〗動いていることが／分かりました。"),
+    // 後（右）：線の中では、電子の粒が－極から＋極へ流れている
+    AN("rt", function(){ tag(q("m2"), 300); fade(1, 400, 600); drawArrow($("mb"), 968, 870, 338, 1000, 900); glow([$("mb")], 2000); }),
+    TX("決めた向きと、本当の動きが／〖逆〗だったのです。"),
+    // 左右の矢印を光らせて比べる
+    AN("", function(){ glow([$("mo")], 300); glow([$("mb")], 1100); glow([$("mo"), $("mb")], 2000); }),
+    TX("それでも、ほかの決まりや計算とは／〖つじつまが合う〗ので、今もそのまま、／電流の向きは＋極から－極として／使っています。"),
+    // 元の回路に戻り、橙（電流）と青（電子）が逆向きに並んだ形で止まる
+    AN("back", function(){ glow([$("arw"), $("barw")], 700); })
+  ];
+  function reset(){
+    mOn = 0; ["arw", "barw", "mo", "mb"].forEach(function(id){ $(id).setAttribute("d", ""); $(id).style.opacity = 0; });
+    ["tO", "tB", "m1", "m2"].forEach(function(c){ q(c).classList.remove("vis"); });
+  }
+  reset();
+  draw(); requestAnimationFrame(loop);
+  FLOW.run({scr: $("scr"), beats: beats, reset: reset});
+  function fit(){ var s = Math.min(innerWidth / 1180, innerHeight / 820); scr.style.transform = "scale(" + s + ")"; }
+  fit(); addEventListener("resize", fit);
+})();
+</script>
+</body>
+</html>

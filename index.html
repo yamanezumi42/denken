@@ -414,6 +414,33 @@ button{font:inherit;color:inherit}
   .slide svg.fig path.head.on,.slide svg.fig circle.dot.on{fill:#000}
   svg.fig .mkl .mkw{fill:none;stroke:#66d9e8;stroke-opacity:.6;stroke-linecap:round;stroke-linejoin:round}
   svg.fig .mkl .mkb{fill:#66d9e8;fill-opacity:.6}
+
+  #tbRev{position:fixed;inset:0;background:var(--bg);z-index:15;overflow:auto;-webkit-overflow-scrolling:touch}
+  #tbRev[hidden]{display:none}
+  #tbRev .lnk{display:inline-flex;align-items:center}
+  #tbRevBtn{display:inline-flex;align-items:center;padding:6px 10px}
+  #tbRevBtn .tbi{width:22px;height:22px}
+  .rvset .rvrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:10px}
+  .rvset .rvrow:last-child{margin-bottom:0}
+  .rvb{height:40px;min-width:56px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:15px;cursor:pointer}
+  .rvb.on{border-color:var(--accent);background:var(--selbg);color:var(--accent);font-weight:bold}
+  .rvgap{width:14px}
+  .rvgo .rvnum{font-size:30px;font-weight:bold;font-variant-numeric:tabular-nums;min-width:56px}
+  .rvgo .rvres{display:inline-flex;align-items:center;gap:4px;font-size:18px;color:var(--ok);font-variant-numeric:tabular-nums}
+  .rvgo .go{height:44px;min-width:96px;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+  .rvgo .go[disabled]{opacity:.4}
+  .rvf{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--sub);margin:16px 4px 6px}
+  .rvc{border:0;background:none;padding:6px;margin:-6px;color:var(--accent);display:inline-flex;cursor:pointer}
+  .rvck{width:22px;height:22px}
+  .rvu{grid-template-columns:44px 1fr auto;cursor:pointer}
+  .rvu .nm{display:flex;align-items:center;gap:10px}
+  .rvu .rvl{color:var(--sub);font-size:15px;min-width:30px}
+  .rvu .rvo .tbi{transition:transform .15s;color:var(--sub)}
+  .rvu.op .rvo .tbi{transform:rotate(180deg)}
+  .rvu .acts{align-items:center;gap:10px}
+  .rvsecs{display:flex;flex-wrap:wrap;gap:8px;padding:2px 12px 12px 56px}
+  .rvpos{display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums}
+  .rvpos .tbi{width:16px;height:16px}
 </style>
 <script>
 (function(){
@@ -1207,7 +1234,7 @@ function genQ(G, sec, r){
 }
 
 var H = {NS: NS, Drawer: Drawer, n: n, clamp01: clamp01, lerp: lerp, seriesPair: seriesPair, parallelPair: parallelPair, vdim: vdim, pv: pv, swapText: swapText, ZC: ZC, zband: zband, ztint: ztint, zpt: zpt, zones: zones, vOn: vOn, zoneTint: zoneTint, zSides: zSides, rngOf: rngOf, pick: pick, shuffled: shuffled, nice: nice, fmt: fmt, UNIT: UNIT, qv: qv, qf: qf, choices: choices, num: num, distinct: distinct, UNIT_CH: UNIT_CH, unitQ: unitQ, genQ: genQ};
-var TBD = {"ver":"2026-11-13 12:06 版　新：直流のつなぎ（3つ）13b を足した","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","f":0,"secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"b3a3ba0f"},{"name":"直列回路と並列回路","f":0,"secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"ccd23e1f","pm":1},{"name":"合成抵抗","f":0,"secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"5be82756","pm":1},{"name":"分圧と分流","f":0,"secs":["分圧（2つの抵抗）","分圧（3つ以上）","分流（2つの抵抗）","分流（3つ以上）","短絡","分かれた電流から全体の電流"],"file":"tb/u04.js","hash":"8317ce02","pm":1},{"name":"キルヒホッフの法則","f":0,"secs":["キルヒホッフの第1法則","キルヒホッフの第2法則","閉回路の向きと符号","直列の電源をまとめる","ループ電流法で式を立てる","連立方程式を解く","電位の基準を決める"],"file":"tb/u05.js","hash":"71059e17","pm":1},{"name":"抵抗率と温度","f":0,"secs":["抵抗率","単位を式から出す","長さと断面積","抵抗を長さで分ける","コンダクタンス","導電率","温度と抵抗","抵抗温度係数","温度が変わった後の抵抗"],"file":"tb/u06.js","hash":"8fa24fed","pm":1},{"name":"ブリッジ回路","f":0,"secs":["ブリッジ回路の形","ブリッジの平衡","平衡条件","平衡なら真ん中を消す","平衡していないブリッジ"],"file":"tb/u07.js","hash":"cc457ee7"},{"name":"Δ-Y変換","f":0,"secs":["Δ結線とY結線","Δ から Y への変換","Y から Δ への変換","等しい抵抗の Δ-Y変換","ブリッジの中の Δ","Δ の中の Y"],"file":"tb/u08.js","hash":"ef16aa6a","pm":1},{"name":"重ね合わせの理","f":0,"secs":["重ね合わせの理","向きが逆の成分","電流源と開放","電圧源と電流源が混ざる回路","書かずに足す"],"file":"tb/u09.js","hash":"9d93ee7b","pm":1},{"name":"テブナンの定理","f":0,"secs":["テブナンの定理","a・b 間の電圧","a・b 間の合成抵抗","平衡しないブリッジ","電流源の回路"],"file":"tb/u10.js","hash":"e8600d83","pm":1},{"name":"ミルマンの定理","f":0,"secs":["ミルマンの定理","分母と分子の意味","3つの枝で計算する","電源の無い枝","枝の電流"],"file":"tb/u11.js","hash":"7f027e36"},{"name":"電力と電力量","f":0,"secs":["電力","電力の3つの式","電力量","回路の電力量","グラフの面積"],"file":"tb/u12.js","hash":"f2c9780f"},{"name":"電池の内部抵抗と最大電力","f":0,"secs":["内部抵抗","負荷の電力","最大電力の条件","電源側の合成抵抗"],"file":"tb/u13.js","hash":"e13eefd6"},{"name":"クーロンの法則","f":1,"secs":["点電荷とクーロン力","クーロンの法則","距離の2乗に反比例","符号の扱い","電荷が3つ"],"file":"tb/u14.js","hash":"9edd516e"},{"name":"電界と電位","f":1,"secs":["電界の強さ","電界の中の力","誘電率","電位","電位差と仕事","平行な極板の間の電界"],"file":"tb/u15.js","hash":"1b3cd3c8"},{"name":"電束と電気力線","f":1,"secs":["電束","電気力線","電束密度と電気力線の密度","電気力線の性質"],"file":"tb/u16.js","hash":"ea19bf8f"},{"name":"コンデンサ","f":1,"secs":["電荷と電圧","平行平板コンデンサ","コンデンサの直列","直列の電圧","コンデンサの並列","誘電体の入れ方"],"file":"tb/u17.js","hash":"83d6f212"},{"name":"静電エネルギーと電荷の移動","f":1,"secs":["静電エネルギー","静電エネルギーの式の変形","直列の電圧と電荷","電荷の合計は変わらない","つなぎ替え"],"file":"tb/u18.js","hash":"7a29dfab"},{"name":"磁界と磁束","f":2,"secs":["磁界と磁極","磁気の力","透磁率","磁界の強さと磁力線","磁束と磁束密度"],"file":"tb/u19.js","hash":"1d4f09f6"},{"name":"電流がつくる磁界","f":2,"secs":["右ねじの法則","直線の導体","円形コイルの中心","環状ソレノイド"],"file":"tb/u20.js","hash":"52a253af"},{"name":"電磁力","f":2,"secs":["電磁力の向き","フレミングの左手の法則","電磁力の大きさ","斜めの導体","平行な2本の導体"],"file":"tb/u21.js","hash":"575a4be9"},{"name":"電磁誘導","f":2,"secs":["電磁誘導","誘導電流の向き","ファラデーの法則","磁束のグラフと起電力","導体棒","斜めに動かす"],"file":"tb/u22.js","hash":"dfcecf0e"},{"name":"磁気回路","f":2,"secs":["起磁力","磁気抵抗","磁気回路のオームの法則","磁気抵抗の単位","エアギャップ"],"file":"tb/u23.js","hash":"fa085d86"},{"name":"自己インダクタンス","f":2,"secs":["自己誘導","自己インダクタンスと磁束","自己インダクタンスの式","巻数の2乗に比例"],"file":"tb/u24.js","hash":"b7f06606"},{"name":"相互インダクタンスと磁気エネルギー","f":2,"secs":["相互インダクタンス","相互インダクタンスの式","結合係数","和動と差動","磁気エネルギー"],"file":"tb/u25.js","hash":"c9c9609b"},{"name":"過渡現象","f":3,"secs":["過渡と定常","コイルの振る舞い","時定数","コンデンサの振る舞い","RC の時定数","放電","電圧のグラフ"],"file":"tb/u26.js","hash":"5ebba0c8"},{"name":"正弦波交流","f":4,"secs":["交流と正弦波","周期と周波数","瞬時値の式","時刻を入れる","位相","抵抗の電流とベクトル図"],"file":"tb/u27.js","hash":"1a98450b"},{"name":"平均値と実効値","f":4,"secs":["決まった値になる時刻","平均値","実効値","波高率と波形率","整流した波形"],"file":"tb/u28.js","hash":"a2a7aa70"},{"name":"ベクトル図","f":4,"secs":["ベクトル表示","同じ向き・逆向き","向きの違う2つ","引き算","斜めのベクトル","複素数で書く"],"file":"tb/u29.js","hash":"00a4f4b7"},{"name":"コイルとコンデンサ（リアクタンス）","f":4,"secs":["誘導性リアクタンス","容量性リアクタンス","周波数との関係","抵抗は同相","コイルは 90° 遅れ","コンデンサは 90° 進み"],"file":"tb/u30.js","hash":"8aaf0a3c"},{"name":"交流の直列回路","f":4,"secs":["インピーダンス","交流のオームの法則","電流を基準にした図","電圧を基準にした計算","RC 直列","RLC 直列","答えが2つ"],"file":"tb/u31.js","hash":"12973ccc"},{"pad":1,"f":4},{"pad":1,"f":4},{"pad":1,"f":4},{"pad":1,"f":4},{"pad":1,"f":5},{"pad":1,"f":5},{"pad":1,"f":5},{"pad":1,"f":5},{"pad":1,"f":6},{"pad":1,"f":6},{"pad":1,"f":6},{"pad":1,"f":6},{"pad":1,"f":7},{"name":"直流のつなぎ（2つ）","f":0,"secs":["合成から全体の電流","矢印の位置と分流","合成の式を逆に解く","二次方程式で2つの抵抗","ミリとキロ","オームから電流の和","電圧の引き算からオーム","合成から電源の電圧を出す","電源の電圧を次の図へ持ち越す","短絡を見抜いて合成する","平衡を見抜いて合成する","比をとる","電力を出して比べる"],"file":"tb/u45.js","hash":"50801fd9","label":"13a","prev":13},{"name":"直流のつなぎ（3つ）","f":0,"secs":["合成から全体の電流、分流","分流を2回","はしごを奥から解く","電圧と電流から逆に解く","電圧の引き算から電流の和","重ね合わせで分流する","スイッチを読んで描き直す","平衡と読んで電流を出す","2つの図の持ち越し","2つの条件を等しく置く"],"file":"tb/u46.js","hash":"7832db09","label":"13b","prev":45},{"name":"直流の過去問","f":0,"secs":[],"file":"tb/u47.js","hash":"c8b5d33d","label":"13c","prev":46,"plist":[{"u":6,"k":0,"id":"r2q5","t":"令和2年 問5","st":2},{"u":3,"k":1,"id":"r6bq7","t":"令和6年下期 問7","st":1},{"u":6,"k":1,"id":"r5aq7","t":"令和5年上期 問7","st":3},{"u":5,"k":0,"id":"h18q5","t":"平成18年 問5","st":1},{"u":3,"k":0,"id":"h21q6","t":"平成21年 問6","st":1},{"u":2,"k":0,"id":"h25q5","t":"平成25年 問5","st":2},{"u":10,"k":0,"id":"r2q7","t":"令和2年 問7","st":4},{"u":5,"k":2,"id":"h27q4","t":"平成27年 問4","st":3},{"u":8,"k":1,"id":"h23q6","t":"平成23年 問6","st":3},{"u":4,"k":4,"id":"h25q8","t":"平成25年 問8","st":4},{"u":8,"k":2,"id":"h29q5","t":"平成29年 問5","st":4},{"u":9,"k":0,"id":"r5aq6","t":"令和5年上期 問6","st":1},{"u":9,"k":1,"id":"r6bq6","t":"令和6年下期 問6","st":2},{"u":5,"k":1,"id":"r6aq6","t":"令和6年上期 問6","st":2},{"u":4,"k":1,"id":"h28q6","t":"平成28年 問6","st":2},{"u":8,"k":0,"id":"r4aq7","t":"令和4年上期 問7","st":3},{"u":6,"k":2,"id":"h24q5","t":"平成24年 問5","st":3},{"u":4,"k":0,"id":"r4aq5","t":"令和4年上期 問5","st":2},{"u":4,"k":2,"id":"r1q5","t":"令和元年 問5","st":3},{"u":9,"k":2,"id":"h30q7","t":"平成30年 問7","st":4},{"u":4,"k":3,"id":"r7aq6","t":"令和7年上期 問6","st":3},{"u":5,"k":3,"id":"h22q6","t":"平成22年 問6","st":3}]}],"order":[1,2,3,4,5,6,7,8,9,10,11,12,13,45,46,47,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],"x2":{}};
+var TBD = {"ver":"2026-11-13 12:25 版　新：復習（範囲・種類・絞り込みを選んで解く）を足した","fields":["直流回路","静電気","磁気","過渡現象","交流","三相","電子理論","電気計測"],"units":[{"name":"オームの法則","f":0,"secs":["電流","電圧","抵抗","オームの法則","式の変形"],"file":"tb/u01.js","hash":"b3a3ba0f"},{"name":"直列回路と並列回路","f":0,"secs":["直列回路","直列の電圧","並列回路","並列の電圧","直並列"],"file":"tb/u02.js","hash":"ccd23e1f","pk":["h25q5"],"pm":1},{"name":"合成抵抗","f":0,"secs":["電位と電圧降下","直列の合成抵抗","並列の合成抵抗（2つ）","並列の合成抵抗（3つ以上）","直並列の合成抵抗","合成抵抗から全体の電流"],"file":"tb/u03.js","hash":"5be82756","pk":["h21q6","r6bq7"],"pm":1},{"name":"分圧と分流","f":0,"secs":["分圧（2つの抵抗）","分圧（3つ以上）","分流（2つの抵抗）","分流（3つ以上）","短絡","分かれた電流から全体の電流"],"file":"tb/u04.js","hash":"8317ce02","pk":["r4aq5","h28q6","r1q5","r7aq6","h25q8"],"pm":1},{"name":"キルヒホッフの法則","f":0,"secs":["キルヒホッフの第1法則","キルヒホッフの第2法則","閉回路の向きと符号","直列の電源をまとめる","ループ電流法で式を立てる","連立方程式を解く","電位の基準を決める"],"file":"tb/u05.js","hash":"71059e17","pk":["h18q5","r6aq6","h27q4","h22q6"],"pm":1},{"name":"抵抗率と温度","f":0,"secs":["抵抗率","単位を式から出す","長さと断面積","抵抗を長さで分ける","コンダクタンス","導電率","温度と抵抗","抵抗温度係数","温度が変わった後の抵抗"],"file":"tb/u06.js","hash":"8fa24fed","pk":["r2q5","r5aq7","h24q5"],"pm":1},{"name":"ブリッジ回路","f":0,"secs":["ブリッジ回路の形","ブリッジの平衡","平衡条件","平衡なら真ん中を消す","平衡していないブリッジ"],"file":"tb/u07.js","hash":"cc457ee7"},{"name":"Δ-Y変換","f":0,"secs":["Δ結線とY結線","Δ から Y への変換","Y から Δ への変換","等しい抵抗の Δ-Y変換","ブリッジの中の Δ","Δ の中の Y"],"file":"tb/u08.js","hash":"ef16aa6a","pk":["r4aq7","h23q6","h29q5"],"pm":1},{"name":"重ね合わせの理","f":0,"secs":["重ね合わせの理","向きが逆の成分","電流源と開放","電圧源と電流源が混ざる回路","書かずに足す"],"file":"tb/u09.js","hash":"9d93ee7b","pk":["r5aq6","r6bq6","h30q7"],"pm":1},{"name":"テブナンの定理","f":0,"secs":["テブナンの定理","a・b 間の電圧","a・b 間の合成抵抗","平衡しないブリッジ","電流源の回路"],"file":"tb/u10.js","hash":"e8600d83","pk":["r2q7"],"pm":1},{"name":"ミルマンの定理","f":0,"secs":["ミルマンの定理","分母と分子の意味","3つの枝で計算する","電源の無い枝","枝の電流"],"file":"tb/u11.js","hash":"7f027e36"},{"name":"電力と電力量","f":0,"secs":["電力","電力の3つの式","電力量","回路の電力量","グラフの面積"],"file":"tb/u12.js","hash":"f2c9780f"},{"name":"電池の内部抵抗と最大電力","f":0,"secs":["内部抵抗","負荷の電力","最大電力の条件","電源側の合成抵抗"],"file":"tb/u13.js","hash":"e13eefd6"},{"name":"クーロンの法則","f":1,"secs":["点電荷とクーロン力","クーロンの法則","距離の2乗に反比例","符号の扱い","電荷が3つ"],"file":"tb/u14.js","hash":"9edd516e"},{"name":"電界と電位","f":1,"secs":["電界の強さ","電界の中の力","誘電率","電位","電位差と仕事","平行な極板の間の電界"],"file":"tb/u15.js","hash":"1b3cd3c8"},{"name":"電束と電気力線","f":1,"secs":["電束","電気力線","電束密度と電気力線の密度","電気力線の性質"],"file":"tb/u16.js","hash":"ea19bf8f"},{"name":"コンデンサ","f":1,"secs":["電荷と電圧","平行平板コンデンサ","コンデンサの直列","直列の電圧","コンデンサの並列","誘電体の入れ方"],"file":"tb/u17.js","hash":"83d6f212"},{"name":"静電エネルギーと電荷の移動","f":1,"secs":["静電エネルギー","静電エネルギーの式の変形","直列の電圧と電荷","電荷の合計は変わらない","つなぎ替え"],"file":"tb/u18.js","hash":"7a29dfab"},{"name":"磁界と磁束","f":2,"secs":["磁界と磁極","磁気の力","透磁率","磁界の強さと磁力線","磁束と磁束密度"],"file":"tb/u19.js","hash":"1d4f09f6"},{"name":"電流がつくる磁界","f":2,"secs":["右ねじの法則","直線の導体","円形コイルの中心","環状ソレノイド"],"file":"tb/u20.js","hash":"52a253af"},{"name":"電磁力","f":2,"secs":["電磁力の向き","フレミングの左手の法則","電磁力の大きさ","斜めの導体","平行な2本の導体"],"file":"tb/u21.js","hash":"575a4be9"},{"name":"電磁誘導","f":2,"secs":["電磁誘導","誘導電流の向き","ファラデーの法則","磁束のグラフと起電力","導体棒","斜めに動かす"],"file":"tb/u22.js","hash":"dfcecf0e"},{"name":"磁気回路","f":2,"secs":["起磁力","磁気抵抗","磁気回路のオームの法則","磁気抵抗の単位","エアギャップ"],"file":"tb/u23.js","hash":"fa085d86"},{"name":"自己インダクタンス","f":2,"secs":["自己誘導","自己インダクタンスと磁束","自己インダクタンスの式","巻数の2乗に比例"],"file":"tb/u24.js","hash":"b7f06606"},{"name":"相互インダクタンスと磁気エネルギー","f":2,"secs":["相互インダクタンス","相互インダクタンスの式","結合係数","和動と差動","磁気エネルギー"],"file":"tb/u25.js","hash":"c9c9609b"},{"name":"過渡現象","f":3,"secs":["過渡と定常","コイルの振る舞い","時定数","コンデンサの振る舞い","RC の時定数","放電","電圧のグラフ"],"file":"tb/u26.js","hash":"5ebba0c8"},{"name":"正弦波交流","f":4,"secs":["交流と正弦波","周期と周波数","瞬時値の式","時刻を入れる","位相","抵抗の電流とベクトル図"],"file":"tb/u27.js","hash":"1a98450b"},{"name":"平均値と実効値","f":4,"secs":["決まった値になる時刻","平均値","実効値","波高率と波形率","整流した波形"],"file":"tb/u28.js","hash":"a2a7aa70"},{"name":"ベクトル図","f":4,"secs":["ベクトル表示","同じ向き・逆向き","向きの違う2つ","引き算","斜めのベクトル","複素数で書く"],"file":"tb/u29.js","hash":"00a4f4b7"},{"name":"コイルとコンデンサ（リアクタンス）","f":4,"secs":["誘導性リアクタンス","容量性リアクタンス","周波数との関係","抵抗は同相","コイルは 90° 遅れ","コンデンサは 90° 進み"],"file":"tb/u30.js","hash":"8aaf0a3c"},{"name":"交流の直列回路","f":4,"secs":["インピーダンス","交流のオームの法則","電流を基準にした図","電圧を基準にした計算","RC 直列","RLC 直列","答えが2つ"],"file":"tb/u31.js","hash":"12973ccc"},{"pad":1,"f":4},{"pad":1,"f":4},{"pad":1,"f":4},{"pad":1,"f":4},{"pad":1,"f":5},{"pad":1,"f":5},{"pad":1,"f":5},{"pad":1,"f":5},{"pad":1,"f":6},{"pad":1,"f":6},{"pad":1,"f":6},{"pad":1,"f":6},{"pad":1,"f":7},{"name":"直流のつなぎ（2つ）","f":0,"secs":["合成から全体の電流","矢印の位置と分流","合成の式を逆に解く","二次方程式で2つの抵抗","ミリとキロ","オームから電流の和","電圧の引き算からオーム","合成から電源の電圧を出す","電源の電圧を次の図へ持ち越す","短絡を見抜いて合成する","平衡を見抜いて合成する","比をとる","電力を出して比べる"],"file":"tb/u45.js","hash":"50801fd9","label":"13a","prev":13},{"name":"直流のつなぎ（3つ）","f":0,"secs":["合成から全体の電流、分流","分流を2回","はしごを奥から解く","電圧と電流から逆に解く","電圧の引き算から電流の和","重ね合わせで分流する","スイッチを読んで描き直す","平衡と読んで電流を出す","2つの図の持ち越し","2つの条件を等しく置く"],"file":"tb/u46.js","hash":"7832db09","label":"13b","prev":45},{"name":"直流の過去問","f":0,"secs":[],"file":"tb/u47.js","hash":"c8b5d33d","label":"13c","prev":46,"plist":[{"u":6,"k":0,"id":"r2q5","t":"令和2年 問5","st":2},{"u":3,"k":1,"id":"r6bq7","t":"令和6年下期 問7","st":1},{"u":6,"k":1,"id":"r5aq7","t":"令和5年上期 問7","st":3},{"u":5,"k":0,"id":"h18q5","t":"平成18年 問5","st":1},{"u":3,"k":0,"id":"h21q6","t":"平成21年 問6","st":1},{"u":2,"k":0,"id":"h25q5","t":"平成25年 問5","st":2},{"u":10,"k":0,"id":"r2q7","t":"令和2年 問7","st":4},{"u":5,"k":2,"id":"h27q4","t":"平成27年 問4","st":3},{"u":8,"k":1,"id":"h23q6","t":"平成23年 問6","st":3},{"u":4,"k":4,"id":"h25q8","t":"平成25年 問8","st":4},{"u":8,"k":2,"id":"h29q5","t":"平成29年 問5","st":4},{"u":9,"k":0,"id":"r5aq6","t":"令和5年上期 問6","st":1},{"u":9,"k":1,"id":"r6bq6","t":"令和6年下期 問6","st":2},{"u":5,"k":1,"id":"r6aq6","t":"令和6年上期 問6","st":2},{"u":4,"k":1,"id":"h28q6","t":"平成28年 問6","st":2},{"u":8,"k":0,"id":"r4aq7","t":"令和4年上期 問7","st":3},{"u":6,"k":2,"id":"h24q5","t":"平成24年 問5","st":3},{"u":4,"k":0,"id":"r4aq5","t":"令和4年上期 問5","st":2},{"u":4,"k":2,"id":"r1q5","t":"令和元年 問5","st":3},{"u":9,"k":2,"id":"h30q7","t":"平成30年 問7","st":4},{"u":4,"k":3,"id":"r7aq6","t":"令和7年上期 問6","st":3},{"u":5,"k":3,"id":"h22q6","t":"平成22年 問6","st":3}]}],"order":[1,2,3,4,5,6,7,8,9,10,11,12,13,45,46,47,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31],"x2":{}};
 // 教科書の画面：ホームの単元の並び・単元の節・説明（スライド）・例題と練習（問題の画面＝手書きつき）・記録
 // 記録の id：例題＝"t:単元:節:x"、練習＝"t:単元:節:p"、済み＝"t:単元:節:done"（過去問 "dc001"・ドリル "d:単元:番号" と混ざらない）
 var IC = {
@@ -1603,6 +1630,167 @@ window.TB = {init: init, renderHome: renderHome, active: function(){ return !!TB
              state: function(){ return TBQ && {u: TBQ.u, s: TBQ.s, mode: TBQ.mode, ans: TBQ.q.ans, answered: answered, form: TBQ.q.form}; }, data: TBD};
 window.SLIDES = SLIDES;
 
+// ---- 復習（2026-11-13 本人OK・監督の追加 D。宅建アプリの「選んで解く」と同じ考え）。tb_ui.js の後ろに同じ囲みの中で入る（make_tb.py の REVIEW）。
+// ①範囲：分野・単元・節を複数選ぶ（単元の行を押すと節が開く）②種類：練習／例題／つなぎ（label のある節つきの単元＝13a・13b）／過去問
+// ③絞り込み（重ねると「どれかに当てはまる」）：間違えたことがある／今日・3日・7日のうちに間違えた（1つ選ぶ）／まだ解いていない。当てはまる数をすぐ出す
+// ④数：10／20／全部、順番：ランダム／単元順。練習・つなぎの練習は毎回 genQ で新しい数字、例題・過去問は決まった問題。
+// 記録の id は今のまま（t:単元:節:x／p・t:単元:k:id）。単元の済みの判定は今まで通り（練習は streak・done も今まで通り付く）。
+// 途中でやめても続きから：問題の並びと位置を localStorage の RV_KEY に置く（GitHub に上げる記録 {v, log, del} の形は変えない）。
+var RV_KEY = "denken_review_v1";
+var RV = {sel: {}, open: {}, kinds: {p: 1, x: 1, j: 1, k: 1}, wrong: 0, yet: false, n: 10, ord: "r", res: null};
+var RV_ACT = false;                       // 復習の問題を解いている間
+var RV_IC = {
+  rev: '<svg class="tbi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14-5.3"/><path d="M18 3v4h-4"/><path d="M20 12a8 8 0 0 1-14 5.3"/><path d="M6 21v-4h4"/></svg>',
+  ck: function(st){ return '<svg class="rvck" viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="4" fill="' + (st === 2 ? "currentColor" : "#fff") + '" stroke="currentColor" stroke-width="1.8"/>' +
+    (st === 2 ? '<path d="M6 10.5l2.8 2.8L14.5 7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>' : st === 1 ? '<path d="M6 10h8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>' : "") + "</svg>"; },
+  dn: '<svg class="tbi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
+};
+function rvOrder(){ return (TBD.order || TBD.units.map(function(_, i){ return i + 1; })).filter(function(u){ var U = TBD.units[u - 1]; return U && !U.pad && U.secs; }); }
+function rvJ(u){ var U = TBD.units[u - 1]; return !!(U.label && U.secs && U.secs.length); }     // つなぎ（13a・13b）
+// 単元 u の問題の項目：{u, s, m, id, kind, key}（key＝選んだかの印。節＝"u:s"・過去問＝"u:k"）
+function rvItems(u){
+  var U = TBD.units[u - 1], out = [];
+  U.secs.forEach(function(_, i){
+    var s = i + 1;
+    out.push({u: u, s: s, m: "x", id: "t:" + u + ":" + s + ":x", kind: rvJ(u) ? "j" : "x", key: u + ":" + s});
+    out.push({u: u, s: s, m: "p", id: "t:" + u + ":" + s + ":p", kind: rvJ(u) ? "j" : "p", key: u + ":" + s});
+  });
+  if (U.plist) U.plist.forEach(function(P){ out.push({u: P.u, s: P.k, m: "k", id: "t:" + P.u + ":k:" + P.id, kind: "k", key: u + ":k"}); });
+  else if (!U.pm && U.pk) U.pk.forEach(function(id, k){ out.push({u: u, s: k, m: "k", id: "t:" + u + ":k:" + id, kind: "k", key: u + ":k"}); });
+  return out;
+}
+function rvKeys(u){ var U = TBD.units[u - 1], a = U.secs.map(function(_, i){ return u + ":" + (i + 1); }); if (U.plist || (!U.pm && U.pk && U.pk.length)) a.push(u + ":k"); return a; }
+function rvLog(){ var m = {}; REC.log.forEach(function(x){ (m[x.id] = m[x.id] || []).push(x); }); return m; }
+function rvMatch(it, L){
+  var a = L[it.id] || [];
+  if (!RV.wrong && !RV.yet) return true;
+  if (RV.yet && !a.length) return true;
+  if (RV.wrong) {
+    var d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    var since = [0, 0, d0.getTime(), Date.now() - 3 * 864e5, Date.now() - 7 * 864e5][RV.wrong];
+    if (a.some(function(x){ return !x.ok && x.t >= since; })) return true;
+  }
+  return false;
+}
+function rvPool(){
+  var L = rvLog(), out = [];
+  rvOrder().forEach(function(u){
+    rvItems(u).forEach(function(it){ if (RV.sel[it.key] && RV.kinds[it.kind] && rvMatch(it, L)) out.push(it); });
+  });
+  return out;
+}
+function rvCount(u, L){ return rvItems(u).filter(function(it){ return RV.kinds[it.kind] && rvMatch(it, L); }).length; }
+function rvLoad(){ try { return JSON.parse(localStorage.getItem(RV_KEY) || "null"); } catch (e) { return null; } }
+function rvSave(S){ try { if (S) localStorage.setItem(RV_KEY, JSON.stringify(S)); else localStorage.removeItem(RV_KEY); } catch (e) {} }
+function rvShuffle(a){ for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function rvStart(){
+  var pool = rvPool(); if (!pool.length) return;
+  var list = RV.ord === "r" ? rvShuffle(pool.slice()) : pool.slice(), n = RV.n || list.length;
+  var gen = list.filter(function(it){ return it.m === "p"; });
+  while (list.length < n && gen.length) list = list.concat(RV.ord === "r" ? rvShuffle(gen.slice()) : gen);   // 練習は毎回新しい数字なので足して数をそろえる
+  list = list.slice(0, n);                  // 単元順＝rvPool の並び（ホームの並び→節→例題・練習→過去問）
+  var S = {items: list.map(function(it){ return {u: it.u, s: it.s, m: it.m}; }), i: 0, ok: 0, ng: 0, t: Date.now()};
+  rvSave(S); rvRun();
+}
+function rvRun(){
+  var S = rvLoad(); if (!S || S.i >= S.items.length) { rvSave(null); rvShow(); return; }
+  var it = S.items[S.i];
+  RV_ACT = true; $("#tbRev").hidden = true;
+  openQ(it.u, it.s, it.m).then(function(){ rvTop(); });
+}
+function rvTop(){
+  var S = rvLoad(); if (!S || !TBQ) return;
+  $("#pos").innerHTML = '<span class="rvpos">' + RV_IC.rev + (S.i + 1) + " / " + S.items.length + "</span>";
+  $("#next").textContent = S.i + 1 < S.items.length ? "次の問題へ" : "終わり";
+}
+function rvQuit(){                           // 問題の画面を閉じる（leave と同じ片付け。単元の画面ではなく復習の画面へ）
+  TBQ = null; clearInterval(tick); RV_ACT = false;
+  sheet.querySelectorAll(".tbq,.cb").forEach(function(e){ e.remove(); }); blocks = [];
+  $("#toHome").textContent = "ホーム"; $("#tbAns").hidden = true; $("#side").classList.remove("on");
+  rvShow();
+}
+var _rvChoose = window.TB.choose, _rvNext = window.TB.next, _rvBack = window.TB.back;
+window.TB.choose = function(n){
+  var was = answered; _rvChoose(n);
+  if (!RV_ACT || was || !answered) return;
+  var S = rvLoad(); if (!S) return;
+  if (picked[0] === TBQ.q.ans) S.ok++; else S.ng++;
+  S.done = S.i + 1; rvSave(S); rvTop();
+};
+window.TB.next = function(){
+  if (!RV_ACT) return _rvNext();
+  var S = rvLoad(); if (!S) { rvQuit(); return; }
+  if (S.done === S.i + 1) S.i++;
+  if (S.i >= S.items.length) { RV.res = {ok: S.ok, n: S.items.length}; rvSave(null); rvQuit(); return; }
+  rvSave(S); clearInterval(tick); TBQ = null; rvRun();
+};
+window.TB.back = function(){ if (!RV_ACT) return _rvBack(); rvQuit(); };
+window.TB.review = {open: function(){ rvShow(); }, state: function(){ return {act: RV_ACT, s: rvLoad(), pool: rvPool().length}; }, set: function(o){ Object.assign(RV, o); if (!$("#tbRev").hidden) rvRender(); },
+                    start: rvStart};
+// ---- 復習の画面
+function rvShow(){ $("#home").hidden = true; $("#tbUnit").hidden = true; $("#tbRev").hidden = false; rvRender(); }
+function rvBtn(on, a, v, t){ return '<button class="rvb' + (on ? " on" : "") + '" data-a="' + a + '" data-v="' + v + '">' + t + "</button>"; }
+function rvRender(){
+  var L = rvLog(), S = rvLoad(), pool = rvPool(), h = "";
+  h += '<div class="card rvset">' +
+    '<div class="rvrow">' + [["p", "練習"], ["x", "例題"], ["j", "つなぎ"], ["k", "過去問"]].map(function(k){ return rvBtn(RV.kinds[k[0]], "kind", k[0], k[1]); }).join("") + "</div>" +
+    '<div class="rvrow">' + [[1, "間違えた"], [2, "今日"], [3, "3日"], [4, "7日"]].map(function(k){ return rvBtn(RV.wrong === k[0], "wrong", k[0], k[1]); }).join("") +
+      '<span class="rvgap"></span>' + rvBtn(RV.yet, "yet", 1, "まだ") + "</div>" +
+    '<div class="rvrow">' + [[10, "10"], [20, "20"], [0, "全部"]].map(function(k){ return rvBtn(RV.n === k[0], "n", k[0], k[1]); }).join("") +
+      '<span class="rvgap"></span>' + [["r", "ランダム"], ["u", "単元順"]].map(function(k){ return rvBtn(RV.ord === k[0], "ord", k[0], k[1]); }).join("") + "</div>" +
+    '<div class="rvrow rvgo"><span class="rvnum" id="rvN">' + pool.length + "</span>" +
+      (RV.res ? '<span class="rvres">' + IC.ok + RV.res.ok + " / " + RV.res.n + "</span>" : "") + '<span class="sp"></span>' +
+      (S && S.i < S.items.length ? '<button class="go ghost" data-a="cont">' + RV_IC.rev + (S.i + 1) + " / " + S.items.length + "</button>" : "") +
+      '<button class="go" data-a="start"' + (pool.length ? "" : " disabled") + ">開始</button></div></div>";
+  var fi = -1, order = rvOrder();
+  order.forEach(function(u){
+    var U = TBD.units[u - 1], f = U.f || 0;
+    if (f !== fi) {
+      fi = f; var us = order.filter(function(v){ return (TBD.units[v - 1].f || 0) === f; }), ks = [].concat.apply([], us.map(rvKeys));
+      var nOn = ks.filter(function(k){ return RV.sel[k]; }).length;
+      h += '<div class="rvf" data-f="' + f + '"><button class="rvc" data-a="fck" data-v="' + f + '">' + RV_IC.ck(nOn === ks.length && nOn ? 2 : nOn ? 1 : 0) + "</button>" + TBD.fields[f] + "</div>";
+    }
+    var ks2 = rvKeys(u), on = ks2.filter(function(k){ return RV.sel[k]; }).length, op = RV.open[u];
+    h += '<div class="unit rvu' + (op ? " op" : "") + '" data-u="' + u + '"><div class="no"><button class="rvc" data-a="uck" data-v="' + u + '">' + RV_IC.ck(on === ks2.length ? 2 : on ? 1 : 0) + "</button></div>" +
+      '<div class="nm" data-a="uop" data-v="' + u + '"><span class="rvl">' + uLab(u) + "</span>" + U.name + "</div>" +
+      '<div class="acts"><span class="tbn">' + rvCount(u, L) + '</span><button class="rvc rvo" data-a="uop" data-v="' + u + '">' + RV_IC.dn + "</button></div></div>";
+    if (op) h += '<div class="rvsecs">' + ks2.map(function(k){ var s = k.split(":")[1];
+      return rvBtn(RV.sel[k], "sck", k, s === "k" ? "過去問" : uLab(u) + "-" + s); }).join("") + "</div>";
+  });
+  $("#rvBody").innerHTML = h;
+}
+function rvClick(e){
+  var b = e.target.closest("[data-a]"); if (!b) return;
+  var a = b.dataset.a, v = b.dataset.v, order = rvOrder();
+  var setAll = function(ks){ var all = ks.every(function(k){ return RV.sel[k]; }); ks.forEach(function(k){ if (all) delete RV.sel[k]; else RV.sel[k] = 1; }); };
+  if (a === "kind") { if (RV.kinds[v]) delete RV.kinds[v]; else RV.kinds[v] = 1; }
+  else if (a === "wrong") RV.wrong = RV.wrong === +v ? 0 : +v;
+  else if (a === "yet") RV.yet = !RV.yet;
+  else if (a === "n") RV.n = +v;
+  else if (a === "ord") RV.ord = v;
+  else if (a === "fck") setAll([].concat.apply([], order.filter(function(u){ return (TBD.units[u - 1].f || 0) === +v; }).map(rvKeys)));
+  else if (a === "uck") setAll(rvKeys(+v));
+  else if (a === "uop") RV.open[v] = !RV.open[v];
+  else if (a === "sck") { if (RV.sel[v]) delete RV.sel[v]; else RV.sel[v] = 1; }
+  else if (a === "start") { RV.res = null; rvStart(); return; }
+  else if (a === "cont") { RV.res = null; rvRun(); return; }
+  else return;
+  rvRender();
+}
+(function(){
+  var _init = window.TB.init;
+  window.TB.init = function(){
+    _init();
+    var R = document.createElement("div"); R.id = "tbRev"; R.hidden = true;
+    R.innerHTML = '<div class="wrap"><div class="hh"><button class="lnk" id="rvBack">' + IC.back + '</button><h1>復習</h1></div><div id="rvBody"></div></div>';
+    document.body.appendChild(R);
+    $("#rvBack").onclick = function(){ $("#tbRev").hidden = true; RV.res = null; goHome(); };
+    $("#rvBody").addEventListener("click", rvClick);
+    var b = document.createElement("button"); b.className = "lnk"; b.id = "tbRevBtn"; b.innerHTML = RV_IC.rev;
+    var hh = document.querySelector("#home .hh"); hh.querySelector("h1").after(b);
+    b.onclick = rvShow;
+  };
+})();
 
 })();
 </script>

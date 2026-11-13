@@ -1,6 +1,6 @@
 /* 単元2「直列回路と並列回路」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(2, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, IOFF = H.IOFF, iSep = H.iSep, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元2の図（自作）：直列（ser）・並列（par）・直並列（sp）・過去問 平成25年 問5（pq25）。
 // 共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 名前 L[k]：文字（そのまま）か [前, 後]（p[k + "v"] で前→後へ入れ替える）。矢印の濃さ＝p[k + "o"]（無ければ 1）、
@@ -23,22 +23,23 @@ function vArrow(d, id, x, y, L, k, p, below){
   var w = vdim(d, id + "d", x - 72.5, x + 72.5, y0, y1, ya, dd, {});
   lab2(d, id + "t", x, below ? ya + 25 : ya - 25, L[k], p, k, w);
 }
-// 電流の矢印は、その電流が流れる導線の上に置く（2026-11-01 本人：2-5 例題の I₃ が R₃ の線から離れて、何もない所にあった）。
-// 矢じりの先＝電流の向き。名前は矢印のすぐ横（線にかけない）。確かめ＝check_iarrow.py
-// 横の線の上の電流（右向き）。x＝矢印の中心・y＝線。above＝名前を線の上・無ければ線の下
-function iArrow(d, id, x, y, L, k, p, above){
+// 電流の矢印（2026-11-09 本人の決まり・2026-11-14 この形にした：導線に重ねず、導線から離した別の矢印・ループの外側。
+// tb_scenes.js の iSep・確かめ＝check_iarrow.py）。矢じりの先＝電流の向き。名前は矢印のさらに外（線をまたがない）。
+// （〜2026-11-13 は導線の上：2026-11-01 本人「2-5 例題の I₃ が R₃ の線から離れて、何もない所にあった」。どの導線の電流か分かるのは今も同じ）
+// 横の線の電流（右向き）。x＝矢印の中心・y＝線。s＝置く側（-1＝線の上・1＝線の下）
+function iArrow(d, id, x, y, L, k, p, s){
   if (L[k] === undefined) return;
-  var o = pv(p, k + "o", 1);
-  d.arrow(id + "a", x - 20, y, x + 20, y, {o: o});
-  lab2(d, id + "t", x, above ? y - 27 : y + 29, L[k], p, k, o);
+  var o = pv(p, k + "o", 1), lb = iSep(d, id + "a", x - 20, y, x + 20, y, s, {o: o});
+  lab2(d, id + "t", lb[0], lb[1], L[k], p, k, o);
 }
-// 左の縦の線（x=478）の電流（上向き）。名前は線の右。k＝"i"（全体の電流）か "i1"（直並列の直列の部分）
+// 全体の電流。k＝"i"（全体の電流）か "i1"（直並列の直列の部分）
+// 2026-11-14：前は左の縦の線（x=478）の上。外側（左）に名前を出すと枠を左へ広げる＝図が小さくなるので、
+//   下の線の左（＋極から出て左へ流れる所 x=580〜620）の外側（線の下）に置く（枠の中に収まる）
 function iLeft(d, yb, L, p, k){
   k = k || "i";
   if (L[k] === undefined) return;
-  var o = pv(p, k + "o", 1), ym = yb - 80;
-  d.arrow(k + "a", 478, ym + 20, 478, ym - 20, {o: o});
-  lab2(d, k + "t", 494, ym, L[k], p, k, o, {anchor: "start"});
+  var o = pv(p, k + "o", 1), lb = iSep(d, k + "a", 620, yb, 580, yb, 1, {o: o});
+  lab2(d, k + "t", lb[0], lb[1], L[k], p, k, o);
 }
 // 電源（下の線の真ん中）・＋と－・電源の電圧の名前
 function srcPart(d, yb, L, p){
@@ -67,9 +68,10 @@ function tbSer(d, p, L){
   srcPart(d, yb, L, p);
   resL(d, "r1", 640, 360, L, "r1", p); resL(d, "r2", 880, 360, L, "r2", p);
   vArrow(d, "v1", 640, 360, L, "v1", p); vArrow(d, "v2", 880, 360, L, "v2", p);
-  // I₂：R₂ のすぐ後の右の縦の線（下向き・名前は線の左）。上の線の右の端は V₂ の補助線と強調の枠が重なるため
-  iArrow(d, "i1", 545, 360, L, "i1", p);
-  if (L.i2 !== undefined) { var o2 = pv(p, "i2o", 1); d.arrow("i2a", 1045, 440, 1045, 480, {o: o2}); lab2(d, "i2t", 1031, 460, L.i2, p, "i2", o2, {anchor: "end"}); }
+  // I₁：R₁ の左の上の線（x=540）。外側（線の上）。点 a の電位の数字が線の上を使う図は内側（線の下）
+  // I₂：R₂ の右の上の線（x=985）。外側（線の上）。点 b の電位の数字が線の上を使う図は内側（2026-11-14：前は右の縦の線の内側。外側（右）は枠の外）
+  iArrow(d, "i1", 540, 360, L, "i1", p, L.pa && L.pa.v !== undefined ? 1 : -1);
+  iArrow(d, "i2", 1005, 360, L, "i2", p, L.pb && L.pb.v !== undefined ? 1 : -1);   // x=1005（985 だと名前が V₂ の補助線 x=952.5 に触れた）
   iLeft(d, yb, L, p);
   point(d, "a", 520, 360, L, p); point(d, "c", 760, 360, L, p); point(d, "b", 1000, 360, L, p);
   zoneTint(d, L, Z);
@@ -95,7 +97,8 @@ function tbPar(d, p, L){
   if (L.j) { d.dot("dj1", xl, 360); d.dot("dj2", xr, 360); }
   srcPart(d, yb, L, p);
   vArrow(d, "v1", 740, 280, L, "v1", p); vArrow(d, "v2", 740, 440, L, "v2", p, true);
-  iArrow(d, "i1", 880, 280, L, "i1", p, true); iArrow(d, "i2", 880, 440, L, "i2", p);
+  // I₁：上の道（いちばん上の線＝外側は上）。I₂：下の道（並列の中の枝＝外側が無い＝内側の下）
+  iArrow(d, "i1", 880, 280, L, "i1", p, -1); iArrow(d, "i2", 880, 440, L, "i2", p, 1);
   iLeft(d, yb, L, p);
 }
 // ---- 直並列：上の線に R1（x=580）、その先に並列（縦の線 x=680・1000、R2 y=280・R3 y=440）
@@ -120,7 +123,7 @@ function tbSp(d, p, L){
   resL(d, "r1", 580, 360, L, "r1", p);
   srcPart(d, yb, L, p);
   vArrow(d, "v1", 580, 360, L, "v1", p); vArrow(d, "v2", 790, 280, L, "v2", p); vArrow(d, "v3", 790, 440, L, "v3", p, true);
-  iLeft(d, yb, L, p, "i1"); iArrow(d, "i2", 945, 280, L, "i2", p, true); iArrow(d, "i3", 945, 440, L, "i3", p);
+  iLeft(d, yb, L, p, "i1"); iArrow(d, "i2", 945, 280, L, "i2", p, -1); iArrow(d, "i3", 945, 440, L, "i3", p, 1);
 }
 // ---- 過去問 平成25年 問5：端子2つ（左）・R と Rx の並列（縦の抵抗）
 // 電圧 V を加えた並列なので色で分ける：上の線（端子の高い側）＝赤・下の線＝灰（R と Rx の両端は同じ電位＝同じ色）
@@ -137,15 +140,14 @@ function tbPq25(d, p, L){
   // 電圧 V：下の端子から上の端子へ（上が高い）
   d.arrow("va", 520, yb - 24, 520, yt + 24);
   d.text("vt0", 496, 430, L.v, {anchor: "end"});
-  // 電流 I：上の線（端子と R の間）の上・右向き。名前は線の上
-  d.arrow("ia", 602, yt, 642, yt);
-  d.text("it0", 622, yt - 27, L.i);
-  // R と Rx の電流（縦の線の上・下向き）。名前は線の左
-  [["ir", xR, L.ir], ["ix", xX, L.ix]].forEach(function(q){
+  // 電流 I：上の線（端子と R の間）・右向き。外側＝線の上（名前も上）
+  var la = iSep(d, "ia", 602, yt, 642, yt, -1);
+  d.text("it0", la[0], la[1], L.i);
+  // R と Rx の電流（縦の線・下向き）。R の線は並列の中の枝＝外側が無い＝内側（左）、Rx の線は右の端＝外側（右）
+  [["ir", xR, L.ir, -1], ["ix", xX, L.ix, 1]].forEach(function(q){
     if (q[2] === undefined) return;
-    var o = pv(p, q[0] + "o", 1);
-    d.arrow(q[0] + "a", q[1], 330, q[1], 370, {o: o});
-    d.text(q[0] + "t0", q[1] - 14, 350, q[2], {anchor: "end", o: o});
+    var o = pv(p, q[0] + "o", 1), lb = iSep(d, q[0] + "a", q[1], 330, q[1], 370, q[3], {o: o});
+    d.text(q[0] + "t0", lb[0], lb[1], q[2], {anchor: lb[2], o: o});
   });
 }
 var KINDS = {ser: tbSer, par: tbPar, sp: tbSp, pq25: tbPq25};

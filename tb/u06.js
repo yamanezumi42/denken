@@ -1,6 +1,6 @@
 /* 単元6「抵抗率と温度」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(6, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, IOFF = H.IOFF, iSep = H.iSep, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元6の図（自作）の、節の間で共通の部品。共通の部品（vdim・pv・swapText・zones など）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 節の図は u06/sN_scenes.js（u06.py が番号順につなぎ、KINDS・FLOWK を1つにまとめる）。このファイルは書き換えない（足したい部品は自分の節のファイルへ）。
 // 単元3の部品（u03/common_scenes.js）と同じ形。単元のファイルは別々に読み込むので、名前に 6 を付けて写した（単元5の部品と同じ形）。
@@ -25,20 +25,20 @@ function vArrow6(d, id, x, y, L, k, p, below){
   var w = vdim(d, id + "d", x - 72.5, x + 72.5, y0, y1, ya, dd, {});
   lab6(d, id + "t", x, below ? ya + 25 : ya - 25, L[k], p, k, w);
 }
-// 左の縦の線（x=478）の全体の電流 I（上向き）。名前は線の右。id＝k + "a"・名前＝k + "t"
-function iLeft6(d, yb, L, p, k){
+// 電流の矢印（2026-11-14 本人の決まり＝導線に重ねず、導線から離した別の矢印・ループの外側。tb_scenes.js の iSep・proto_circuit/SPEC_expl.md §4）
+// 全体の電流 I（監督の決定＝案A）：左上の角に近い上の線（y=yt、既定 360）の外側（上）に右向き。bot＝真：下の線の左（＋極から左へ）の外側（下）
+function iLeft6(d, yb, L, p, k, yt, bot){
   if (L[k] === undefined) return;
-  var o = pv(p, k + "o", 1), ym = yb - 80;
-  d.arrow(k + "a", 478, ym + 20, 478, ym - 20, {o: o});
-  lab6(d, k + "t", 494, ym, L[k], p, k, o, {anchor: "start"});
+  var y = yt === undefined ? 360 : yt, o = pv(p, k + "o", 1);
+  var lb = bot ? iSep(d, k + "a", 620, yb, 580, yb, 1, {o: o}) : iSep(d, k + "a", 510, y, 550, y, -1, {o: o});
+  lab6(d, k + "t", lb[0], lb[1], L[k], p, k, o);
 }
-// 横の線の上の電流の矢印（右向き）。x＝矢印の真ん中、名前は線の上（below で下）。並列の道の電流（抵抗の右の線）などに使う
-// （電流の矢印は、その電流が流れる導線の上に置く＝proto_circuit/SPEC_expl.md §4。名前は線にかけない）
-function iWire6(d, k, x, y, L, p, below){
+// 横の線の電流の矢印（右向き）。x＝矢印の真ん中、s＝置く側（-1＝線の上・1＝線の下。前の呼び方の true＝下・無し＝上も使える）
+function iWire6(d, k, x, y, L, p, s){
   if (L[k] === undefined) return;
-  var o = pv(p, k + "o", 1);
-  d.arrow(k + "a", x - 20, y, x + 20, y, {o: o});
-  lab6(d, k + "t", x, below ? y + 30 : y - 24, L[k], p, k, o);
+  s = s === true ? 1 : (s === false || s === undefined) ? -1 : s;
+  var o = pv(p, k + "o", 1), lb = iSep(d, k + "a", x - 20, y, x + 20, y, s, {o: o});
+  lab6(d, k + "t", lb[0], lb[1], L[k], p, k, o);
 }
 // 電源（下の線の真ん中）・＋と－・電源の電圧の名前
 function srcPart6(d, yb, L, p){
@@ -188,16 +188,16 @@ function u6s4bshort(L){
 function u6s4sshort(L){
   return L.sh === 1 ? [[530, 360], [530, U6S4YQ], [760, U6S4YQ], [760, 360]] : [[760, 360], [760, U6S4YQ], [990, U6S4YQ], [990, 360]];
 }
-// 電源・＋と－・電源の電圧・全体の電流 I（左の縦の線）を濃さ O で
+// 電源・＋と－・電源の電圧・全体の電流 I（下の線の左の外側）を濃さ O で
 function u6s4src(d, L, p, O){
   var yb = 560;
   d.cell("c", 752, yb, {o: O});
   if (L.pm) { d.text("pp", 722, yb - 26, "+", {o: O}); d.text("pm", 802, yb - 26, "−", {o: O}); }
   lab6(d, "e", 762, yb + 42, L.src, p, "src", O);
   if (L.i !== undefined && L.i !== null) {
-    var o = pv(p, "io", 1) * O;
-    d.arrow("ia", 478, yb - 60, 478, yb - 100, {o: o});
-    lab6(d, "it", 494, yb - 80, L.i, p, "i", o, {anchor: "start"});
+    // 2026-11-14：導線から離した別の矢印。下の線の左（＋極から左へ）の外側（下）（上の線の左は短絡の線が使う）
+    var o = pv(p, "io", 1) * O, la = iSep(d, "ia", 620, yb, 580, yb, 1, {o: o});
+    lab6(d, "it", la[0], la[1], L.i, p, "i", o);
   }
 }
 // ---- 1本の長い抵抗（分ける前と分けた後）
@@ -444,9 +444,8 @@ function tbU6k2r5(d, p, L){
   var s = d.wire("u6k2c:S", [[xl - 11, 420], [xl + 11, 420]]); s.style.strokeWidth = 4;
   lab6(d, "u6k2e", xl - 34, 410, L.src, p, "src", 1, {anchor: "end"});
   if (L.i !== undefined) {
-    var o = pv(p, "io", 1);
-    d.arrow("u6k2ia", 680, yt, 720, yt, {o: o});
-    lab6(d, "u6k2it", 700, yt - 26, L.i, p, "i", o);
+    var o = pv(p, "io", 1), la = iSep(d, "u6k2ia", 680, yt, 720, yt, -1, {o: o});    // 2026-11-14：上の線の外側（上）に離した別の矢印
+    lab6(d, "u6k2it", la[0], la[1], L.i, p, "i", o);
   }
 }
 // ---- 単元6の終わりの過去問3：平成24年 問5（u6k3h24・図は試験センターの図を描き直した物）。左＝図1（電源 E と R1・R2・R3、端子 a・b）・右＝図2（電流源 I と G）。
@@ -454,7 +453,7 @@ function tbU6k2r5(d, p, L){
 //   分かれる点 x=740（R2 は縦 y=350）、R3 は上の線 x=860（横）、端子 a (960, 250)・b (960, 450)。
 // 図2（L.f2 の時だけ＝問題の画面）：左の縦の線 x=1120 に電流源（中心 y=350・半径 26・上向きの矢印は円の左）、分かれる点 x=1340（G は縦 y=350）、端子 a (1560, 250)・b (1560, 450)。
 // 解説は図1だけを使い、2つの形に変わる：sab＝a-b を短絡する線（濃さ）、ssrc＝電源を短絡した形（電池が消えて1本の線になる）。
-// 電流の矢印：I0＝左の縦の線（上向き・名前は線の右）、I＝R3 の右の線（右向き・名前は線の上）。どちらも a-b を短絡した時の電流。
+// 電流の矢印（2026-11-14：導線から離した別の矢印・ループの外側）：I0＝左の縦の線の左（上向き）、I＝R3 の右の線の上（右向き）。名前は矢印の外。どちらも a-b を短絡した時の電流。
 // 名前 L：r1・r2・r3・src・i0・i・f2・g・cs（図2の名前）。部品の id は u6k3a（図1）・u6k3b（図2）で始める。
 // 同じ電位の線の色の帯（図1・電源の電圧の名前がある時）：a-b を開いた時＝＋極から R1 まで赤・R1 の後ろ（R3 から a まで）紫・－極の側 灰。
 //   a-b を短絡した時＝R3 の右の端から a・b は灰。電源を短絡した形では電圧が無いので帯を消す。帯は答えの手がかりにならない（答えは式の組）ので問題の画面にも付ける。
@@ -492,14 +491,12 @@ function tbU6k3h24(d, p, L){
   if (ssrc > 0 && ssrc < 1) d.wire("u6k3csh", [[500, 340], [500, 360]], {o: ssrc});
   lab6(d, "u6k3e", 466, 350, L.src, p, "src", 1 - ssrc, {anchor: "end"});
   if (L.i0 !== undefined) {
-    var o0 = pv(p, "i0o", 1);
-    d.arrow("u6k3i0a", 500, 320, 500, 280, {o: o0});
-    lab6(d, "u6k3i0t", 516, 300, L.i0, p, "i0", o0, {anchor: "start"});
+    var o0 = pv(p, "i0o", 1), l0 = iSep(d, "u6k3i0a", 500, 320, 500, 280, -1, {o: o0});    // 2026-11-14：左の線の外側（左）に離した別の矢印
+    lab6(d, "u6k3i0t", l0[0], l0[1], L.i0, p, "i0", o0, {anchor: l0[2]});
   }
   if (L.i !== undefined) {
-    var o1 = pv(p, "io", 1);
-    d.arrow("u6k3ia", 905, 250, 941, 250, {o: o1});
-    lab6(d, "u6k3it", 923, 224, L.i, p, "i", o1);
+    var o1 = pv(p, "io", 1), l1 = iSep(d, "u6k3ia", 905, 250, 941, 250, -1, {o: o1});    // 上の線の外側（上）
+    lab6(d, "u6k3it", l1[0], l1[1], L.i, p, "i", o1);
   }
   if (!L.f2) return;
   // 図2（問題の画面だけ）

@@ -1,6 +1,6 @@
 /* 単元3「合成抵抗」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(3, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, IOFF = H.IOFF, iSep = H.iSep, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元3の図（自作）の、節の間で共通の部品。共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 節の図は u03/sN_scenes.js（u03.py が番号順につなぎ、KINDS・FLOWK を1つにまとめる）。このファイルは書き換えない（足したい部品は自分の節のファイルへ）。
 // 名前 L[k]：文字（そのまま）か [前, 後]（p[k + "v"] で前→後へ入れ替える）。矢印の濃さ＝p[k + "o"]（無ければ 1）、
@@ -23,12 +23,15 @@ function vArrow3(d, id, x, y, L, k, p, below){
   var w = vdim(d, id + "d", x - 72.5, x + 72.5, y0, y1, ya, dd, {});
   lab3(d, id + "t", x, below ? ya + 25 : ya - 25, L[k], p, k, w);
 }
-// 左の縦の線（x=478）の電流（上向き）。名前は線の右
-function iLeft3(d, yb, L, p, k){
+// 全体の電流（2026-11-14 本人の決まり＝導線から離した別の矢印・ループの外側。tb_scenes.js の iSep・proto_circuit/SPEC_expl.md §4）。
+// 監督の決定＝案A（2026-11-10）：左の線ではなく、左上の角に近い上の線（y=yt、既定 360）の外側（上）に右向き。左の線の外（左）に名前を出すと
+// 図の枠を左へ広げることになり、字が図に対して大きくなって電池の線などに名前が触れるため。公式の「上辺の上」と同じ形。
+// bot＝真：上の線の左を R1 の名前・電圧の矢印・「図1」の字が使う図は、下の線（＋極から左へ流れる・x=580〜620）の外側（下）
+function iLeft3(d, yb, L, p, k, yt, bot){
   if (L[k] === undefined) return;
-  var o = pv(p, k + "o", 1), ym = yb - 80;
-  d.arrow(k + "a", 478, ym + 20, 478, ym - 20, {o: o});
-  lab3(d, k + "t", 494, ym, L[k], p, k, o, {anchor: "start"});
+  var y = yt === undefined ? 360 : yt, o = pv(p, k + "o", 1);
+  var lb = bot ? iSep(d, k + "a", 620, yb, 580, yb, 1, {o: o}) : iSep(d, k + "a", 510, y, 550, y, -1, {o: o});
+  lab3(d, k + "t", lb[0], lb[1], L[k], p, k, o);
 }
 // 電源（下の線の真ん中）・＋と－・電源の電圧の名前
 function srcPart3(d, yb, L, p){
@@ -306,7 +309,7 @@ function s5flowB(p, L){
 // 形は4つ：s6ser（直列2つ）／s6par（並列2つ）／s6par3（並列3つ）／s6sp（R1 のあとに R2・R3 の並列）。
 // まとめる動き＝p.mg（0＝もとの回路・1＝上の線の真ん中 x=760 に合成抵抗 R が1つ）。もとの回路の抵抗と線は 1−mg で消え、R は mg で出る
 //   （mg が 0 の時は R を描かない・1 の時はもとの回路を描かない）。R の名前 L.R は抵抗の上（y=330）、入れ替え＝p.Rv。
-// 全体の電流 I は左の縦の線（x=478）の上・上向き（電源から出る電流。まとめる前も後も同じ線）。名前は線の右。
+// 全体の電流 I は下の線の左（＋極から出て左へ）の外側（線の下・導線から離した別の矢印。2026-11-14）。まとめる前も後も同じ所。
 // 左と下の線の id は形ごとに変える（s6L＋形・s6R＋形＝電流の矢印の確かめで形を見分ける）。電池は下の線の真ん中。
 // 電流は＋極（x=752）から出て、下の線を左へ → 左の線を上へ → 上の線を右へ → 右の線を下へ。
 // 同じ電位の線の色の帯（tb_scenes.js の zones。2026-11-03 本人「電位が関係する問題は色分けすべき」）：電源の電圧が出ている図だけ。
@@ -329,7 +332,7 @@ function s6frame(d, p, L, sh, yb){
   d.wire("s6L" + sh, [[478, 360], [478, yb], [752, yb]]);
   d.wire("s6R" + sh, [[772, yb], [1045, yb], [1045, 360]]);
   srcPart3(d, yb, L, p);
-  iLeft3(d, yb, L, p, "i");
+  iLeft3(d, yb, L, p, "i", 360, true);    // 下の線の外側（直並列の R1 x=580 の名前が上の線の左を使う。形ごとに側を変えない）
   if (mg > 0) {
     d.wire("s6m0", [[478, 360], [730, 360]], {o: mg}); d.wire("s6m1", [[790, 360], [1045, 360]], {o: mg});
     d.res("s6r", 760, 360, "h", {o: mg});
@@ -401,7 +404,7 @@ function s6flow(p, L, yb, xl, xr, ys){
   return {o: o, base: 100 * tot, paths: paths};
 }
 // ---- 単元3の終わりの過去問1：平成21年 問6（k1h21・図は試験センターの図を描き直した物）。上＝図1（R1・R2 の直列）・下＝図2（R1・R2 の並列）。
-// どちらも電源の電圧は 30 V。電池は下の線の真ん中（長い線＝＋極 x=752）、電流の矢印は左の縦の線（x=478）の上・上向き（iLeft3）。
+// どちらも電源の電圧は 30 V。電池は下の線の真ん中（長い線＝＋極 x=752）、電流の矢印は下の線の左の外側（左向き・iLeft3。2026-11-14）。
 // 図1：上の線 y=220（R1 x=640・R2 x=880）・下の線 y=340。図2：分かれる所 y=520（縦の線 x=600・960）・上の道 y=470（R1）・下の道 y=570（R2）・下の線 y=650。
 // 2つの回路の部品の id は k1・k2 で始める（電源の部品も別）。名前 L：r1・r2（両方の図で同じ）・src（両方の図で同じ）・k1i・k2i（電流）。
 function k1Cell(d, id, yb, L, p){
@@ -424,7 +427,7 @@ function tbK1h21(d, p, L){
   d.wire("k1R", [[910, t1], [1045, t1], [1045, b1], [772, b1]]);
   resL3(d, "k1r1", 640, t1, L, "r1", p); resL3(d, "k1r2", 880, t1, L, "r2", p);
   k1Cell(d, "k1", b1, L, p);
-  iLeft3(d, b1, L, p, "k1i");
+  iLeft3(d, b1, L, p, "k1i", t1, true);    // 下の線の外側（上の線の左は「図1」の字が使う）
   // 図2：並列
   d.text("k2n", 478, 485, "図2", {anchor: "start"});
   d.wire("k2L", [[752, b2], [478, b2], [478, jm], [600, jm]]);
@@ -436,7 +439,7 @@ function tbK1h21(d, p, L){
   });
   d.dot("k2j1", 600, jm); d.dot("k2j2", 960, jm);
   k1Cell(d, "k2", b2, L, p);
-  iLeft3(d, b2, L, p, "k2i");
+  iLeft3(d, b2, L, p, "k2i", jm, true);    // 下の線の外側（上の線の左は「図2」の字が使う）
 }
 // ---- 単元3の終わりの過去問2：令和6年下期 問7（k2r6・図は試験センターの図を描き直した物）。端子 a から R（直列）→ R と R_x の並列 → 端子 b。
 // 電源は無い（端子 a・b の間の合成抵抗の問題）。主の線 y=400：端子 a x=505・直列の R x=605・分かれる点 x=700・戻る点 x=920・端子 b x=1015。

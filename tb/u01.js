@@ -1,6 +1,6 @@
 /* 単元1「オームの法則」（textbook/make_tb.py が作る。手で直さない） */
 TB_REG(1, function(H){
-var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
+var NS = H.NS, Drawer = H.Drawer, n = H.n, clamp01 = H.clamp01, lerp = H.lerp, seriesPair = H.seriesPair, parallelPair = H.parallelPair, vdim = H.vdim, pv = H.pv, IOFF = H.IOFF, iSep = H.iSep, swapText = H.swapText, ZC = H.ZC, zband = H.zband, ztint = H.ztint, zpt = H.zpt, zones = H.zones, vOn = H.vOn, zoneTint = H.zoneTint, zSides = H.zSides, rngOf = H.rngOf, pick = H.pick, shuffled = H.shuffled, nice = H.nice, fmt = H.fmt, UNIT = H.UNIT, qv = H.qv, qf = H.qf, choices = H.choices, num = H.num, distinct = H.distinct, UNIT_CH = H.UNIT_CH, unitQ = H.unitQ, genQ = H.genQ;
 // 単元1の図（自作）。共通の部品（vdim・pv・swapText）は tb_scenes.js、描く道具（Drawer）は試作の expl_kit.py。
 // 1つの抵抗と電源の回路
 function tbLoop(d, p, L){
@@ -35,21 +35,25 @@ function tbLoop(d, p, L){
   //   名前は矢印の上（輪の外側）。点 a・b の名前は線の下へ（矢印の名前と重ならないように）。
   var iy = L.iout ? 343 : 360, ty = L.iout ? 318 : 389;
   function orange(id){ if (!L.iout) return; d.els[id].style.stroke = "#f76707"; d.els[id + ":h"].style.fill = "#f76707"; d.els[id + ":h"].style.stroke = "#f76707"; }
+  // 2026-11-14：1-1 以外の図も同じ決まり（tb_scenes.js の iSep）。外側＝上の線の上。点 a・b の名前が線の上にある図（L.nameUp）は外側を使っているので内側（線の下）
+  var isd = L.nameUp && !L.iout ? 1 : -1;
   if (L.i0 || L.i1) {
-    var ia = pv(p, "ia"), ax = L.iax || 600;
-    d.arrow("ia", ax - 20, iy, ax + 20, iy, {o: ia}); orange("ia");
-    swapText(d, "it", ax, ty, L.i0, L.i1, pv(p, "iv"), ia);
+    var ia = pv(p, "ia"), ax = L.iax || 600, la;
+    if (L.iout) { d.arrow("ia", ax - 20, iy, ax + 20, iy, {o: ia}); orange("ia"); la = [ax, ty]; }
+    else la = iSep(d, "ia", ax - 20, 360, ax + 20, 360, isd, {o: ia});
+    swapText(d, "it", la[0], la[1], L.i0, L.i1, pv(p, "iv"), ia);
   }
-  // 2本目の電流の矢印：L.ibx（点 b の位置）があれば上の線の上（右向き）、無ければ左の線（x=478）の上（上向き・名前は線の右）
+  // 2本目の電流の矢印：L.ibx（点 b の位置）があれば上の線（右向き・a と同じ側）、無ければ下の線の左（＋極から出て左へ・外側＝線の下）
+  //   2026-11-14：前は左の線（x=478）。外側（左）に名前を出すと枠を左へ広げる＝図が小さくなるので、枠の中に収まる下の線へ（単元3〜6 の案A と同じ考え）
   if (L.ib0 || L.ib1) {
-    var ib = pv(p, "ib");
+    var ib = pv(p, "ib"), lb;
     if (L.ibx) {
-      d.arrow("ib", L.ibx - 20, iy, L.ibx + 20, iy, {o: ib}); orange("ib");
-      swapText(d, "ibt", L.ibx, ty, L.ib0, L.ib1, pv(p, "ibv"), ib);
+      if (L.iout) { d.arrow("ib", L.ibx - 20, iy, L.ibx + 20, iy, {o: ib}); orange("ib"); lb = [L.ibx, ty]; }
+      else lb = iSep(d, "ib", L.ibx - 20, 360, L.ibx + 20, 360, isd, {o: ib});
+      swapText(d, "ibt", lb[0], lb[1], L.ib0, L.ib1, pv(p, "ibv"), ib);
     } else {
-      var ym = yb - 65;
-      d.arrow("ib", 478, ym + 20, 478, ym - 20, {o: ib});
-      swapText(d, "ibt", 494, ym, L.ib0, L.ib1, pv(p, "ibv"), ib, {anchor: "start"});
+      lb = iSep(d, "ib", 620, yb, 580, yb, 1, {o: ib});
+      swapText(d, "ibt", lb[0], lb[1], L.ib0, L.ib1, pv(p, "ibv"), ib);
     }
   }
   // 点 a・b（点・名前・電位）
